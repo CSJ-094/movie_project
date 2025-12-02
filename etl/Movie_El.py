@@ -1,6 +1,6 @@
 import requests
 from elasticsearch import Elasticsearch
-#
+
 INDEX_SETTINGS = {
     "settings": {
         "index": {
@@ -57,7 +57,7 @@ INDEX_SETTINGS = {
 
 API_KEY = "3d3fea3abfd1ffa8c4b49dc551ddc494"
 ES_URL = "http://localhost:9200"
-INDEX_NAME = "movies" #ElasticSearch의 인덱스 이름은 무조건 소문자 사용. Movies 했다가 오류폭발
+INDEX_NAME = "movies"
 
 es = Elasticsearch(ES_URL)
 
@@ -68,67 +68,70 @@ except Exception as e:
     print(f"연결 실패: {e}")
     exit()
 
-#기존 인덱스 삭제
-if es.indices.exists(index = INDEX_NAME):
-    es.indices.delete(index = INDEX_NAME)
-    print(f"기존 인덱스 삭제")
-
-#인덱스 생성
-es.indices.create(index = INDEX_NAME)
-print("Index {} created".format(INDEX_NAME))
-
-def get_now_playing_ids():
-    now_playing_ids = set() # 빠른 검색을 위해 set 사용
-    url = f"https://api.themoviedb.org/3/movie/now_playing?api_key={API_KEY}&language=ko-KR&region=KR"
-    response = requests.get(url)
-    if response.status_code == 200:
-        results = response.json().get('results', [])
-        for movie in results:
-            now_playing_ids.add(movie['id'])
-    print(f"현재 상영중인 영화 {len(now_playing_ids)}개")
-    return now_playing_ids
-
-def fetch_movies(pages=5):
-    now_playing_set = get_now_playing_ids()
-    for page in range(1, pages +1):
-        url = f"https://api.themoviedb.org/3/movie/popular?api_key={API_KEY}&language=ko-KR&page={page}"
+def get_movies_from_tmdb(endpoint, pages=1):
+    """TMDB API에서 영화 목록을 가져오는 함수"""
+    movies = {}
+    for page in range(1, pages + 1):
+        url = f"https://api.themoviedb.org/3/movie/{endpoint}?api_key={API_KEY}&language=ko-KR&region=KR&page={page}"
         response = requests.get(url)
-
-        #연결 성공시
         if response.status_code == 200:
-            movies = response.json().get('results', [])
-
-            for movie in movies:
-                r_date = movie['release_date']
-                if r_date == "":
-                    r_date = None
-
-                is_playing = movie['id'] in now_playing_set
-                doc = {
-                    "id": movie['id'], #영화 코드
-                    "title": movie['title'], #제목
-                    "overview": movie['overview'], # 줄거리
-                    "poster_path": movie['poster_path'], # 포스터 이미지 경로
-                    "vote_average": movie['vote_average'], # 평점
-                    "release_date": r_date,# 개봉일
-                    "genre_ids": movie['genre_ids'],
-                    "is_now_playing": is_playing
-                }
-
-                es.index(index = INDEX_NAME, id=movie['id'], document=doc)
-                print(f"Saved: {movie['title']}")
-
+            for movie_data in response.json().get('results', []):
+                movies[movie_data['id']] = movie_data
         else:
-            print(f"Error: {page}")
+            print(f"Error fetching from {endpoint} on page {page}")
+    return movies
+
+def fetch_and_index_movies(popular_pages=50, now_playing_pages=5):
+    # 1. '현재 상영작'과 '인기작' 목록을 모두 가져옴
+    print("Fetching now playing movies...")
+    now_playing_movies = get_movies_from_tmdb('now_playing', pages=now_playing_pages)
+    print(f"Found {len(now_playing_movies)} now playing movies.")
+
+    print("Fetching popular movies...")
+    popular_movies = get_movies_from_tmdb('popular', pages=popular_pages)
+    print(f"Found {len(popular_movies)} popular movies.")
+
+    # 2. 두 목록을 합치되, 중복을 제거 (id 기준)
+    all_movies = {**popular_movies, **now_playing_movies}
+    now_playing_ids = set(now_playing_movies.keys())
+    print(f"Total unique movies to index: {len(all_movies)}")
+
+    # 3. Elasticsearch에 데이터 적재
+    count = 0
+    for movie_id, movie in all_movies.items():
+        r_date = movie.get('release_date')
+        if not r_date:
+            r_date = None
+
+        # '현재 상영작' 여부 최종 결정
+        is_playing = movie_id in now_playing_ids
+
+        doc = {
+            "id": movie['id'],
+            "title": movie['title'],
+            "overview": movie['overview'],
+            "poster_path": movie.get('poster_path'),
+            "vote_average": movie.get('vote_average'),
+            "release_date": r_date,
+            "genre_ids": movie.get('genre_ids'),
+            "is_now_playing": is_playing
+        }
+        es.index(index=INDEX_NAME, id=movie_id, document=doc)
+        count += 1
+        if count % 100 == 0:
+            print(f"Indexed {count}/{len(all_movies)} movies...")
+
+    print(f"Finished indexing {count} movies.")
 
 if __name__ == "__main__":
+    # 1. 기존 인덱스 삭제
     if es.indices.exists(index=INDEX_NAME):
         es.indices.delete(index=INDEX_NAME)
+        print(f"기존 인덱스 '{INDEX_NAME}' 삭제 완료")
 
+    # 2. 새 인덱스 생성 (매핑 적용)
     es.indices.create(index=INDEX_NAME, body=INDEX_SETTINGS)
     print(f"매핑이 적용된 인덱스 '{INDEX_NAME}' 생성 완료")
 
     # 3. 데이터 적재 시작
-    fetch_movies(pages=50)
-
-
+    fetch_and_index_movies(popular_pages=50, now_playing_pages=5)
