@@ -1,0 +1,2 @@
+requests
+elasticsearch<9.0.0

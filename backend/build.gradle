@@ -1,0 +1,48 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.0'
+	id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.boot'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	sourceCompatibility = '17'
+}
+
+// [중요] 스프링 부트 3.x와 ES 8.11.1 버전 호환 맞추기
+ext {
+	set('elasticsearch.version', '8.11.1')
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// 1. 핵심: 엘라스틱서치 + 웹 기능
+	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation "org.springdoc:springdoc-openapi-ui:1.8.0"
+
+	// 2. 편의 기능: 롬복 (Getter/Setter 자동생성)
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// 3. 개발 도구: 서버 자동 재시작 (DevTools)
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// 4. 테스트 도구
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
