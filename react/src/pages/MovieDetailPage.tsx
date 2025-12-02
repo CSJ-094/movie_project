@@ -66,6 +66,10 @@ const MovieDetailPage: React.FC = () => {
     fetchMovieDetails();
   }, [movieId]); // movieId가 바뀔 때마다 API를 다시 호출합니다.
 
+  const handleBooking = () => {
+    alert('예매 기능은 현재 준비 중입니다.');
+  };
+
   if (loading) {
     return <div className="text-center p-12 text-2xl text-gray-800 dark:text-white">상세 정보 로딩 중...</div>;
   }
@@ -85,6 +89,15 @@ const MovieDetailPage: React.FC = () => {
           <p className="mt-2"><strong>평점:</strong> <span className="text-yellow-500">{movie.vote_average.toFixed(1)}</span></p>
           <p className="mt-2"><strong>개봉일:</strong> {movie.release_date}</p>
           <p className="mt-2"><strong>장르:</strong> {movie.genres.map(g => g.name).join(', ')}</p>
+          
+          {/* 예매하기 버튼 */}
+          <button
+            onClick={handleBooking}
+            className="mt-6 w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-lg"
+          >
+            예매하기
+          </button>
+
           <h3 className="text-2xl font-bold mt-6">줄거리</h3>
           <p className="mt-2 text-gray-700 dark:text-gray-300">{movie.overview}</p>
         </div>

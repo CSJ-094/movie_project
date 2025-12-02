@@ -1,6 +1,5 @@
 // c:/dev/work_springboot/movie-frontend/src/pages/MainPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import MovieCardSkeleton from '../components/MovieCardSkeleton';
 
@@ -41,28 +40,22 @@ const genres = [
 ];
 
 const MainPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const page = parseInt(searchParams.get('page') || '1', 10);
-
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false); // '더보기' 로딩 상태
   const [error, setError] = useState<Error | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
   // 필터 상태 관리
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [minRating, setMinRating] = useState<number>(0);
-
-  // 필터가 변경되면 1페이지로 리셋하는 로직
+  
+  // 필터가 변경되면 영화 목록과 페이지를 초기화하는 로직
   useEffect(() => {
-    // page가 1이 아니면 1로 변경하여 useEffect를 다시 트리거합니다.
-    if (page !== 1) {
-      setSearchParams(prev => {
-        prev.set('page', '1');
-        return prev;
-      });
-    }
+    setMovies([]);
+    setCurrentPage(1);
   }, [selectedGenres, selectedYear, minRating]);
 
   useEffect(() => {
@@ -70,7 +63,12 @@ const MainPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // 필터 조건과 페이지 번호에 따라 API URL 동적 생성
+      // '더보기' 로딩 상태를 활성화합니다. (첫 페이지 로딩 시에는 전체 로딩이므로 false)
+      if (currentPage > 1) {
+        setLoadingMore(true);
+      }
+
+      // API URL 생성
       const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
       let apiUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&language=ko-KR&sort_by=popularity.desc`;
 
@@ -83,8 +81,7 @@ const MainPage: React.FC = () => {
       if (minRating > 0) {
         apiUrl += `&vote_average.gte=${minRating}`;
       }
-      // 페이지 파라미터 추가
-      apiUrl += `&page=${page}`;
+      apiUrl += `&page=${currentPage}`;
 
       try {
         const response = await fetch(apiUrl);
@@ -92,23 +89,26 @@ const MainPage: React.FC = () => {
           throw new Error('Network response was not ok');
         }
         const data: ApiResult = await response.json();
-        setMovies(data.results);
+        // 첫 페이지는 새로 설정, 이후 페이지는 기존 목록에 추가
+        setMovies(prevMovies => currentPage === 1 ? data.results : [...prevMovies, ...data.results]);
         setTotalPages(data.total_pages);
       } catch (e) {
         setError(e as Error);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
 
     fetchMovies();
-  }, [selectedGenres, selectedYear, minRating, page, setSearchParams]); // 필터 또는 페이지 상태가 변경될 때마다 API 재호출
+  }, [selectedGenres, selectedYear, minRating, currentPage]); // 필터 또는 현재 페이지가 변경될 때마다 API 재호출
 
-  const handlePageChange = (newPage: number) => {
-    setSearchParams(prev => {
-      prev.set('page', String(newPage));
-      return prev;
-    });
+  const handleLoadMore = () => {
+    // 다음 페이지 로드를 위해 현재 페이지 번호를 1 증가시킵니다.
+    // 이 상태 변경은 위 useEffect를 다시 트리거합니다.
+    if (currentPage < totalPages) {
+      setCurrentPage(prevPage => prevPage + 1);
+    }
   };
 
   const handleGenreChange = (genreId: number) => {
@@ -123,7 +123,7 @@ const MainPage: React.FC = () => {
     setMinRating(0);
   };
 
-  if (loading) {
+  if (loading && currentPage === 1) { // 첫 페이지 로딩 시에만 전체 스켈레톤 표시
     return (
       <div className="flex">
         <aside className="w-64 p-5 bg-gray-100 dark:bg-gray-800"><h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">필터</h2></aside>
@@ -201,6 +201,19 @@ const MainPage: React.FC = () => {
           {movies.length > 0 ? movies.map(movie => (
             <MovieCard key={movie.id} id={movie.id} title={movie.title} posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} />
           )) : <p className="mt-8 text-gray-800 dark:text-white">선택한 조건에 맞는 영화가 없습니다.</p>}
+        </div>
+
+        {/* 더보기 버튼 UI */}
+        <div className="flex justify-center mt-8">
+          {currentPage < totalPages && !loading && (
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg disabled:bg-gray-400 hover:bg-blue-600 transition-colors"
+            >
+              {loadingMore ? '로딩 중...' : '더보기'}
+            </button>
+          )}
         </div>
       </main>
     </div>
