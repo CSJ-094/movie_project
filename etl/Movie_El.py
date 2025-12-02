@@ -1,6 +1,6 @@
 import requests
 from elasticsearch import Elasticsearch
-
+#
 INDEX_SETTINGS = {
     "settings": {
         "index": {
