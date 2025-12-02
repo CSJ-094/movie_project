@@ -7,6 +7,7 @@ import SearchPage from './pages/SearchPage.tsx';
 import MovieDetailPage from './pages/MovieDetailPage.tsx';
 import MainPage from './pages/MainPage.tsx';
 
+
 // 라우터(길잡이) 설정을 만듭니다.
 const router = createBrowserRouter([
   {
