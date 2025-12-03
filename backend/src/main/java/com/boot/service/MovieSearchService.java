@@ -3,11 +3,10 @@ package com.boot.service;
 import java.util.List;
 import java.util.Objects;
 
+import com.boot.dto.*;
+import com.boot.dto.AutocompleteResponse.Item;
 import org.springframework.stereotype.Service;
 
-import com.boot.dto.MovieDoc;
-import com.boot.dto.MovieSearchRequest;
-import com.boot.dto.MovieSearchResponse;
 import com.boot.elastic.Movie;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -21,16 +20,19 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import lombok.RequiredArgsConstructor;
 
+import static java.util.Locale.filter;
+
 @Service
 @RequiredArgsConstructor
 public class MovieSearchService {
 
     private final ElasticsearchClient elasticsearchClient;
 
+    // 1. 메인 검색 API 로직
     public MovieSearchResponse search(MovieSearchRequest request) {
 
-        int page = request.getPage() == null ? 0  : request.getPage();
-        int size = request.getSize() == null ? 20 : request.getSize();
+        int page = request.getPage();
+        int size = request.getSize();
         int from = page * size;
 
         // 1. bool query 조립
@@ -145,6 +147,60 @@ public class MovieSearchService {
         }
     }
 
+    //2.자동완성 API 로직
+    public AutocompleteResponse autocomplete(AutocompleteRequest request) {
+
+        // 1) keyword, size 정리
+        String keyword = request.getKeyword() == null
+                ? ""
+                : request.getKeyword().trim();
+
+        int size = (request.getSize() == null || request.getSize() <= 0)
+                ? 10
+                : request.getSize();
+
+        //키워드가 비어 있으면 ES까지 안 가고 그냥 빈 결과 반환
+        if (keyword.isBlank()) {
+            return AutocompleteResponse.builder()
+                    .items(List.of())
+                    .build();
+        }
+
+        try {
+            // 2) ES 검색 요청
+            SearchResponse<Movie> response = elasticsearchClient.search(s -> s
+                            .index("movies")
+                            .size(size)
+                            .query(q -> q
+                                    .match(m -> m
+                                            .field("title")
+                                            .query(keyword)
+                                    )
+                            ),
+                    Movie.class);
+
+            // 3) 결과를 AutocompleteResponse.Item 리스트로 변환
+            List<Item> items = response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .map(movie -> Item.builder()
+                            .movieId(movie.getId())
+                            .title(movie.getTitle())
+                            .releaseDate(movie.getReleaseDate())
+                            .build()
+                    )
+                    .toList();
+
+            return AutocompleteResponse.builder()
+                    .items(items)
+                    .build();
+
+        } catch (Exception e) {
+            throw new RuntimeException("자동완성 검색 중 오류 발생", e);
+        }
+    }
+
+    // 3. 공통 변환 메서드
     private MovieDoc toMovieDoc(Movie movie) {
         if (movie == null) return null;
 
