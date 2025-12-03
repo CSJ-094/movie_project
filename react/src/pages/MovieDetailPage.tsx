@@ -12,6 +12,12 @@ interface MovieDetails {
   release_date: string;
   vote_average: number;
   genres: { id: number; name: string }[];
+  belongs_to_collection: {
+    id: number;
+    name: string;
+    poster_path: string | null;
+    backdrop_path: string | null;
+  } | null;
 }
 // 영상 정보에 대한 타입을 추가합니다.
 interface Video {
@@ -35,6 +41,16 @@ interface Cast {
   character: string;
   profile_path: string | null;
 }
+// 컬렉션 정보에 대한 타입을 추가합니다.
+interface Collection {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: RecommendedMovie[];
+}
+
 
 // 스켈레톤 UI 컴포넌트
 const MovieDetailSkeleton: React.FC = () => {
@@ -110,6 +126,8 @@ const MovieDetailPage: React.FC = () => {
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   // 추천 영화 목록을 저장할 state를 추가합니다.
   const [cast, setCast] = useState<Cast[]>([]);
+  // 컬렉션 정보를 저장할 state를 추가합니다.
+  const [collection, setCollection] = useState<Collection | null>(null);
   const [recommendedMovies, setRecommendedMovies] = useState<RecommendedMovie[]>([]);
   // 캐러셀 컨테이너의 ref를 생성합니다.
   const recommendationsRef = useRef<HTMLDivElement>(null);
@@ -193,6 +211,26 @@ const MovieDetailPage: React.FC = () => {
 
     fetchRecommendations();
   }, [movie]); // movie 상태가 변경될 때(즉, 상세 정보 로딩이 완료될 때) 실행됩니다.
+
+  // 영화 상세 정보가 로드되면, 컬렉션 정보를 가져오는 useEffect
+  useEffect(() => {
+    if (!movie?.belongs_to_collection) {
+      setCollection(null); // 현재 영화가 컬렉션에 속하지 않으면 상태를 초기화합니다.
+      return;
+    }
+
+    const fetchCollectionDetails = async () => {
+      try {
+        const response = await fetch(`https://api.themoviedb.org/3/collection/${movie.belongs_to_collection.id}?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR`);
+        const data = await response.json();
+        setCollection(data);
+      } catch (error) {
+        console.error("Failed to fetch collection details:", error);
+      }
+    };
+
+    fetchCollectionDetails();
+  }, [movie]); // movie 상태가 변경될 때 실행됩니다.
 
   // 줄거리가 3줄을 넘어가는지 확인하여 '더보기' 버튼 표시 여부를 결정합니다.
   useEffect(() => {
@@ -319,6 +357,36 @@ const MovieDetailPage: React.FC = () => {
                 </div>
               </Link>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 컬렉션/시리즈 정보 섹션 */}
+      {collection && (
+        <div className="mt-12">
+          <div 
+            className="relative rounded-xl p-8 bg-cover bg-center text-white"
+            style={{ 
+              backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(https://image.tmdb.org/t/p/w1280${collection.backdrop_path})`
+            }}
+          >
+            <h2 className="text-3xl font-bold mb-2">'{collection.name}'의 일부입니다</h2>
+            <p className="text-lg mb-6">이 컬렉션에 포함된 다른 영화들도 확인해보세요.</p>
+            <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
+              {collection.parts.map((part) => (
+                <div key={part.id} className="flex-shrink-0">
+                  <MovieCard
+                    id={part.id}
+                    title={part.title}
+                    posterUrl={
+                      part.poster_path
+                        ? `https://image.tmdb.org/t/p/w500${part.poster_path}`
+                        : 'https://via.placeholder.com/200x300?text=No+Image'
+                    }
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
