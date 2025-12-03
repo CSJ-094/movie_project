@@ -42,5 +42,6 @@ public class Movie {
     // LocalDate로 받고 싶으면 변환 로직 추가해야 하니까 지금은 String이 무난.
 
     @Field(name = "genre_ids", type = FieldType.Keyword)
-    private List<String> genreIds; // TMDB면 숫자인데 ES는 keyword로 들어가 있으니 String 리스트로 받는 게 편함.
+    @JsonProperty("genre_ids")
+    private List<String> genreIds;
 }

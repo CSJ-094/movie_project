@@ -1,13 +1,13 @@
 package com.boot.controller;
 
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.boot.dto.MovieSearchRequest;
 import com.boot.dto.MovieSearchResponse;
 import com.boot.service.MovieSearchService;
+import com.boot.dto.MovieSearchRequest;
+
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +26,15 @@ public class MovieSearchController {
     )
     @GetMapping("/search")
     public MovieSearchResponse search(MovieSearchRequest request) {
+        return movieSearchService.search(request);
+    }
+
+    @Operation(
+            summary = "영화 자동완성 검색어 API",
+            description = "입력된 키워드 기반으로 영화 제목 자동완성 검색어를 제공하는 API"
+    )
+    @GetMapping("/autocomplete")
+    public MovieSearchResponse autocomplete(MovieSearchRequest request) {
         return movieSearchService.search(request);
     }
 }

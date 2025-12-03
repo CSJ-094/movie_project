@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+
 	<classpathentry excluding="com/boot/config/" kind="src" path="backend/src/main/java"/>
 	<classpathentry kind="src" path="backend/src/main/java/com/boot/config"/>
 	<classpathentry kind="src" path="backend/src/test/java"/>
