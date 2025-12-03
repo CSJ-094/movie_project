@@ -47,7 +47,7 @@ public class MovieSearchService {
             // 제목에 keyword가 매칭되는 영화만 검색
             bool.must(m -> m
                     .multiMatch(mt -> mt
-                            .fields("title","title.ngram","overview")
+                            .fields("title","title.ngram"/*,"overview"*/)
                             .query(keyword)
                             .operator(Operator.And)));
         }
