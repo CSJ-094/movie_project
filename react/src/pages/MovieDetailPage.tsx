@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -52,6 +52,38 @@ interface Collection {
   parts: RecommendedMovie[];
 }
 
+// --- 상단 카테고리 헤더 컴포넌트 ---
+const AppHeader: React.FC = () => {
+  const location = useLocation();
+  const categories = [
+    { name: '현재 상영중', path: '/' },
+    { name: '인기 영화', path: '/popular' },
+    { name: '높은 평점', path: '/top-rated' },
+    { name: '개봉 예정', path: '/upcoming' },
+  ];
+
+  return (
+    <header className="bg-gray-900 bg-opacity-80 backdrop-blur-sm text-white shadow-lg sticky top-0 z-40">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-16">
+          <div className="flex items-baseline space-x-4">
+            {categories.map((category) => (
+              <Link
+                key={category.name}
+                to={category.path}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
+                  location.pathname === category.path
+                    ? 'bg-red-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+              >{category.name}</Link>
+            ))}
+          </div>
+        </div>
+      </nav>
+    </header>
+  );
+};
 
 // 스켈레톤 UI 컴포넌트
 const MovieDetailSkeleton: React.FC = () => {
@@ -144,6 +176,13 @@ const MovieDetailPage: React.FC = () => {
   const [isClamped, setIsClamped] = useState(false);
   // 줄거리 p 태그에 대한 ref
   const overviewRef = useRef<HTMLParagraphElement>(null);
+  // 즐겨찾기 상태
+  const [isFavorite, setIsFavorite] = useState(false);
+  // 관심 목록 상태
+  const [isInWatchlist, setIsInWatchlist] = useState(false);
+
+  // TODO: 실제 로그인 시스템과 연동해야 합니다.
+  const isLoggedIn = false; // 가상의 로그인 상태 (false: 로그아웃, true: 로그인)
 
   useEffect(() => {
     if (!movieId) return;
@@ -244,6 +283,64 @@ const MovieDetailPage: React.FC = () => {
     }
   }, [movie?.overview]); // 영화 줄거리가 변경될 때마다 체크
 
+  // movieId가 변경될 때 localStorage를 확인하여 즐겨찾기/관심목록 상태를 설정합니다.
+  useEffect(() => {
+    if (!movieId) return;
+    const numericMovieId = Number(movieId);
+
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]') as number[];
+    setIsFavorite(favorites.includes(numericMovieId));
+
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]') as number[];
+    setIsInWatchlist(watchlist.includes(numericMovieId));
+  }, [movieId]);
+
+  // 즐겨찾기 토글 함수
+  const toggleFavorite = () => {
+    // 로그인 상태가 아닐 경우, 알림을 띄우고 함수를 종료합니다.
+    if (!isLoggedIn) {
+      alert('로그인이 필요한 기능입니다.');
+      return;
+    }
+
+    if (!movieId) return;
+    const numericMovieId = Number(movieId);
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]') as number[];
+    let newFavorites: number[];
+
+    if (favorites.includes(numericMovieId)) {
+      newFavorites = favorites.filter(id => id !== numericMovieId);
+    } else {
+      newFavorites = [...favorites, numericMovieId];
+    }
+
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+    setIsFavorite(!isFavorite);
+  };
+
+  // 관심 목록 토글 함수
+  const toggleWatchlist = () => {
+    // 로그인 상태가 아닐 경우, 알림을 띄우고 함수를 종료합니다.
+    if (!isLoggedIn) {
+      alert('로그인이 필요한 기능입니다.');
+      return;
+    }
+
+    if (!movieId) return;
+    const numericMovieId = Number(movieId);
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]') as number[];
+    let newWatchlist: number[];
+
+    if (watchlist.includes(numericMovieId)) {
+      newWatchlist = watchlist.filter(id => id !== numericMovieId);
+    } else {
+      newWatchlist = [...watchlist, numericMovieId];
+    }
+
+    localStorage.setItem('watchlist', JSON.stringify(newWatchlist));
+    setIsInWatchlist(!isInWatchlist);
+  };
+
   // 줄거리 더보기/접기 토글 함수
   const toggleOverview = () => setIsOverviewExpanded(!isOverviewExpanded);
 
@@ -285,8 +382,9 @@ const MovieDetailPage: React.FC = () => {
 
   // 3. 받아온 데이터를 사용해 상세 페이지 UI를 그립니다.
   return (
-    <div className="text-gray-800 dark:text-white">
-      {/* --- 상단 배경 이미지 섹션 --- */}
+    <div className="bg-white dark:bg-gray-900">
+      <AppHeader />
+      {/* --- 상단 정보 섹션 --- */}
       <div
         className="relative w-full h-[60vh] bg-cover bg-center"
         style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})` }}
@@ -296,7 +394,24 @@ const MovieDetailPage: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center md:items-start">
             <img src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} alt={movie.title} className="w-48 md:w-64 rounded-lg shadow-2xl z-10" />
             <div className="md:ml-8 mt-5 md:mt-0 text-white text-center md:text-left">
-              <h1 className="text-3xl md:text-5xl font-bold">{movie.title}</h1>
+              <div className="flex items-center justify-center md:justify-start gap-x-4">
+                <h1 className="text-3xl md:text-5xl font-bold">{movie.title}</h1>
+                <div className="flex items-center gap-x-2">
+                  {/* 즐겨찾기 버튼 */}
+                  <button onClick={toggleFavorite} className="p-2 rounded-full bg-black bg-opacity-30 hover:bg-opacity-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isFavorite ? 'text-red-500' : 'text-white'}`} fill={isFavorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+                    </svg>
+                  </button>
+                  {/* 관심 목록 버튼 */}
+                  <button onClick={toggleWatchlist} className="p-2 rounded-full bg-black bg-opacity-30 hover:bg-opacity-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isInWatchlist ? 'text-yellow-400' : 'text-white'}`} fill={isInWatchlist ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center justify-center md:justify-start space-x-4 mt-2">
                 <span>⭐ {movie.vote_average.toFixed(1)}</span>
                 <span>|</span>
@@ -326,7 +441,7 @@ const MovieDetailPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="mt-6 flex items-center justify-center md:justify-start space-x-4">
+              <div className="mt-8 flex items-center justify-center md:justify-start space-x-4">
                 <button
                   onClick={handleBooking}
                   className="bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 transition-colors text-lg"
