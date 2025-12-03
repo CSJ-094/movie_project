@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
+import { useAuth } from '../contexts/AuthContext';
 
 // 영화 상세 정보에 대한 타입을 정의합니다.
 interface MovieDetails {
