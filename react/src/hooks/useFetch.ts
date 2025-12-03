@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axiosInstance from '../api/axiosInstance'; // axios 인스턴스 임포트
 
 interface FetchResult<T> {
   data: T | null;
@@ -17,11 +18,12 @@ function useFetch<T>(url: string): FetchResult<T> {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await fetch(url);
-        const result = await response.json();
-        setData(result);
-      } catch (e) {
-        setError(e as Error);
+        // fetch 대신 axiosInstance 사용
+        const response = await axiosInstance.get<T>(url);
+        setData(response.data);
+      } catch (e: any) {
+        const error = new Error(e.response?.data || e.message || '데이터를 불러오는 데 실패했습니다.');
+        setError(error);
       } finally {
         setLoading(false);
       }
