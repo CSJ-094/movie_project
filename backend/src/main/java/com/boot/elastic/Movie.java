@@ -46,4 +46,8 @@ public class Movie {
     @Field(name = "genre_ids", type = FieldType.Keyword)
     @JsonProperty("genre_ids")
     private List<String> genreIds;
+
+    @Field(name = "ott_providers", type =FieldType.Keyword)
+    @JsonProperty("ott_providers")
+    private List<String> ottProviders;
 }

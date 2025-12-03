@@ -11,7 +11,7 @@ import com.boot.entity.User;
 @Entity
 @Getter
 @NoArgsConstructor
-public class PasswordResetToken {
+public class    PasswordResetToken {
 
     private static final int EXPIRATION_MINUTES = 10; // 토큰 만료 시간 (10분)
 
