@@ -6,6 +6,16 @@ import './index.css'
 import SearchPage from './pages/SearchPage.tsx';
 import MovieDetailPage from './pages/MovieDetailPage.tsx';
 import MainPage from './pages/MainPage.tsx';
+import LoginPage from './pages/LoginPage.tsx';
+import RegisterPage from './pages/RegisterPage.tsx';
+import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
+import ProtectedRoute from './components/ProtectedRoute.tsx';
+import MyPage from './pages/MyPage.tsx';
+import AdminRoute from './components/AdminRoute.tsx';
+import AdminPage from './pages/AdminPage.tsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
+import { AuthProvider } from './contexts/AuthContext.tsx';
 
 
 // 라우터(길잡이) 설정을 만듭니다.
@@ -27,12 +37,48 @@ const router = createBrowserRouter([
         path: "movie/:movieId", // '/movie/:movieId' 경로
         element: <MovieDetailPage />,
       },
+      {
+        path: "login", // '/login' 경로
+        element: <LoginPage />,
+      },
+      {
+        path: "register", // '/register' 경로
+        element: <RegisterPage />,
+      },
+      {
+        path: "verify-email", // '/verify-email' 경로
+        element: <VerifyEmailPage />,
+      },
+      {
+        path: "forgot-password",
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPasswordPage />,
+      },
+      // 보호된 라우트 설정
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: "mypage", element: <MyPage /> },
+        ],
+      },
+      // 관리자 전용 라우트 설정
+      {
+        element: <AdminRoute />,
+        children: [
+          { path: "admin", element: <AdminPage /> },
+        ],
+      },
     ],
   },
 ]);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>,
 )

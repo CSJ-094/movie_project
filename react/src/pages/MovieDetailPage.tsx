@@ -164,6 +164,9 @@ const MovieDetailPage: React.FC = () => {
   // 캐러셀 컨테이너의 ref를 생성합니다.
   const recommendationsRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  // AuthContext에서 로그인 상태를 가져옵니다.
+  const { isLoggedIn } = useAuth();
   // 트레일러 모달의 열림/닫힘 상태를 관리합니다.
   const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
   // 줄거리 '더보기' 상태를 관리합니다.
@@ -341,7 +344,13 @@ const MovieDetailPage: React.FC = () => {
   const toggleOverview = () => setIsOverviewExpanded(!isOverviewExpanded);
 
   const handleBooking = () => {
-    alert('예매 기능은 현재 준비 중입니다.');
+    if (isLoggedIn) {
+      // TODO: 실제 예매 페이지나 예매 로직으로 연결
+      alert('예매 페이지로 이동합니다. (구현 필요)');
+    } else {
+      alert('로그인이 필요한 서비스입니다.');
+      navigate('/login'); // 로그인 페이지로 이동
+    }
   };
 
   // 트레일러 모달을 여는 함수
