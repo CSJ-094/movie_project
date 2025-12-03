@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -71,11 +71,10 @@ const AppHeader: React.FC = () => {
               <Link
                 key={category.name}
                 to={category.path}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
-                  location.pathname === category.path
-                    ? 'bg-red-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${location.pathname === category.path
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
               >{category.name}</Link>
             ))}
           </div>
@@ -180,9 +179,6 @@ const MovieDetailPage: React.FC = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   // 관심 목록 상태
   const [isInWatchlist, setIsInWatchlist] = useState(false);
-
-  // TODO: 실제 로그인 시스템과 연동해야 합니다.
-  const isLoggedIn = false; // 가상의 로그인 상태 (false: 로그아웃, true: 로그인)
 
   useEffect(() => {
     if (!movieId) return;
@@ -464,92 +460,92 @@ const MovieDetailPage: React.FC = () => {
 
       {/* --- 하단 컨텐츠 섹션 --- */}
       <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      {/* 주요 출연진 섹션 */}
-      {cast.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-3xl font-bold mb-4">주요 출연진</h2>
-          <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
-            {cast.map((actor) => (
-              <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline text-current">
-                <div>
-                  <img
-                    src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
-                    alt={actor.name}
-                    className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
-                  />
-                  <p className="mt-2 font-semibold text-sm">{actor.name}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{actor.character} 역</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 컬렉션/시리즈 정보 섹션 */}
-      {collection && (
-        <div className="mt-12">
-          <div 
-            className="relative rounded-xl p-8 bg-cover bg-center text-white"
-            style={{ 
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(https://image.tmdb.org/t/p/w1280${collection.backdrop_path})`
-            }}
-          >
-            <h2 className="text-3xl font-bold mb-2">'{collection.name}'의 일부입니다</h2>
-            <p className="text-lg mb-6">이 컬렉션에 포함된 다른 영화들도 확인해보세요.</p>
+        {/* 주요 출연진 섹션 */}
+        {cast.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold mb-4">주요 출연진</h2>
             <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
-              {collection.parts.map((part) => (
-                <div key={part.id} className="flex-shrink-0">
-                  <MovieCard
-                    id={part.id}
-                    title={part.title}
-                    posterUrl={
-                      part.poster_path
-                        ? `https://image.tmdb.org/t/p/w500${part.poster_path}`
-                        : 'https://via.placeholder.com/200x300?text=No+Image'
-                    }
-                  />
-                </div>
+              {cast.map((actor) => (
+                <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline text-current">
+                  <div>
+                    <img
+                      src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
+                      alt={actor.name}
+                      className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
+                    />
+                    <p className="mt-2 font-semibold text-sm">{actor.name}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{actor.character} 역</p>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 추천 영화 섹션 */}
-      {recommendedMovies.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-3xl font-bold mb-4">비슷한 장르의 추천 영화</h2>
-          <div className="relative">
-            {/* 왼쪽 스크롤 버튼 */}
-            <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
-              &#10094;
-            </button>
-            {/* 캐러셀 컨테이너 */}
+        {/* 컬렉션/시리즈 정보 섹션 */}
+        {collection && (
+          <div className="mt-12">
             <div
-              ref={recommendationsRef}
-              className="flex overflow-x-auto space-x-4 p-2 -m-2 scroll-smooth"
-              style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}
+              className="relative rounded-xl p-8 bg-cover bg-center text-white"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(https://image.tmdb.org/t/p/w1280${collection.backdrop_path})`
+              }}
             >
-              {recommendedMovies.map(recMovie => (
-                // 각 카드가 줄어들지 않도록 flex-shrink-0을 추가합니다.
-                <div key={recMovie.id} className="flex-shrink-0">
-                  <MovieCard id={recMovie.id} title={recMovie.title} posterUrl={recMovie.poster_path ? `https://image.tmdb.org/t/p/w500${recMovie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} />
-                </div>
-              ))}
+              <h2 className="text-3xl font-bold mb-2">'{collection.name}'의 일부입니다</h2>
+              <p className="text-lg mb-6">이 컬렉션에 포함된 다른 영화들도 확인해보세요.</p>
+              <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
+                {collection.parts.map((part) => (
+                  <div key={part.id} className="flex-shrink-0">
+                    <MovieCard
+                      id={part.id}
+                      title={part.title}
+                      posterUrl={
+                        part.poster_path
+                          ? `https://image.tmdb.org/t/p/w500${part.poster_path}`
+                          : 'https://via.placeholder.com/200x300?text=No+Image'
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* 오른쪽 스크롤 버튼 */}
-            <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
-              &#10095;
-            </button>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* 추천 영화 섹션 */}
+        {recommendedMovies.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold mb-4">비슷한 장르의 추천 영화</h2>
+            <div className="relative">
+              {/* 왼쪽 스크롤 버튼 */}
+              <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
+                &#10094;
+              </button>
+              {/* 캐러셀 컨테이너 */}
+              <div
+                ref={recommendationsRef}
+                className="flex overflow-x-auto space-x-4 p-2 -m-2 scroll-smooth"
+                style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}
+              >
+                {recommendedMovies.map(recMovie => (
+                  // 각 카드가 줄어들지 않도록 flex-shrink-0을 추가합니다.
+                  <div key={recMovie.id} className="flex-shrink-0">
+                    <MovieCard id={recMovie.id} title={recMovie.title} posterUrl={recMovie.poster_path ? `https://image.tmdb.org/t/p/w500${recMovie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} />
+                  </div>
+                ))}
+              </div>
+              {/* 오른쪽 스크롤 버튼 */}
+              <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
+                &#10095;
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      
+
       {/* 트레일러 모달 */}
       {isTrailerModalOpen && trailerKey && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
           onClick={closeTrailerModal}
         >
