@@ -1,5 +1,5 @@
 // c:/dev/work_springboot/movie-frontend/src/pages/MainPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MovieCard from '../components/MovieCard';
 import MovieCardSkeleton from '../components/MovieCardSkeleton';
 
@@ -42,7 +42,7 @@ const genres = [
 const MainPage: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false); // '더보기' 로딩 상태
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -51,22 +51,36 @@ const MainPage: React.FC = () => {
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [minRating, setMinRating] = useState<number>(0);
-  
+
+  // 무한 스크롤을 위한 Intersection Observer와 타겟 Ref
+  const observer = useRef<IntersectionObserver>();
+  const loadMoreRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && currentPage < totalPages && !loadingMore) {
+        setCurrentPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loading, loadingMore, currentPage, totalPages]);
+
   // 필터가 변경되면 영화 목록과 페이지를 초기화하는 로직
   useEffect(() => {
     setMovies([]);
     setCurrentPage(1);
+    setTotalPages(0); // 필터 변경 시 totalPages도 초기화
   }, [selectedGenres, selectedYear, minRating]);
 
   useEffect(() => {
     const fetchMovies = async () => {
-      setLoading(true);
-      setError(null);
-
-      // '더보기' 로딩 상태를 활성화합니다. (첫 페이지 로딩 시에는 전체 로딩이므로 false)
-      if (currentPage > 1) {
+      // currentPage가 1이면 전체 로딩, 아니면 추가 로딩
+      if (currentPage === 1) {
+        setLoading(true);
+      } else {
         setLoadingMore(true);
       }
+      setError(null);
 
       // API URL 생성
       const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
@@ -101,15 +115,7 @@ const MainPage: React.FC = () => {
     };
 
     fetchMovies();
-  }, [selectedGenres, selectedYear, minRating, currentPage]); // 필터 또는 현재 페이지가 변경될 때마다 API 재호출
-
-  const handleLoadMore = () => {
-    // 다음 페이지 로드를 위해 현재 페이지 번호를 1 증가시킵니다.
-    // 이 상태 변경은 위 useEffect를 다시 트리거합니다.
-    if (currentPage < totalPages) {
-      setCurrentPage(prevPage => prevPage + 1);
-    }
-  };
+  }, [selectedGenres, selectedYear, minRating, currentPage]);
 
   const handleGenreChange = (genreId: number) => {
     setSelectedGenres(prev =>
@@ -200,21 +206,21 @@ const MainPage: React.FC = () => {
         <div className="flex flex-wrap justify-center">
           {movies.length > 0 ? movies.map(movie => (
             <MovieCard key={movie.id} id={movie.id} title={movie.title} posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} />
-          )) : <p className="mt-8 text-gray-800 dark:text-white">선택한 조건에 맞는 영화가 없습니다.</p>}
-        </div>
+          )) : !loading && <p className="mt-8 text-gray-800 dark:text-white">선택한 조건에 맞는 영화가 없습니다.</p>}
 
-        {/* 더보기 버튼 UI */}
-        <div className="flex justify-center mt-8">
-          {currentPage < totalPages && !loading && (
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="px-6 py-3 bg-blue-500 text-white rounded-lg disabled:bg-gray-400 hover:bg-blue-600 transition-colors"
-            >
-              {loadingMore ? '로딩 중...' : '더보기'}
-            </button>
+          {/* 로딩 스피너 또는 스켈레톤 UI */}
+          {loadingMore && (
+            <>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <MovieCardSkeleton key={`loading-${index}`} />
+              ))}
+            </>
           )}
         </div>
+
+        {/* 무한 스크롤 트리거 */}
+        <div ref={loadMoreRef} style={{ height: '20px' }} />
+
       </main>
     </div>
   );

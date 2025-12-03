@@ -50,7 +50,8 @@ INDEX_SETTINGS = {
             "vote_average": { "type": "float" },
             "release_date": { "type": "date" },
             "genre_ids": { "type": "keyword" },
-            "is_now_playing": { "type": "boolean" }
+            "is_now_playing": { "type": "boolean" },
+            "ott_providers": { "type": "keyword" }
         }
     }
 }
@@ -81,6 +82,18 @@ def get_movies_from_tmdb(endpoint, pages=1):
             print(f"Error fetching from {endpoint} on page {page}")
     return movies
 
+def get_ott_providers(movie_id):
+    """TMDB API에서 특정 영화의 한국 OTT 제공사 목록을 가져오는 함수"""
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers?api_key={API_KEY}"
+    response = requests.get(url)
+    providers = []
+    if response.status_code == 200:
+        results = response.json().get('results', {})
+        # 'KR' 국가 코드에 해당하는 정보 확인
+        if 'KR' in results and 'flatrate' in results['KR']:
+            providers = [p['provider_name'] for p in results['KR']['flatrate']]
+    return list(set(providers)) # 중복 제거
+
 def fetch_and_index_movies(popular_pages=50, now_playing_pages=5):
     # 1. '현재 상영작'과 '인기작' 목록을 모두 가져옴
     print("Fetching now playing movies...")
@@ -106,6 +119,9 @@ def fetch_and_index_movies(popular_pages=50, now_playing_pages=5):
         # '현재 상영작' 여부 최종 결정
         is_playing = movie_id in now_playing_ids
 
+        # OTT 제공사 정보 가져오기
+        ott_list = get_ott_providers(movie_id)
+
         doc = {
             "id": movie['id'],
             "title": movie['title'],
@@ -114,7 +130,8 @@ def fetch_and_index_movies(popular_pages=50, now_playing_pages=5):
             "vote_average": movie.get('vote_average'),
             "release_date": r_date,
             "genre_ids": movie.get('genre_ids'),
-            "is_now_playing": is_playing
+            "is_now_playing": is_playing,
+            "ott_providers": ott_list
         }
         es.index(index=INDEX_NAME, id=movie_id, document=doc)
         count += 1
