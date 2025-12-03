@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -180,9 +180,6 @@ const MovieDetailPage: React.FC = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   // 관심 목록 상태
   const [isInWatchlist, setIsInWatchlist] = useState(false);
-
-  // TODO: 실제 로그인 시스템과 연동해야 합니다.
-  const isLoggedIn = false; // 가상의 로그인 상태 (false: 로그아웃, true: 로그인)
 
   useEffect(() => {
     if (!movieId) return;
