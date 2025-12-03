@@ -30,6 +30,21 @@ services:
     networks:
       - movie-net
 
+  mysql:
+    image: mysql:8.0
+    container_name: movie-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: atom
+      MYSQL_USER: bts
+      MYSQL_PASSWORD: 1234
+    ports:
+      - "3306:3306"
+    command: # 한글 깨짐 방지
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
 networks:
   movie-net:
     driver: bridge
