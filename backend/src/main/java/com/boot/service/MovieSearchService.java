@@ -20,19 +20,6 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import lombok.RequiredArgsConstructor;
 
-import static java.util.Locale.filter;
-
-import com.boot.dto.MovieDoc;
-import com.boot.dto.MovieSearchRequest;
-import com.boot.dto.MovieSearchResponse;
-import com.boot.elastic.Movie;
-import com.boot.repository.MovieRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-
 
 @Service
 @RequiredArgsConstructor
@@ -155,7 +142,10 @@ public class MovieSearchService {
                     .build();
 
         } catch (Exception e) {
-            throw new RuntimeException("영화 검색 중 오류 발생", e);
+            System.err.println("=== Elasticsearch 검색 오류 ===");
+            System.err.println("요청: " + request);
+            e.printStackTrace();
+            throw new RuntimeException("영화 검색 중 오류 발생: " + e.getMessage(), e);
         }
     }
 
@@ -212,25 +202,6 @@ public class MovieSearchService {
         }
     }
 
-    private final MovieRepository movieRepository;
-    private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
-
-    public MovieSearchResponse search(MovieSearchRequest request) {
-        PageRequest pageRequest = PageRequest.of(request.getPage(), request.getSize());
-        Page<Movie> moviePage = movieRepository.findMovieByTitleOrOverview(request.getKeyword(), request.getKeyword(), pageRequest);
-
-        List<MovieDoc> movieDocs = moviePage.getContent().stream()
-                .map(this::convertToMovieDoc)
-                .collect(Collectors.toList());
-
-        return MovieSearchResponse.builder()
-                .totalHits(moviePage.getTotalElements())
-                .page(request.getPage())
-                .size(request.getSize())
-                .movies(movieDocs)
-                .build();
-    }
-
     // 3. 공통 변환 메서드
     private MovieDoc toMovieDoc(Movie movie) {
         if (movie == null) return null;
@@ -239,7 +210,15 @@ public class MovieSearchService {
         doc.setMovieId(movie.getId());
         doc.setTitle(movie.getTitle());
         doc.setOverview(movie.getOverview());
-        doc.setPosterUrl(movie.getPosterPath());
+        
+        // TMDB 이미지 URL 생성
+        String posterPath = movie.getPosterPath();
+        if (posterPath != null && !posterPath.isEmpty()) {
+            doc.setPosterUrl("https://image.tmdb.org/t/p/w500" + posterPath);
+        } else {
+            doc.setPosterUrl(null);
+        }
+        
         doc.setVoteAverage(movie.getVoteAverage());
         doc.setReleaseDate(movie.getReleaseDate());
         doc.setIsNowPlaying(movie.getIsNowPlaying());

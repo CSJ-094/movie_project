@@ -6,6 +6,7 @@ import './index.css'
 import SearchPage from './pages/SearchPage.tsx';
 import MovieDetailPage from './pages/MovieDetailPage.tsx';
 import MainPage from './pages/MainPage.tsx';
+import BookingPage from './pages/BookingPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
       {
         index: true, // 부모 경로('/')와 동일할 때 MainPage를 보여줍니다.
         element: <MainPage />,
+      },
+      {
+        path: "booking", // '/booking' 경로
+        element: <BookingPage />,
       },
       {
         path: "search", // '/search' 경로

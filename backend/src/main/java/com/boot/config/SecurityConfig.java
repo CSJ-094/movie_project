@@ -6,7 +6,6 @@ import com.boot.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -42,11 +41,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // HTTP 요청에 대한 접근 권한 설정
                 .authorizeHttpRequests(authz -> authz
-                        // 로그인, 회원가입, 이메일 인증, 영화 검색 API는 누구나 접근 허용
-                        .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify").permitAll()
+                        // 영화 API는 누구나 접근 허용 (순서 중요: 가장 먼저)
+                        .requestMatchers("/api/movies/**").permitAll()
+                        // 로그인, 회원가입, 이메일 인증 API는 누구나 접근 허용
+                        .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify", 
+                                "/api/user/forgot-password", "/api/user/reset-password").permitAll()
                         // 관리자 API는 ADMIN 역할만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/movies/**").permitAll()
                         // 그 외 모든 요청은 인증된 사용자만 접근 가능
                         .anyRequest().authenticated())
                 // JWT 인증 필터를 UsernamePasswordAuthenticationFilter 앞에 추가

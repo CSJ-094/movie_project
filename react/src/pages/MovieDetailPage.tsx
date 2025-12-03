@@ -342,11 +342,19 @@ const MovieDetailPage: React.FC = () => {
 
   const handleBooking = () => {
     if (isLoggedIn) {
-      // TODO: 실제 예매 페이지나 예매 로직으로 연결
-      alert('예매 페이지로 이동합니다. (구현 필요)');
+      // 영화 정보를 state로 전달
+      navigate('/booking', { 
+        state: { 
+          movieId: movie?.id,
+          title: movie?.title,
+          posterUrl: movie?.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
+          voteAverage: movie?.vote_average,
+          releaseDate: movie?.release_date
+        } 
+      });
     } else {
       alert('로그인이 필요한 서비스입니다.');
-      navigate('/login'); // 로그인 페이지로 이동
+      navigate('/login');
     }
   };
 
