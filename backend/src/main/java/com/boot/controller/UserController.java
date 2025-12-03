@@ -45,4 +45,14 @@ public class UserController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @DeleteMapping
+    public ResponseEntity<String> deleteUser() {
+        try {
+            userService.deleteUser();
+            return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("회원 탈퇴 실패: " + e.getMessage());
+        }
+    }
 }

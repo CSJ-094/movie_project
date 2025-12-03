@@ -52,7 +52,7 @@ public class UserService {
         String subject = "[Movie Project] 회원가입 이메일 인증";
         String verificationLink = "http://localhost:8484/api/user/verify?token=" + token;
         String emailBody = "<h1>회원가입을 완료하려면 아래 링크를 클릭하세요.</h1>" +
-                           "<a href='" + verificationLink + "'>인증하기</a>";
+                "<a href='" + verificationLink + "'>인증하기</a>";
         emailService.sendVerificationEmail(savedUser.getEmail(), subject, emailBody);
     }
 
@@ -66,7 +66,8 @@ public class UserService {
         }
 
         // 2. Login ID/PW 를 기반으로 Authentication 객체 생성
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(email, password);
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(email,
+                password);
 
         // 3. 실제 검증 (사용자 비밀번호 체크)
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
@@ -90,5 +91,19 @@ public class UserService {
         }
         user.enable(); // User 엔티티의 enabled 필드를 true로 변경
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUser() {
+        // 현재 인증된 사용자의 이메일 가져오기
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                .getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 연관된 토큰 삭제 (Cascade 설정이 안되어 있을 경우를 대비)
+        tokenRepository.deleteByUser(user);
+
+        userRepository.delete(user);
     }
 }
