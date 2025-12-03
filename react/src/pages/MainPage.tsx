@@ -53,18 +53,18 @@ const MainPage: React.FC = () => {
   const [minRating, setMinRating] = useState<number>(0);
 
   // 무한 스크롤을 위한 Intersection Observer와 타겟 Ref
-  const observer = useRef<IntersectionObserver>();
+  const observer = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback((node: HTMLDivElement) => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && currentPage < totalPages && !loadingMore) {
-        setCurrentPage(prevPage => prevPage + 1);
+        setCurrentPage((prevPage: number) => prevPage + 1);
       }
     });
     if (node) observer.current.observe(node);
   }, [loading, loadingMore, currentPage, totalPages]);
-
+  
   // 필터가 변경되면 영화 목록과 페이지를 초기화하는 로직
   useEffect(() => {
     setMovies([]);
@@ -74,7 +74,6 @@ const MainPage: React.FC = () => {
 
   useEffect(() => {
     const fetchMovies = async () => {
-      // currentPage가 1이면 전체 로딩, 아니면 추가 로딩
       if (currentPage === 1) {
         setLoading(true);
       } else {
@@ -82,7 +81,6 @@ const MainPage: React.FC = () => {
       }
       setError(null);
 
-      // API URL 생성
       const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
       let apiUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&language=ko-KR&sort_by=popularity.desc`;
 
@@ -103,8 +101,7 @@ const MainPage: React.FC = () => {
           throw new Error('Network response was not ok');
         }
         const data: ApiResult = await response.json();
-        // 첫 페이지는 새로 설정, 이후 페이지는 기존 목록에 추가
-        setMovies(prevMovies => currentPage === 1 ? data.results : [...prevMovies, ...data.results]);
+        setMovies((prevMovies: Movie[]) => currentPage === 1 ? data.results : [...prevMovies, ...data.results]);
         setTotalPages(data.total_pages);
       } catch (e) {
         setError(e as Error);
@@ -114,12 +111,12 @@ const MainPage: React.FC = () => {
       }
     };
 
-    fetchMovies();
+    void fetchMovies();
   }, [selectedGenres, selectedYear, minRating, currentPage]);
 
   const handleGenreChange = (genreId: number) => {
-    setSelectedGenres(prev =>
-      prev.includes(genreId) ? prev.filter(id => id !== genreId) : [...prev, genreId]
+    setSelectedGenres((prev: number[]) =>
+      prev.includes(genreId) ? prev.filter((id: number) => id !== genreId) : [...prev, genreId]
     );
   };
 
@@ -129,14 +126,14 @@ const MainPage: React.FC = () => {
     setMinRating(0);
   };
 
-  if (loading && currentPage === 1) { // 첫 페이지 로딩 시에만 전체 스켈레톤 표시
+  if (loading && currentPage === 1) {
     return (
       <div className="flex">
         <aside className="w-64 p-5 bg-gray-100 dark:bg-gray-800"><h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">필터</h2></aside>
         <main className="flex-1 p-5">
           <h1 className="text-3xl font-bold text-center mb-4 text-gray-800 dark:text-white">영화 목록</h1>
           <div className="flex flex-wrap justify-center">
-            {Array.from({ length: 10 }).map((_, index) => (
+            {Array.from({ length: 10 }).map((_, index: number) => (
               <MovieCardSkeleton key={index} />
             ))}
           </div>
@@ -151,7 +148,6 @@ const MainPage: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row">
-      {/* 왼쪽 필터 패널 */}
       <aside className="w-full md:w-64 p-5 bg-gray-100 dark:bg-gray-800">
         <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">필터</h2>
         <button
@@ -160,7 +156,6 @@ const MainPage: React.FC = () => {
         >
           필터 초기화
         </button>
-        {/* 장르 필터 */}
         <div className="mb-4">
           <h3 className="font-semibold mb-2 text-gray-800 dark:text-white">장르</h3>
           {genres.map(genre => (
@@ -171,54 +166,48 @@ const MainPage: React.FC = () => {
           ))}
         </div>
 
-        {/* 연도 필터 */}
         <div className="mb-4">
           <h3 className="font-semibold mb-2 text-gray-800 dark:text-white">개봉 연도</h3>
           <select
             value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedYear(e.target.value)}
             className="w-full p-2 rounded bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600"
           >
             <option value="">전체</option>
-            {/* 현재 연도부터 1980년까지 옵션 생성 */}
-            {Array.from({ length: new Date().getFullYear() - 1979 }, (_, i) => new Date().getFullYear() - i).map(year => (
+            {Array.from({ length: new Date().getFullYear() - 1979 }, (_, i: number) => new Date().getFullYear() - i).map(year => (
               <option key={year} value={year}>{year}년</option>
             ))}
           </select>
         </div>
 
-        {/* 평점 필터 */}
         <div className="mb-4">
           <h3 className="font-semibold mb-2 text-gray-800 dark:text-white">최소 평점: <span className="font-bold text-blue-500">{minRating.toFixed(1)}</span></h3>
           <input
             type="range"
             min="0" max="10" step="0.5"
             value={minRating}
-            onChange={(e) => setMinRating(parseFloat(e.target.value))}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinRating(parseFloat(e.target.value))}
             className="w-full"
           />
         </div>
       </aside>
 
-      {/* 오른쪽 영화 목록 */}
       <main className="flex-1 p-5">
         <h1 className="text-3xl font-bold text-center mb-4 text-gray-800 dark:text-white">영화 목록</h1>
         <div className="flex flex-wrap justify-center">
-          {movies.length > 0 ? movies.map(movie => (
+          {movies.length > 0 ? movies.map((movie: Movie) => (
             <MovieCard key={movie.id} id={movie.id} title={movie.title} posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} />
           )) : !loading && <p className="mt-8 text-gray-800 dark:text-white">선택한 조건에 맞는 영화가 없습니다.</p>}
-
-          {/* 로딩 스피너 또는 스켈레톤 UI */}
+          
           {loadingMore && (
             <>
-              {Array.from({ length: 4 }).map((_, index) => (
+              {Array.from({ length: 4 }).map((_, index: number) => (
                 <MovieCardSkeleton key={`loading-${index}`} />
               ))}
             </>
           )}
         </div>
-
-        {/* 무한 스크롤 트리거 */}
+        
         <div ref={loadMoreRef} style={{ height: '20px' }} />
 
       </main>
