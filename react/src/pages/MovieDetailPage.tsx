@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 
 // 영화 상세 정보에 대한 타입을 정의합니다.
 interface MovieDetails {
@@ -13,6 +14,9 @@ interface MovieDetails {
   release_date: string;
   vote_average: number;
   genres: { id: number; name: string }[];
+  ott_providers: string[];
+  ott_link: string;
+
   belongs_to_collection: {
     id: number;
     name: string;
@@ -186,7 +190,7 @@ const MovieDetailPage: React.FC = () => {
     const fetchMovieDetails = async () => {
       setLoading(true);
       try {
-        // Promise.all을 사용해 상세 정보와 영상 정보를 동시에 요청합니다.
+        // Promise.all을 사용해 TMDB에서 상세 정보와 영상 정보를 동시에 요청합니다.
         const [detailsResponse, videosResponse, creditsResponse] = await Promise.all([
           fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR`),
           fetch(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb`),
@@ -197,7 +201,21 @@ const MovieDetailPage: React.FC = () => {
         const videosData = await videosResponse.json();
         const creditsData = await creditsResponse.json();
 
-        setMovie(detailsData);
+        //내 ElasticSearch에서 OTT 정보 가져오기.
+        try {
+          const backendResponse = await axios.get(`http://localhost:8484/api/movies/${movieId}`);
+          const myData = backendResponse.data;
+
+          if(myData){
+            detailsData.ott_providers = myData.ott_providers;
+            detailsData.ott_link = myData.ott_link;
+            detailsData.is_now_playing = myData.is_now_playing;
+          }
+        }catch (error){
+          console.warn("no data")
+        }
+
+        setMovie({ ...detailsData });
 
         // 응답받은 영상 목록에서 보여줄 영상을 찾습니다. (더 유연한 방식으로)
         // 1. 'Trailer'를 우선적으로 찾습니다.
@@ -368,6 +386,22 @@ const MovieDetailPage: React.FC = () => {
     }
   };
 
+  const getOttSearchLink = (providerName: string, movieTitle: string) => {
+    const titleEncoded = encodeURIComponent(movieTitle);
+    const pName = providerName.toLowerCase();
+
+    if (pName.includes('netflix')) return `https://www.netflix.com/search?q=${titleEncoded}`;
+    if (pName.includes('disney')) return `https://www.disneyplus.com/search?q=${titleEncoded}`;
+    if (pName.includes('wavve')) return `https://www.wavve.com/search?searchWord=${titleEncoded}`;
+    if (pName.includes('watcha')) return `https://watcha.com/search?query=${titleEncoded}`;
+    if (pName.includes('tving')) return `https://www.tving.com/search?keyword=${titleEncoded}`;
+    if (pName.includes('coupang')) return `https://www.coupangplay.com/search?q=${titleEncoded}`;
+    if (pName.includes('apple')) return `https://tv.apple.com/kr/search?term=${titleEncoded}`;
+
+    // 그 외는 구글 검색으로 연결
+    return `https://www.google.com/search?q=${titleEncoded} ${providerName}`;
+  };
+
   if (loading) {
     return <MovieDetailSkeleton />;
   }
@@ -451,6 +485,19 @@ const MovieDetailPage: React.FC = () => {
                       >
                         트레일러 보기
                       </button>
+                  )}
+                  {movie.ott_providers && movie.ott_providers.length > 0 && (
+                      movie.ott_providers.map((provider, index) => (
+                          <a
+                              key={index}
+                              href={getOttSearchLink(provider, movie.title)} // [핵심] 검색 링크 함수 사용
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-gray-800 border border-gray-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2 no-underline"
+                          >
+                            <span>▶</span> {provider}
+                          </a>
+                      ))
                   )}
                 </div>
               </div>

@@ -50,4 +50,8 @@ public class Movie {
     @Field(name = "ott_providers", type =FieldType.Keyword)
     @JsonProperty("ott_providers")
     private List<String> ottProviders;
+
+    @Field(name = "ott_link", type = FieldType.Keyword)
+    @JsonProperty("ott_link")
+    private String ottLink;
 }

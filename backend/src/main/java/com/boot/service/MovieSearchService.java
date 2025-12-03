@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.elasticsearch.core.GetResponse;
 import com.boot.dto.*;
 import com.boot.dto.AutocompleteResponse.Item;
 import org.springframework.stereotype.Service;
@@ -186,6 +187,26 @@ public class MovieSearchService {
         }
     }
 
+    public Movie getMovieById(String id) {
+        try {
+            GetResponse<Movie> response = elasticsearchClient.get(g -> g
+                            .index("movies")
+                            .id(id),
+                    Movie.class
+            );
+
+            if (response.found()) {
+                return response.source();
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            // 로그를 남기는 것이 좋지만, 일단 null 반환
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     // 3. 공통 변환 메서드
     private MovieDoc toMovieDoc(Movie movie) {
         if (movie == null)
@@ -206,6 +227,9 @@ public class MovieSearchService {
         doc.setVoteAverage(movie.getVoteAverage());
         doc.setReleaseDate(movie.getReleaseDate());
         doc.setIsNowPlaying(movie.getIsNowPlaying());
+        doc.setOttProviders(movie.getOttProviders());
+        doc.setOttLink(movie.getOttLink());
+
         return doc;
     }
 }
