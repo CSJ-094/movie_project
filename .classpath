@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry excluding="com/boot/dto/|com/boot/config/|com/boot/controller/|com/boot/service/" kind="src" path="backend/src/main/java"/>
+	<classpathentry kind="src" path="backend/src/main/java/com/boot/config"/>
+	<classpathentry kind="src" path="backend/src/main/java/com/boot/controller"/>
+	<classpathentry kind="src" path="backend/src/main/java/com/boot/dto"/>
+	<classpathentry kind="src" path="backend/src/main/java/com/boot/service"/>
+	<classpathentry kind="src" path="backend/src/test/java"/>
+	<classpathentry kind="lib" path="backend/gradle/wrapper/gradle-wrapper.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
