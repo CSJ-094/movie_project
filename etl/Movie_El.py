@@ -1,5 +1,6 @@
 import requests
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
+from concurrent.futures import ThreadPoolExecutor, as_completed # ThreadPoolExecutor 임포트
 
 INDEX_SETTINGS = {
     "settings": {
@@ -51,7 +52,14 @@ INDEX_SETTINGS = {
             "release_date": { "type": "date" },
             "genre_ids": { "type": "keyword" },
             "is_now_playing": { "type": "boolean" },
-            "ott_providers": { "type": "keyword" }
+            "ott_providers": { "type": "keyword" },
+            "director": { "type": "keyword" },
+            "cast": {
+                "type": "text",
+                "fields": {
+                    "keyword": { "type": "keyword" }
+                }
+            }
         }
     }
 }
@@ -89,13 +97,32 @@ def get_ott_providers(movie_id):
     providers = []
     if response.status_code == 200:
         results = response.json().get('results', {})
-        # 'KR' 국가 코드에 해당하는 정보 확인
         if 'KR' in results and 'flatrate' in results['KR']:
             providers = [p['provider_name'] for p in results['KR']['flatrate']]
-    return list(set(providers)) # 중복 제거
+    return list(set(providers))
+
+def get_movie_credits(movie_id):
+    """TMDB API에서 특정 영화의 감독과 주요 배우 정보를 가져오는 함수"""
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=ko-KR"
+    response = requests.get(url)
+    director = []
+    cast = []
+    if response.status_code == 200:
+        credits_data = response.json()
+        for crew_member in credits_data.get('crew', []):
+            if crew_member.get('job') == 'Director':
+                director.append(crew_member.get('name'))
+        for cast_member in credits_data.get('cast', [])[:20]:
+            cast.append(cast_member.get('name'))
+    return director, cast
+
+# 각 영화의 추가 정보를 병렬로 가져오는 헬퍼 함수
+def fetch_movie_additional_data(movie_id):
+    ott_list = get_ott_providers(movie_id)
+    directors, cast_members = get_movie_credits(movie_id)
+    return movie_id, ott_list, directors, cast_members
 
 def fetch_and_index_movies(popular_pages=50, now_playing_pages=5):
-    # 1. '현재 상영작'과 '인기작' 목록을 모두 가져옴
     print("Fetching now playing movies...")
     now_playing_movies = get_movies_from_tmdb('now_playing', pages=now_playing_pages)
     print(f"Found {len(now_playing_movies)} now playing movies.")
@@ -104,51 +131,71 @@ def fetch_and_index_movies(popular_pages=50, now_playing_pages=5):
     popular_movies = get_movies_from_tmdb('popular', pages=popular_pages)
     print(f"Found {len(popular_movies)} popular movies.")
 
-    # 2. 두 목록을 합치되, 중복을 제거 (id 기준)
     all_movies = {**popular_movies, **now_playing_movies}
     now_playing_ids = set(now_playing_movies.keys())
     print(f"Total unique movies to index: {len(all_movies)}")
 
-    # 3. Elasticsearch에 데이터 적재
-    count = 0
-    for movie_id, movie in all_movies.items():
-        r_date = movie.get('release_date')
-        if not r_date:
-            r_date = None
+    actions = []
+    
+    print(f"Starting parallel fetching of additional data for {len(all_movies)} movies...")
+    # ThreadPoolExecutor를 사용하여 TMDB API 호출 병렬 처리
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_movie_id = {executor.submit(fetch_movie_additional_data, movie_id): movie_id for movie_id in all_movies.keys()}
+        
+        processed_count = 0
+        for future in as_completed(future_to_movie_id):
+            movie_id = future_to_movie_id[future]
+            try:
+                _, ott_list, directors, cast_members = future.result()
+                movie = all_movies[movie_id]
 
-        # '현재 상영작' 여부 최종 결정
-        is_playing = movie_id in now_playing_ids
+                r_date = movie.get('release_date')
+                if not r_date:
+                    r_date = None
 
-        # OTT 제공사 정보 가져오기
-        ott_list = get_ott_providers(movie_id)
+                is_playing = movie_id in now_playing_ids
 
-        doc = {
-            "id": movie['id'],
-            "title": movie['title'],
-            "overview": movie['overview'],
-            "poster_path": movie.get('poster_path'),
-            "vote_average": movie.get('vote_average'),
-            "release_date": r_date,
-            "genre_ids": movie.get('genre_ids'),
-            "is_now_playing": is_playing,
-            "ott_providers": ott_list
-        }
-        es.index(index=INDEX_NAME, id=movie_id, document=doc)
-        count += 1
-        if count % 100 == 0:
-            print(f"Indexed {count}/{len(all_movies)} movies...")
+                doc = {
+                    "id": movie['id'],
+                    "title": movie['title'],
+                    "overview": movie['overview'],
+                    "poster_path": movie.get('poster_path'),
+                    "vote_average": movie.get('vote_average'),
+                    "release_date": r_date,
+                    "genre_ids": movie.get('genre_ids'),
+                    "is_now_playing": is_playing,
+                    "ott_providers": ott_list,
+                    "director": directors,
+                    "cast": cast_members
+                }
+                
+                actions.append({
+                    "_index": INDEX_NAME,
+                    "_id": movie_id,
+                    "_source": doc
+                })
+                processed_count += 1
+                if processed_count % 50 == 0: # 50개마다 진행 상황 출력
+                    print(f"Processed {processed_count}/{len(all_movies)} movies for indexing...")
 
-    print(f"Finished indexing {count} movies.")
+            except Exception as exc:
+                print(f"Movie {movie_id} generated an exception: {exc}")
+
+    print(f"Finished processing {processed_count} movies for indexing.")
+
+    if actions:
+        print(f"Starting bulk indexing of {len(actions)} movies...")
+        success, failed = helpers.bulk(es, actions)
+        print(f"Finished bulk indexing: {success} movies indexed, {len(failed)} failed.")
+    else:
+        print("No movies to index.")
 
 if __name__ == "__main__":
-    # 1. 기존 인덱스 삭제
     if es.indices.exists(index=INDEX_NAME):
         es.indices.delete(index=INDEX_NAME)
         print(f"기존 인덱스 '{INDEX_NAME}' 삭제 완료")
 
-    # 2. 새 인덱스 생성 (매핑 적용)
     es.indices.create(index=INDEX_NAME, body=INDEX_SETTINGS)
     print(f"매핑이 적용된 인덱스 '{INDEX_NAME}' 생성 완료")
 
-    # 3. 데이터 적재 시작
     fetch_and_index_movies(popular_pages=50, now_playing_pages=5)
