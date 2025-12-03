@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Boot_Movie_Search.iml" filepath="$PROJECT_DIR$/.idea/Boot_Movie_Search.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/boot_movie_project.main.iml" filepath="$PROJECT_DIR$/.idea/modules/boot_movie_project.main.iml" />
     </modules>
   </component>
 </project>
