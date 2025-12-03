@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // useAuth 훅 임포트
 
 // 영화 상세 정보에 대한 타입을 정의합니다.
 interface MovieDetails {
@@ -26,6 +27,9 @@ const MovieDetailPage: React.FC = () => {
   // 트레일러 영상의 키를 저장할 state를 추가합니다.
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  // AuthContext에서 로그인 상태를 가져옵니다.
+  const { isLoggedIn } = useAuth();
 
   useEffect(() => {
     if (!movieId) return;
@@ -67,7 +71,13 @@ const MovieDetailPage: React.FC = () => {
   }, [movieId]); // movieId가 바뀔 때마다 API를 다시 호출합니다.
 
   const handleBooking = () => {
-    alert('예매 기능은 현재 준비 중입니다.');
+    if (isLoggedIn) {
+      // TODO: 실제 예매 페이지나 예매 로직으로 연결
+      alert('예매 페이지로 이동합니다. (구현 필요)');
+    } else {
+      alert('로그인이 필요한 서비스입니다.');
+      navigate('/login'); // 로그인 페이지로 이동
+    }
   };
 
   if (loading) {
