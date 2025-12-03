@@ -36,6 +36,72 @@ interface Cast {
   profile_path: string | null;
 }
 
+// 스켈레톤 UI 컴포넌트
+const MovieDetailSkeleton: React.FC = () => {
+  return (
+    <div className="animate-pulse">
+      {/* --- 상단 스켈레톤 --- */}
+      <div className="relative w-full h-[60vh] bg-gray-300 dark:bg-gray-700">
+        <div className="relative max-w-5xl mx-auto p-4 md:p-8 h-full flex items-center">
+          <div className="flex flex-col md:flex-row items-center md:items-start">
+            <div className="w-48 md:w-64 h-72 md:h-96 bg-gray-400 dark:bg-gray-600 rounded-lg shadow-2xl z-10" />
+            <div className="md:ml-8 mt-5 md:mt-0 flex-1 w-full">
+              <div className="h-10 bg-gray-400 dark:bg-gray-600 rounded w-3/4" />
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="h-5 bg-gray-400 dark:bg-gray-600 rounded w-20" />
+                <div className="h-5 bg-gray-400 dark:bg-gray-600 rounded w-24" />
+              </div>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <div className="h-6 w-20 bg-gray-400 dark:bg-gray-600 rounded-full" />
+                <div className="h-6 w-24 bg-gray-400 dark:bg-gray-600 rounded-full" />
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-full" />
+                <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-full" />
+                <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-5/6" />
+              </div>
+              <div className="mt-6 h-14 w-36 bg-gray-400 dark:bg-gray-600 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- 하단 컨텐츠 스켈레톤 --- */}
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        {/* 출연진 스켈레톤 */}
+        <div className="mt-12">
+          <div className="h-8 w-48 bg-gray-300 dark:bg-gray-700 rounded mb-4" />
+          <div className="flex overflow-x-auto space-x-4 pb-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="flex-shrink-0 w-32 text-center">
+                <div className="w-full h-48 bg-gray-300 dark:bg-gray-700 rounded-lg" />
+                <div className="mt-2 h-4 w-24 mx-auto bg-gray-300 dark:bg-gray-700 rounded" />
+                <div className="mt-1 h-3 w-16 mx-auto bg-gray-300 dark:bg-gray-700 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 트레일러 스켈레톤 */}
+        <div className="mt-12">
+          <div className="h-8 w-48 bg-gray-300 dark:bg-gray-700 rounded mb-4" />
+          <div className="aspect-w-16 aspect-h-9 bg-gray-300 dark:bg-gray-700 rounded-lg" />
+        </div>
+
+        {/* 추천 영화 스켈레톤 */}
+        <div className="mt-12">
+          <div className="h-8 w-64 bg-gray-300 dark:bg-gray-700 rounded mb-4" />
+          <div className="flex space-x-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="w-40 h-60 bg-gray-300 dark:bg-gray-700 rounded-lg flex-shrink-0" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MovieDetailPage: React.FC = () => {
   // 1. useParams를 사용해 URL의 :movieId 값을 가져옵니다.
   const { movieId } = useParams<{ movieId: string }>();
@@ -48,6 +114,14 @@ const MovieDetailPage: React.FC = () => {
   // 캐러셀 컨테이너의 ref를 생성합니다.
   const recommendationsRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
+  // 트레일러 모달의 열림/닫힘 상태를 관리합니다.
+  const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
+  // 줄거리 '더보기' 상태를 관리합니다.
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
+  // 줄거리가 실제로 잘렸는지 여부를 저장합니다.
+  const [isClamped, setIsClamped] = useState(false);
+  // 줄거리 p 태그에 대한 ref
+  const overviewRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!movieId) return;
@@ -120,9 +194,26 @@ const MovieDetailPage: React.FC = () => {
     fetchRecommendations();
   }, [movie]); // movie 상태가 변경될 때(즉, 상세 정보 로딩이 완료될 때) 실행됩니다.
 
+  // 줄거리가 3줄을 넘어가는지 확인하여 '더보기' 버튼 표시 여부를 결정합니다.
+  useEffect(() => {
+    if (overviewRef.current) {
+      // scrollHeight가 clientHeight보다 크면 텍스트가 잘렸다는 의미입니다.
+      setIsClamped(overviewRef.current.scrollHeight > overviewRef.current.clientHeight);
+    }
+  }, [movie?.overview]); // 영화 줄거리가 변경될 때마다 체크
+
+  // 줄거리 더보기/접기 토글 함수
+  const toggleOverview = () => setIsOverviewExpanded(!isOverviewExpanded);
+
   const handleBooking = () => {
     alert('예매 기능은 현재 준비 중입니다.');
   };
+
+  // 트레일러 모달을 여는 함수
+  const openTrailerModal = () => setIsTrailerModalOpen(true);
+
+  // 트레일러 모달을 닫는 함수
+  const closeTrailerModal = () => setIsTrailerModalOpen(false);
 
   // 캐러셀 스크롤 함수
   const scroll = (direction: 'left' | 'right') => {
@@ -137,7 +228,7 @@ const MovieDetailPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-center p-12 text-2xl text-gray-800 dark:text-white">상세 정보 로딩 중...</div>;
+    return <MovieDetailSkeleton />;
   }
 
   if (!movie) {
@@ -163,18 +254,46 @@ const MovieDetailPage: React.FC = () => {
                 <span>|</span>
                 <span>{movie.release_date}</span>
               </div>
-              <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
-                {movie.genres.map(g => (
-                  <span key={g.id} className="bg-white bg-opacity-20 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full">{g.name}</span>
+              {/* 장르 표시를 점(·)으로 구분하여 한 줄로 간결하게 표시합니다. */}
+              <div className="flex items-center justify-center md:justify-start gap-x-2 mt-3 text-gray-300 text-sm">
+                {movie.genres.map((g, index) => (
+                  <React.Fragment key={g.id}>
+                    <span>{g.name}</span>
+                    {/* 마지막 장르가 아닐 경우에만 구분점을 추가합니다. */}
+                    {index < movie.genres.length - 1 && <span>·</span>}
+                  </React.Fragment>
                 ))}
               </div>
-              <p className="mt-4 text-sm md:text-base max-w-2xl line-clamp-3">{movie.overview}</p>
-              <button
-                onClick={handleBooking}
-                className="mt-6 bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 transition-colors text-lg"
-              >
-                예매하기
-              </button>
+              <div className="mt-4 max-w-2xl">
+                <p
+                  ref={overviewRef}
+                  className={`text-sm md:text-base transition-all duration-300 ${!isOverviewExpanded && 'line-clamp-3'}`}
+                >
+                  {movie.overview}
+                </p>
+                {isClamped && (
+                  <button onClick={toggleOverview} className="text-gray-300 hover:text-white font-semibold mt-1">
+                    {isOverviewExpanded ? '접기' : '더보기'}
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-center justify-center md:justify-start space-x-4">
+                <button
+                  onClick={handleBooking}
+                  className="bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 transition-colors text-lg"
+                >
+                  예매하기
+                </button>
+                {trailerKey && (
+                  <button
+                    onClick={openTrailerModal}
+                    className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-colors text-lg"
+                  >
+                    트레일러 보기
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -200,22 +319,6 @@ const MovieDetailPage: React.FC = () => {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* 트레일러 영상이 있을 경우에만 보여줍니다. */}
-      {trailerKey && (
-        <div className="mt-12">
-          <h2 className="text-3xl font-bold mb-4">공식 트레일러</h2>
-          <div className="relative aspect-w-16 aspect-h-9">
-            <iframe
-              src={`https://www.youtube.com/embed/${trailerKey}`}
-              title="YouTube video player"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full rounded-lg shadow-lg"
-            ></iframe>
           </div>
         </div>
       )}
@@ -250,6 +353,28 @@ const MovieDetailPage: React.FC = () => {
         </div>
       )}
       </div>
+      
+      {/* 트레일러 모달 */}
+      {isTrailerModalOpen && trailerKey && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
+          onClick={closeTrailerModal}
+        >
+          <div className="relative w-11/12 md:w-3/4 lg:w-2/3 aspect-w-16 aspect-h-9" onClick={(e) => e.stopPropagation()}>
+            <iframe
+              src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
+              title="YouTube video player"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full rounded-lg shadow-lg"
+            ></iframe>
+            <button
+              onClick={closeTrailerModal}
+              className="absolute -top-10 -right-2 text-white text-4xl font-bold"
+            >&times;</button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
