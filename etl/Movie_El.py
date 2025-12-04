@@ -12,7 +12,7 @@ import os
 # --- 설정 로드 ---
 config = configparser.ConfigParser()
 config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
-config.read(config_path)
+config.read(config_path, encoding='utf-8') # 인코딩 명시
 
 # TMDB 설정
 API_KEY = config['TMDB']['API_KEY']
@@ -27,7 +27,8 @@ POPULAR_PAGES = int(config['ETL_SETTINGS']['POPULAR_PAGES'])
 NOW_PLAYING_PAGES = int(config['ETL_SETTINGS']['NOW_PLAYING_PAGES'])
 MAX_WORKERS = int(config['ETL_SETTINGS']['MAX_WORKERS'])
 BULK_CHUNK_SIZE = int(config['ETL_SETTINGS']['BULK_CHUNK_SIZE'])
-API_REQUEST_DELAY_SECONDS = float(config['ETL_SETTINGS']['API_REQUEST_DELAY_SECONDS'])
+# 주석 부분을 제거하고 숫자만 float으로 변환
+API_REQUEST_DELAY_SECONDS = float(config['ETL_SETTINGS']['API_REQUEST_DELAY_SECONDS'].split(';')[0].strip())
 
 # 로깅 설정
 LOG_LEVEL = config['LOGGING']['LEVEL']
@@ -37,7 +38,7 @@ LOG_FILE = config['LOGGING']['FILE']
 logging.basicConfig(level=LOG_LEVEL,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[
-                        logging.FileHandler(LOG_FILE),
+                        logging.FileHandler(LOG_FILE, encoding='utf-8'), # 로그 파일도 UTF-8로 저장
                         logging.StreamHandler()
                     ])
 logger = logging.getLogger(__name__)
