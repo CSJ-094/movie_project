@@ -32,11 +32,16 @@ import java.util.List;
 public class SecurityConfig {
 
         private final JwtTokenProvider jwtTokenProvider;
-        private final CustomOAuth2UserService customOAuth2UserService;
+        // private final CustomOAuth2UserService customOAuth2UserService; // 순환 참조 해결을 위해 제거
         private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOAuth2UserService customOAuth2UserService) throws Exception { // 파라미터로 주입
         http
                 // CORS 설정을 Spring Security와 통합
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
