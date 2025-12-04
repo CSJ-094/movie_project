@@ -1,5 +1,7 @@
 server:
   port: 8484
+  error: #제 register가 작동을 안해서 추가했는데 오히려 자기쪽에서 안되면 다시 지워주세요
+    include-message: always
 
 spring:
   elasticsearch:
