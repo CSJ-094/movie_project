@@ -1,10 +1,13 @@
 package com.boot.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import co.elastic.clients.elasticsearch._types.aggregations.StatsAggregate;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.GetResponse;
+
 import com.boot.dto.*;
 import com.boot.dto.AutocompleteResponse.Item;
 import org.springframework.stereotype.Service;
@@ -18,17 +21,10 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import lombok.RequiredArgsConstructor;
 
-import static java.util.Locale.filter;
-
 import com.boot.dto.MovieDoc;
 import com.boot.dto.MovieSearchRequest;
 import com.boot.dto.MovieSearchResponse;
-import com.boot.elastic.Movie;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+
 
 @Service
 @RequiredArgsConstructor
@@ -147,6 +143,95 @@ public class MovieSearchService {
         int size = (request.getSize() == null || request.getSize() <= 0)
                 ? 10
                 : request.getSize();
+
+    private static final List<GenreOption> GENRE_OPTIONS = List.of(
+            new GenreOption(28, "액션"),
+            new GenreOption(12, "모험"),
+            new GenreOption(16, "애니메이션"),
+            new GenreOption(35, "코미디"),
+            new GenreOption(80, "범죄"),
+            new GenreOption(99, "다큐멘터리"),
+            new GenreOption(18, "드라마"),
+            new GenreOption(10751, "가족"),
+            new GenreOption(14, "판타지"),
+            new GenreOption(36, "역사"),
+            new GenreOption(27, "공포"),
+            new GenreOption(10402, "음악"),
+            new GenreOption(9648, "미스터리"),
+            new GenreOption(10749, "로맨스"),
+            new GenreOption(878, "SF"),
+            new GenreOption(10770, "TV 영화"),
+            new GenreOption(53, "스릴러"),
+            new GenreOption(10752, "전쟁"),
+            new GenreOption(37, "서부")
+    );
+
+        // 2. 필터 옵션
+        public FilterOptionsResponse getFilterOptions() {
+
+            Double minRating = 0.0;
+            Double maxRating = 10.0;
+
+            try{
+                // 2) ES 집계 쿼리 실행
+                SearchResponse<Void> response = elasticsearchClient.search(s -> s
+                                .index("movies")
+                                .size(0) // 문서 검색은 하지 않음
+                                .aggregations("rating_stats", a -> a
+                                        .stats(st -> st.field("vote_average"))
+                                ),
+                        Void.class);
+
+                StatsAggregate stats = response.aggregations()
+                        .get("rating_stats")
+                        .stats();
+
+                if (stats != null) {
+                    double minValue = stats.min();
+                    double maxValue = stats.max();
+
+                    if (!Double.isInfinite(minValue) && !Double.isNaN(minValue)) {
+                        minRating = minValue;
+                    }
+
+                    if (!Double.isInfinite(maxValue) && !Double.isNaN(maxValue)) {
+                        maxRating = maxValue;
+                    }
+                }
+
+            } catch (Exception e) {
+                // ES 쪽 문제 나면 그냥 기본값 0.0 ~ 10.0 사용
+                System.out.println("필터 옵션 조회 중 오류 발생: " + e.getMessage());
+            }
+
+            return FilterOptionsResponse.builder()
+                    .genres(GENRE_OPTIONS)
+                    .minRating(minRating)
+                    .maxRating(maxRating)
+                    .build();
+        }
+
+        // 3. 공통 변환 메서드
+        private MovieDoc toMovieDoc(Movie movie) {
+                if (movie == null)
+                        return null;
+
+                MovieDoc doc = new MovieDoc();
+                doc.setMovieId(movie.getId());
+                doc.setTitle(movie.getTitle());
+                doc.setOverview(movie.getOverview());
+
+                // TMDB 이미지 URL 추가
+                if (movie.getPosterPath() != null && !movie.getPosterPath().isEmpty()) {
+                        doc.setPosterUrl("https://image.tmdb.org/t/p/w500" + movie.getPosterPath());
+                } else {
+                        doc.setPosterUrl(null);
+                }
+
+                doc.setVoteAverage(movie.getVoteAverage());
+                doc.setReleaseDate(movie.getReleaseDate());
+                doc.setIsNowPlaying(movie.getIsNowPlaying());
+                return doc;
 
         // 키워드가 비어 있으면 ES까지 안 가고 그냥 빈 결과 반환
         if (keyword.isBlank()) {

@@ -15,7 +15,7 @@ public class MovieSearchRequest {
 	    private Boolean nowPlaying;
 
 	    @Schema(description = "장르 필터", example = "[\"Action\", \"SF\"]")
-	    private List<String> genres;
+	    private List<Integer> genres;
 
 	    @Schema(description = "최소 평점", example = "7.5")
 	    private Float minRating;
