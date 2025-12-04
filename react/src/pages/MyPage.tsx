@@ -201,7 +201,7 @@ const MyPage: React.FC = () => {
                         <p className="text-gray-600 dark:text-gray-400">찜한 영화가 없습니다.</p>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-                            {favoriteMoviesDetails.map(movie => (
+                            {favoriteMoviesDetails.map((movie, index) => (
                                 <MovieCard
                                     key={movie.id}
                                     id={parseInt(movie.id)}
@@ -210,6 +210,7 @@ const MyPage: React.FC = () => {
                                     isFavorite={true}
                                     onToggleFavorite={() => {}}
                                     size="sm"
+                                    staggerIndex={index}
                                 />
                             ))}
                         </div>
@@ -223,7 +224,7 @@ const MyPage: React.FC = () => {
                         <p className="text-gray-600 dark:text-gray-400">보고싶어요 목록에 영화가 없습니다.</p>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-                            {watchlistMoviesDetails.map(movie => (
+                            {watchlistMoviesDetails.map((movie, index) => (
                                 <MovieCard
                                     key={movie.id}
                                     id={parseInt(movie.id)}
@@ -233,6 +234,7 @@ const MyPage: React.FC = () => {
                                     showWatchlistControls={true}
                                     onToggleWatched={() => handleToggleWatched(parseInt(movie.id))}
                                     size="sm"
+                                    staggerIndex={index}
                                 />
                             ))}
                         </div>

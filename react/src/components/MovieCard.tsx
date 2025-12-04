@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import TrailerModal from './TrailerModal';
 import axios from 'axios';
@@ -12,8 +12,9 @@ interface MovieCardProps {
   size?: 'sm' | 'md' | 'lg';
   showTitle?: boolean;
   isWatched?: boolean;
-  showWatchlistControls?: boolean; // '보고싶어요' 목록 전용 컨트롤 표시 여부
-  onToggleWatched?: (movieId: number) => void; // '보고싶어요' 상태 변경 핸들러
+  showWatchlistControls?: boolean;
+  onToggleWatched?: (movieId: number) => void;
+  staggerIndex?: number;
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ 
@@ -26,10 +27,20 @@ const MovieCard: React.FC<MovieCardProps> = ({
   showTitle = true, 
   isWatched = false,
   showWatchlistControls = false,
-  onToggleWatched
+  onToggleWatched,
+  staggerIndex = 0
 }) => {
   const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -81,11 +92,19 @@ const MovieCard: React.FC<MovieCardProps> = ({
     lg: 'w-64',
   }[size];
 
-  // 그룹-호버를 사용하여 카드 전체에 애니메이션 적용
-  const cardWrapperClassName = `relative group no-underline flex-shrink-0 ${sizeClassName} transform transition-transform duration-300 hover:scale-110 hover:z-10`;
+  const cardWrapperClassName = `
+    relative group no-underline flex-shrink-0 ${sizeClassName}
+    transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
+    transform
+    ${isVisible ? 'opacity-100 translate-y-0 scale-100 rotate-0' : 'opacity-0 translate-y-8 scale-90 -rotate-6'}
+    hover:scale-110 hover:-translate-y-2 hover:shadow-2xl hover:z-10
+  `;
 
   return (
-    <div className={cardWrapperClassName}>
+    <div 
+      className={cardWrapperClassName} 
+      style={{ transitionDelay: `${staggerIndex * 75}ms` }}
+    >
       <Link to={`/movie/${id}`} className="block w-full h-full">
         <div className="relative border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg h-full flex flex-col">
           <img 
@@ -143,7 +162,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
           </button>
 
           {showTitle && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2 z-10">
+            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2 z-20">
               <h4 className="text-center font-semibold text-sm text-white truncate">
                 {title}
               </h4>
