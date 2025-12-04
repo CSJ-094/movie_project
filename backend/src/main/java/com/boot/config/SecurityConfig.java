@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -50,7 +51,8 @@ public class SecurityConfig {
 
                 // 요청에 대한 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/auth/**", "/oauth2/**", "/login/**").permitAll() // 인증 없이 접근 허용
+                        .requestMatchers(HttpMethod.GET, "/api/movies/**", "/api/search/**").permitAll() // 영화 정보 조회, 검색 등 GET 요청 허용
+                        .requestMatchers("/", "/auth/**", "/oauth2/**", "/login/**", "/error").permitAll() // 인증 없이 접근 허용
                         .anyRequest().authenticated()) // 그 외 모든 요청은 인증 필요
 
                 // OAuth2 로그인 설정
