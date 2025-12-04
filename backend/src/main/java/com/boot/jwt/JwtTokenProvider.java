@@ -1,9 +1,14 @@
 package com.boot.jwt;
 
 import com.boot.dto.TokenInfo;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecurityException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,6 +21,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -25,6 +32,7 @@ import java.util.stream.Collectors;
 @Component
 public class JwtTokenProvider {
 
+    private static final String AUTHORITIES_KEY = "auth";
     private final SecretKey key;
     private final long expirationTime;
 
@@ -43,12 +51,13 @@ public class JwtTokenProvider {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
-        long now = (new Date()).getTime();
+        Instant now = Instant.now();
         // Access Token 생성
-        Date accessTokenExpiresIn = new Date(now + expirationTime);
+        Date accessTokenExpiresIn = Date.from(now.plusMillis(expirationTime));
         String accessToken = Jwts.builder()
                 .subject(authentication.getName())
-                .claim("auth", authorities)
+                .claim(AUTHORITIES_KEY, authorities)
+                .issuedAt(Date.from(now))
                 .expiration(accessTokenExpiresIn)
                 .signWith(key) // 0.12.x 방식: 알고리즘 자동 추론
                 .compact();
@@ -59,17 +68,36 @@ public class JwtTokenProvider {
                 .build();
     }
 
+    /**
+     * OAuth2 로그인 또는 다른 커스텀 로직에서 이메일과 역할을 기반으로 AccessToken을 생성하는 메서드
+     * @param email 사용자의 이메일 (토큰의 subject)
+     * @param role 사용자의 역할
+     * @return 생성된 AccessToken 문자열
+     */
+    public String createToken(String email, String role) {
+        Instant now = Instant.now();
+        Date accessTokenExpiresIn = Date.from(now.plusMillis(expirationTime));
+
+        return Jwts.builder()
+                .subject(email)
+                .claim(AUTHORITIES_KEY, role)
+                .issuedAt(Date.from(now))
+                .expiration(accessTokenExpiresIn)
+                .signWith(key)
+                .compact();
+    }
+
     // JWT 토큰을 복호화하여 토큰에 들어있는 정보를 꺼내는 메서드
     public Authentication getAuthentication(String accessToken) {
         // 토큰 복호화
         Claims claims = parseClaims(accessToken);
 
-        if (claims.get("auth") == null) {
+        if (claims.get(AUTHORITIES_KEY) == null) {
             throw new RuntimeException("권한 정보가 없는 토큰입니다.");
         }
 
         // 클레임에서 권한 정보 가져오기
-        Collection<? extends GrantedAuthority> authorities = Arrays.stream(claims.get("auth").toString().split(","))
+        Collection<? extends GrantedAuthority> authorities = Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
