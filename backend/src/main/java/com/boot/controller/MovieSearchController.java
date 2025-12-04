@@ -3,6 +3,7 @@ package com.boot.controller;
 import com.boot.dto.*;
 
 import com.boot.elastic.Movie;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/movies")
+@CrossOrigin(origins = "http://localhost:5173") // React 개발 서버의 주소를 허용
 @RequiredArgsConstructor
 public class MovieSearchController {
 
@@ -41,7 +43,7 @@ public class MovieSearchController {
 
     @Operation(summary = "영화 상세 조회 API", description = "영화 ID로 상세 정보를 조회합니다.")
     @GetMapping("/{id}") // URL: /api/movies/{id}
-    public ResponseEntity<Movie> getMovieById(@PathVariable String id) {
+    public ResponseEntity<Movie> getMovieById(@PathVariable("id") String id) {
         Movie movie = movieSearchService.getMovieById(id);
         if (movie != null) {
             return ResponseEntity.ok(movie);
