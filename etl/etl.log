@@ -1,0 +1,17 @@
+2025-12-04 12:40:51,045 - INFO - GET http://localhost:9200/ [status:200 duration:0.017s]
+2025-12-04 12:40:51,046 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-04 12:40:51,046 - INFO - --- Starting ETL Process ---
+2025-12-04 12:40:51,053 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.007s]
+2025-12-04 12:40:51,053 - INFO - Deleting existing index 'movies'...
+2025-12-04 12:40:51,219 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.165s]
+2025-12-04 12:40:51,219 - INFO - Existing index 'movies' deleted.
+2025-12-04 12:40:51,219 - INFO - Creating new index 'movies' with mappings...
+2025-12-04 12:40:51,439 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.220s]
+2025-12-04 12:40:51,439 - INFO - Index 'movies' created with mappings.
+2025-12-04 12:40:51,440 - INFO - 
+--- Extracting Movie Data (Basic Info) ---
+2025-12-04 12:40:52,053 - INFO - Found 100 now playing movies.
+2025-12-04 12:40:53,933 - INFO - Found 1000 popular movies.
+2025-12-04 12:40:53,933 - INFO - Total unique movies to process: 1080
+2025-12-04 12:40:53,933 - INFO - 
+--- Extracting Movie Data (OTT Providers) ---
