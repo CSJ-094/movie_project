@@ -14,6 +14,7 @@ interface MovieDetails {
   release_date: string;
   vote_average: number;
   genres: { id: number; name: string }[];
+  is_now_playing : boolean;
   ott_providers: string[];
   ott_link: string;
 
@@ -390,17 +391,28 @@ const MovieDetailPage: React.FC = () => {
     const titleEncoded = encodeURIComponent(movieTitle);
     const pName = providerName.toLowerCase();
 
-    if (pName.includes('netflix')) return `https://www.netflix.com/search?q=${titleEncoded}`;
-    if (pName.includes('disney')) return `https://www.disneyplus.com/search?q=${titleEncoded}`;
+    if (pName.includes('netflix')) return `https://www.netflix.com/`;
+    if (pName.includes('disney')) return `https://www.disneyplus.com/`;
     if (pName.includes('wavve')) return `https://www.wavve.com/search?searchWord=${titleEncoded}`;
     if (pName.includes('watcha')) return `https://watcha.com/search?query=${titleEncoded}`;
-    if (pName.includes('tving')) return `https://www.tving.com/search?keyword=${titleEncoded}`;
+    if (pName.includes('tving')) return `https://www.tving.com/`;
     if (pName.includes('coupang')) return `https://www.coupangplay.com/search?q=${titleEncoded}`;
     if (pName.includes('apple')) return `https://tv.apple.com/kr/search?term=${titleEncoded}`;
 
     // 그 외는 구글 검색으로 연결
     return `https://www.google.com/search?q=${titleEncoded} ${providerName}`;
   };
+
+  const getProviderLogoUrl = (providerName: string) => {
+    const lowerName = providerName.toLowerCase();
+      if (lowerName.includes('netflix')) return 'https://image.tmdb.org/t/p/original/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg';
+      if (lowerName.includes('disney')) return 'https://image.tmdb.org/t/p/original/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg';
+      if (lowerName.includes('watcha')) return 'https://image.tmdb.org/t/p/original/5qeRb2pQn5877y98t3tE5uEae5.jpg';
+      if (lowerName.includes('wavve')) return 'https://media.themoviedb.org/t/p/original/hPcjSaWfMwEqXaCMu7Fkb529Dkc.jpg';
+      if (lowerName.includes('apple')) return 'https://image.tmdb.org/t/p/original/q6tl6Ib6X5FT80RMlcDbexIo4St.jpg';
+      if (lowerName.includes('tving')) return 'https://media.themoviedb.org/t/p/original/qHThQdkJuROK0k5QTCrknaNukWe.jpg';
+
+  }
 
   if (loading) {
     return <MovieDetailSkeleton />;
@@ -472,12 +484,19 @@ const MovieDetailPage: React.FC = () => {
                 </div>
 
                 <div className="mt-8 flex items-center justify-center md:justify-start space-x-4">
+
                   <button
                       onClick={handleBooking}
-                      className="bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 transition-colors text-lg"
+                      disabled={!movie.is_now_playing} // 상영 중이 아니면 버튼 기능 비활성화
+                      className={`font-bold py-3 px-8 rounded-lg text-lg transition-colors ${
+                          movie.is_now_playing
+                              ? 'bg-red-600 text-white hover:bg-red-700' //true
+                              : 'bg-red-400 text-gray-300 cursor-not-allowed' //false
+                      }`}
                   >
-                    예매하기
+                    {movie.is_now_playing ? '예매 하기' : '예매 불가'}
                   </button>
+
                   {trailerKey && (
                       <button
                           onClick={openTrailerModal}
@@ -487,17 +506,46 @@ const MovieDetailPage: React.FC = () => {
                       </button>
                   )}
                   {movie.ott_providers && movie.ott_providers.length > 0 && (
-                      movie.ott_providers.map((provider, index) => (
-                          <a
-                              key={index}
-                              href={getOttSearchLink(provider, movie.title)} // [핵심] 검색 링크 함수 사용
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="bg-gray-800 border border-gray-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2 no-underline"
-                          >
-                            <span>▶</span> {provider}
-                          </a>
-                      ))
+
+                      <div className="relative group">
+
+                        <button className="bg-gray-800 border border-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2 text-lg">
+                          <span>▶</span> 시청하기
+                        </button>
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden z-50 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform origin-top-left">
+                          <div className="py-2">
+                            {movie.ott_providers.map((provider, index) => {
+                              const logoUrl = getProviderLogoUrl(provider); // 로고 URL 가져오기
+
+                              return (
+                                  <a
+                                      key={index}
+                                      href={getOttSearchLink(provider, movie.title)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center px-4 py-3 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-600 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                                  >
+                                    {/* 로고 이미지가 있으면 렌더링, 없으면 빈 원으로 표시하거나 생략 */}
+                                    {logoUrl ? (
+                                        <img
+                                            src={logoUrl}
+                                            alt={provider}
+                                            className="w-6 h-6 rounded-md mr-3 object-cover shadow-sm border border-gray-200 dark:border-gray-600"
+                                        />
+                                    ) : (
+                                        <span className="w-6 h-6 rounded-md mr-3 bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-500">
+                                          {provider.charAt(0)}
+          </span>
+                                    )}
+
+                                    {/* OTT 이름 표시 */}
+                                    <span className="font-medium">{provider}</span>
+                                  </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
                   )}
                 </div>
               </div>
