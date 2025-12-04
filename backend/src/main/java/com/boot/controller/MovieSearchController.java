@@ -1,6 +1,9 @@
 package com.boot.controller;
 
+import com.boot.elastic.Movie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,5 +33,16 @@ public class MovieSearchController {
     @GetMapping("/autocomplete")
     public AutocompleteResponse autocomplete(AutocompleteRequest request) {
         return movieSearchService.autocomplete(request);
+    }
+
+    @Operation(summary = "영화 상세 조회 API", description = "영화 ID로 상세 정보를 조회합니다.")
+    @GetMapping("/{id}") // URL: /api/movies/{id}
+    public ResponseEntity<Movie> getMovieById(@PathVariable String id) {
+        Movie movie = movieSearchService.getMovieById(id);
+        if (movie != null) {
+            return ResponseEntity.ok(movie);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

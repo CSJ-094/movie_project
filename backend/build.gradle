@@ -29,6 +29,8 @@ repositories {
 dependencies {
 	// 1. 핵심: 엘라스틱서치 + 웹 기능
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+	// Spring Data Elasticsearch 라이브러리를 명시적으로 추가 (NativeQuery 오류 해결 시도)
+	implementation 'org.springframework.data:spring-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0"
 
