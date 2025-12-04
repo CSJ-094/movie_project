@@ -15,3 +15,11 @@
 2025-12-04 12:40:53,933 - INFO - Total unique movies to process: 1080
 2025-12-04 12:40:53,933 - INFO - 
 --- Extracting Movie Data (OTT Providers) ---
+2025-12-04 12:41:29,043 - INFO - 
+--- Loading Data to Elasticsearch ---
+2025-12-04 12:41:29,537 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.401s]
+2025-12-04 12:41:29,754 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.207s]
+2025-12-04 12:41:29,797 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.040s]
+2025-12-04 12:41:29,798 - INFO - Successfully indexed 1080 movies.
+2025-12-04 12:41:29,800 - INFO - 
+--- ETL Process Finished in 38.36 seconds ---

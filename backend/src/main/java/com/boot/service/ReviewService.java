@@ -104,8 +104,14 @@ public class ReviewService {
     // 특정 영화에 대한 특정 사용자의 리뷰 조회
     @Transactional(readOnly = true)
     public Optional<Review> getUserReviewForMovie(String movieId, Long userId) {
-        User user = userService.findById(userId) // UserService에 findById 메서드가 있다고 가정
+        User user = userService.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("사용자를 찾을 수 없습니다: " + userId));
         return reviewRepository.findByMovieIdAndUser(movieId, user);
+    }
+
+    // 특정 사용자가 작성한 모든 리뷰 조회 (UserProfileService에서 사용)
+    @Transactional(readOnly = true)
+    public List<Review> findByUser(User user) {
+        return reviewRepository.findByUser(user);
     }
 }

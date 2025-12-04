@@ -207,13 +207,25 @@ const MovieDetailPage: React.FC = () => {
     }
   }, [movie?.overview]);
 
-  // Watchlist from localStorage (re-added)
+  // Watchlist 상태 fetching (백엔드 연동)
   useEffect(() => {
     if (!movieId) return;
-    const numericMovieId = Number(movieId);
-    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]') as number[];
-    setIsInWatchlist(watchlist.includes(numericMovieId));
-  }, [movieId]);
+    if (!isLoggedIn) {
+      setIsInWatchlist(false);
+      return;
+    }
+
+    const fetchWatchlistStatus = async () => {
+      try {
+        const response = await axiosInstance.get<boolean>(`/watchlist/${movieId}`);
+        setIsInWatchlist(response.data);
+      } catch (error) {
+        console.error("Failed to fetch watchlist status:", error);
+        setIsInWatchlist(false);
+      }
+    };
+    fetchWatchlistStatus();
+  }, [movieId, isLoggedIn]); // isLoggedIn 의존성 추가
 
   // 리뷰 데이터 fetching
   useEffect(() => {
@@ -225,6 +237,7 @@ const MovieDetailPage: React.FC = () => {
         setReviews(response.data);
       } catch (error) {
         console.error("Failed to fetch reviews:", error);
+        setReviews([]); // 오류 발생 시 빈 배열로 설정
       }
     };
 
@@ -295,24 +308,22 @@ const MovieDetailPage: React.FC = () => {
     }
   };
 
-  const toggleWatchlist = () => {
+  const toggleWatchlist = async () => { // async 추가
     if (!isLoggedIn) {
       alert('로그인이 필요한 기능입니다.');
       navigate('/login');
       return;
     }
     if (!movieId) return;
-    const numericMovieId = Number(movieId);
-    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]') as number[];
-    let newWatchlist: number[];
 
-    if (watchlist.includes(numericMovieId)) {
-      newWatchlist = watchlist.filter(id => id !== numericMovieId);
-    } else {
-      newWatchlist = [...watchlist, numericMovieId];
+    try {
+      const response = await axiosInstance.post<boolean>(`/watchlist/${movieId}`);
+      setIsInWatchlist(response.data); // 백엔드에서 반환된 추가/제거 여부로 상태 업데이트
+      alert(response.data ? 'Watchlist에 추가되었습니다.' : 'Watchlist에서 제거되었습니다.');
+    } catch (error) {
+      console.error("Failed to toggle watchlist:", error);
+      alert("Watchlist 상태 변경에 실패했습니다.");
     }
-    localStorage.setItem('watchlist', JSON.stringify(newWatchlist));
-    setIsInWatchlist(!isInWatchlist);
   };
 
   const handleBooking = () => {
@@ -706,11 +717,11 @@ const MovieDetailPage: React.FC = () => {
 
           <div className="mt-8">
             <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({reviews.length})</h3>
-            {reviews.length === 0 ? (
+            {reviews && Array.isArray(reviews) && reviews.length === 0 ? ( // reviews && Array.isArray(reviews) 추가
                 <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
             ) : (
                 <div className="space-y-6">
-                  {reviews.map((review) => (
+                  {reviews && Array.isArray(reviews) && reviews.map((review) => ( // reviews && Array.isArray(reviews) 추가
                       <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center">

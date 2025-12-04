@@ -16,6 +16,7 @@ import AdminPage from './pages/AdminPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
 import OAuth2CallbackPage from './pages/OAuth2CallbackPage.tsx';
+// import ProfilePage from './pages/ProfilePage.tsx'; // ProfilePage 임포트 제거
 import { AuthProvider } from './contexts/AuthContext.tsx';
 
 
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           { path: "mypage", element: <MyPage /> },
+          // { path: "profile", element: <ProfilePage /> }, // ProfilePage 라우팅 제거
         ],
       },
       // 관리자 전용 라우트 설정

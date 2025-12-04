@@ -41,7 +41,22 @@ public class RatingService {
                 );
     }
 
-    // 사용자가 매긴 모든 별점 정보 조회
+    // 사용자가 매긴 모든 별점 정보 조회 (UserProfileService에서 사용)
+    @Transactional(readOnly = true)
+    public Map<String, Integer> getUserRatings(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
+        
+        List<Rating> ratings = ratingRepository.findByUserId(user.getId());
+        
+        return ratings.stream()
+                .collect(Collectors.toMap(
+                        rating -> String.valueOf(rating.getMovieId()), // Long -> String
+                        rating -> (int) rating.getRating() // Double -> Integer
+                ));
+    }
+
+    // 기존 메서드 이름 변경 (혼동 방지)
     @Transactional(readOnly = true)
     public Map<Long, Double> getRatingsByUser(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
