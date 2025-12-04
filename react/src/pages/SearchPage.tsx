@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import MovieCardSkeleton from '../components/MovieCardSkeleton';
 import axiosInstance from '../api/axiosInstance';
+import { useAuth } from '../contexts/AuthContext';
 
 // 백엔드 API 응답에 맞춘 Movie 인터페이스
 interface Movie {
@@ -22,28 +23,59 @@ interface SearchResponse {
   movies: Movie[];
 }
 
+// SearchHistoryItem 인터페이스 추가
+interface SearchHistoryItem {
+  id: number;
+  query: string;
+}
+
 const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
   const query = searchParams.get('q');
-  // 프론트엔드 URL은 1-based page, 백엔드는 0-based page
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const size = 20; // 페이지 당 항목 수
+  const size = 20;
 
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalHits, setTotalHits] = useState(0);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]); // 타입 변경
+
+  // 검색 기록 가져오는 함수
+  const fetchSearchHistory = useCallback(async () => {
+    if (!isLoggedIn) {
+      setSearchHistory([]);
+      return;
+    }
+    try {
+      const response = await axiosInstance.get<SearchHistoryItem[]>('/search-history'); // 타입 변경
+      setSearchHistory(response.data);
+    } catch (error) {
+      console.error('검색 기록을 불러오는데 실패했습니다:', error);
+      setSearchHistory([]);
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
-    if (!query) return;
+    fetchSearchHistory();
+  }, [fetchSearchHistory]);
+
+  useEffect(() => {
+    if (!query) {
+      setMovies([]);
+      setTotalHits(0);
+      setLoading(false);
+      return;
+    }
 
     const fetchMovies = async () => {
       setLoading(true);
       try {
-        // 백엔드 API 호출
         const response = await axiosInstance.get<SearchResponse>('/movies/search', {
           params: {
             keyword: query,
-            page: page - 1, // 백엔드는 0부터 시작하므로 1을 뺍니다.
+            page: page - 1,
             size: size
           }
         });
@@ -52,6 +84,8 @@ const SearchPage: React.FC = () => {
         setTotalHits(response.data.totalHits);
       } catch (error) {
         console.error("Failed to fetch search results:", error);
+        setMovies([]);
+        setTotalHits(0);
       } finally {
         setLoading(false);
       }
@@ -59,25 +93,95 @@ const SearchPage: React.FC = () => {
     fetchMovies();
   }, [query, page]);
 
-  if (loading) {
-    return (
-      <div className="p-5 text-center">
-        <h1 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">'{query}'에 대한 검색 결과</h1>
-        <div className="flex flex-wrap justify-center">
-          {Array.from({ length: 10 }).map((_, index) => (
-            <MovieCardSkeleton key={index} />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // 검색 기록 클릭 시
+  const handleSearchHistoryClick = (historyQuery: string) => {
+    navigate(`/search?q=${historyQuery}`);
+  };
+
+  // 특정 검색 기록 삭제
+  const handleDeleteSearchHistoryItem = async (historyId: number, queryToDelete: string) => {
+    if (!isLoggedIn) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    if (!window.confirm(`'${queryToDelete}' 검색 기록을 삭제하시겠습니까?`)) {
+      return;
+    }
+    try {
+      await axiosInstance.delete(`/search-history/${historyId}`);
+      fetchSearchHistory(); // 삭제 후 기록 새로고침
+      alert('검색 기록이 삭제되었습니다.');
+    } catch (error) {
+      console.error('검색 기록 삭제 실패:', error);
+      alert('검색 기록 삭제에 실패했습니다.');
+    }
+  };
+
+  // 모든 검색 기록 삭제
+  const handleClearSearchHistory = async () => {
+    if (!isLoggedIn) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    if (!window.confirm('모든 검색 기록을 삭제하시겠습니까?')) {
+      return;
+    }
+    try {
+      await axiosInstance.delete('/search-history');
+      fetchSearchHistory();
+      alert('모든 검색 기록이 삭제되었습니다.');
+    } catch (error) {
+      console.error('모든 검색 기록 삭제 실패:', error);
+      alert('모든 검색 기록 삭제에 실패했습니다.');
+    }
+  };
+
 
   const totalPages = Math.ceil(totalHits / size);
 
   return (
     <div className="p-5 text-center">
       <h1 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">'{query}'에 대한 검색 결과</h1>
-      {movies.length > 0 ? (
+
+      {isLoggedIn && searchHistory.length > 0 && (
+        <div className="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md text-left">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">최근 검색 기록</h2>
+            <button
+              onClick={handleClearSearchHistory}
+              className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+            >
+              전체 삭제
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {searchHistory.map((item) => ( // item.id를 key로 사용
+              <div key={item.id} className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-full px-3 py-1 text-gray-700 dark:text-gray-200 text-sm">
+                <span
+                  onClick={() => handleSearchHistoryClick(item.query)}
+                  className="cursor-pointer hover:underline"
+                >
+                  {item.query}
+                </span>
+                <button
+                  onClick={() => handleDeleteSearchHistoryItem(item.id, item.query)}
+                  className="ml-2 text-gray-500 hover:text-red-500"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex flex-wrap justify-center">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <MovieCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : movies.length > 0 ? (
         <>
           <div className="flex flex-wrap justify-center">
             {movies.map(movie => (
