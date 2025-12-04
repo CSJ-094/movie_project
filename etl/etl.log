@@ -23,3 +23,53 @@
 2025-12-04 12:41:29,798 - INFO - Successfully indexed 1080 movies.
 2025-12-04 12:41:29,800 - INFO - 
 --- ETL Process Finished in 38.36 seconds ---
+2025-12-04 15:58:37,764 - INFO - GET http://localhost:9200/ [status:200 duration:0.005s]
+2025-12-04 15:58:37,764 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-04 15:58:37,764 - INFO - --- Starting ETL Process ---
+2025-12-04 15:58:37,766 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.001s]
+2025-12-04 15:58:37,766 - INFO - Deleting existing index 'movies'...
+2025-12-04 15:58:37,805 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.040s]
+2025-12-04 15:58:37,806 - INFO - Existing index 'movies' deleted.
+2025-12-04 15:58:37,806 - INFO - Creating new index 'movies' with mappings...
+2025-12-04 15:58:38,010 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.205s]
+2025-12-04 15:58:38,011 - INFO - Index 'movies' created with mappings.
+2025-12-04 15:58:38,011 - INFO - 
+--- Extracting Movie Data (Basic Info) ---
+2025-12-04 15:58:39,218 - INFO - Found 100 now playing movies.
+2025-12-04 15:58:42,153 - INFO - Found 986 popular movies.
+2025-12-04 15:58:42,153 - INFO - Total unique movies to process: 1066
+2025-12-04 15:58:42,154 - INFO - 
+--- Extracting Movie Data (OTT Providers) ---
+2025-12-04 15:59:25,489 - INFO - 
+--- Loading Data to Elasticsearch ---
+2025-12-04 15:59:25,744 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.209s]
+2025-12-04 15:59:25,919 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.166s]
+2025-12-04 15:59:25,950 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.028s]
+2025-12-04 15:59:25,950 - INFO - Successfully indexed 1066 movies.
+2025-12-04 15:59:25,960 - INFO - 
+--- ETL Process Finished in 47.95 seconds ---
+2025-12-04 16:08:10,805 - INFO - GET http://localhost:9200/ [status:200 duration:0.005s]
+2025-12-04 16:08:10,805 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-04 16:08:10,805 - INFO - --- Starting ETL Process ---
+2025-12-04 16:08:10,807 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.001s]
+2025-12-04 16:08:10,807 - INFO - Deleting existing index 'movies'...
+2025-12-04 16:08:10,842 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.035s]
+2025-12-04 16:08:10,842 - INFO - Existing index 'movies' deleted.
+2025-12-04 16:08:10,842 - INFO - Creating new index 'movies' with mappings...
+2025-12-04 16:08:11,030 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.188s]
+2025-12-04 16:08:11,030 - INFO - Index 'movies' created with mappings.
+2025-12-04 16:08:11,030 - INFO - 
+--- Extracting Movie Data (Basic Info) ---
+2025-12-04 16:08:12,056 - INFO - Found 100 now playing movies.
+2025-12-04 16:08:14,616 - INFO - Found 985 popular movies.
+2025-12-04 16:08:14,616 - INFO - Total unique movies to process: 1065
+2025-12-04 16:08:14,616 - INFO - 
+--- Extracting Movie Data (OTT Providers) ---
+2025-12-04 16:08:46,701 - INFO - 
+--- Loading Data to Elasticsearch ---
+2025-12-04 16:08:46,863 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.113s]
+2025-12-04 16:08:47,004 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.133s]
+2025-12-04 16:08:47,040 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.034s]
+2025-12-04 16:08:47,041 - INFO - Successfully indexed 1065 movies.
+2025-12-04 16:08:47,053 - INFO - 
+--- ETL Process Finished in 36.02 seconds ---

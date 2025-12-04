@@ -17,6 +17,8 @@ interface MovieDetails {
   vote_average: number;
   genres: { id: number; name: string }[];
   is_now_playing?: boolean;
+  runtime?: number;
+  certification?: string;
   ott_providers?: string[];
   ott_link?: string;
 
@@ -139,10 +141,14 @@ const MovieDetailPage: React.FC = () => {
 
         try {
           const backendResponse = await axios.get(`http://localhost:8484/api/movies/${movieId}`);
-          if (backendResponse.data) {
+          const myData = backendResponse.data
+          if (myData) {
             detailsData.ott_providers = backendResponse.data.ott_providers;
             detailsData.ott_link = backendResponse.data.ott_link;
             detailsData.is_now_playing = backendResponse.data.is_now_playing;
+
+            if (myData.runtime) detailsData.runtime = myData.runtime;
+            if (myData.certification) detailsData.certification = myData.certification;
           }
         } catch (error) { console.warn("OTT info not found in backend."); }
         
@@ -446,6 +452,21 @@ const MovieDetailPage: React.FC = () => {
       alert('리뷰 삭제에 실패했습니다.');
     }
   };
+  const formatRuntime = (minutes: number | undefined) => {
+    if (!minutes) return '';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}시간 ${m}분`;
+  };
+
+  const getCertColor = (cert: string | undefined) => {
+    if (!cert) return 'bg-gray-500';
+    if (cert === 'All' || cert === 'ALL') return 'bg-green-600';
+    if (cert === '12') return 'bg-yellow-500 text-black'; // 12세는 노랑
+    if (cert === '15') return 'bg-orange-600';
+    if (cert === '18' || cert.includes('청불')) return 'bg-red-600';
+    return 'bg-gray-600';
+  };
 
 
   if (loading) {
@@ -492,6 +513,19 @@ const MovieDetailPage: React.FC = () => {
                 <span>⭐ {movie.vote_average.toFixed(1)}</span>
                 <span>|</span>
                 <span>{movie.release_date}</span>
+                {movie.runtime && (
+                    <>
+                      <span>|</span>
+                      <span>{formatRuntime(movie.runtime)}</span>
+                    </>
+                )}
+
+                {/* [추가] 관람 등급 뱃지 */}
+                {movie.certification && (
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ml-2 ${getCertColor(movie.certification)}`}>
+                {movie.certification === 'All' ? '전체' : `${movie.certification}세`}
+    </span>
+                )}
               </div>
               {/* 장르 표시를 점(·)으로 구분하여 한 줄로 간결하게 표시합니다. */}
               <div className="flex items-center justify-center md:justify-start gap-x-2 mt-3 text-gray-300 text-sm">

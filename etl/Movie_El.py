@@ -94,8 +94,10 @@ INDEX_SETTINGS = {
             "release_date": { "type": "date" },
             "genre_ids": { "type": "keyword" },
             "is_now_playing": { "type": "boolean" },
-            "ott_providers": { "type": "keyword" }, # 추가
-            "ott_link": { "type": "keyword", "index": False } # 추가
+            "runtime": { "type": "integer" },
+            "certification": { "type": "keyword" },
+            "ott_providers": { "type": "keyword" },
+            "ott_link": { "type": "keyword", "index": False }
         }
     }
 }
@@ -145,39 +147,63 @@ def get_movies_from_tmdb_parallel(endpoint, pages=1):
             all_movies_data.update(page_movies)
     return all_movies_data
 
-def get_movie_ott_providers(movie_id, session):
-    """TMDB API에서 특정 영화의 OTT 제공자 정보를 가져오는 함수"""
-    url = f"{TMDB_BASE_URL}{movie_id}/watch/providers?api_key={API_KEY}"
-    
-    time.sleep(API_REQUEST_DELAY_SECONDS) # API 요청 간 지연 시간
+def get_movie_details(movie_id, session):
+    # 기본 상세 정보 + 등급(release_dates) + OTT(watch/providers)
+    url = f"{TMDB_BASE_URL}{movie_id}?api_key={API_KEY}&language=ko-KR&append_to_response=release_dates,watch/providers"
+
+    time.sleep(API_REQUEST_DELAY_SECONDS)
 
     try:
         response = session.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json().get('results', {})
-        
+        # 404 등 에러 발생 시 무시하고 빈 정보 반환
+        if response.status_code != 200:
+            logger.warning(f"Failed to fetch details for movie {movie_id}: status {response.status_code}")
+            return {'movie_id': movie_id, 'runtime': 0, 'certification': '', 'ott_providers': [], 'ott_link': None}
+
+        data = response.json()
+
+        # 1) 러닝타임
+        runtime = data.get('runtime', 0)
+        if runtime is None: runtime = 0
+
+        # 2) 관람 등급 (한국 KR 기준)
+        certification = ""
+        release_dates_results = data.get('release_dates', {}).get('results', [])
+        for item in release_dates_results:
+            if item['iso_3166_1'] == 'KR':
+                # 한국 데이터 중 등급 정보가 있는 첫 번째 항목 선택
+                for release in item['release_dates']:
+                    if release.get('certification'):
+                        certification = release['certification']
+                        break
+            if certification: break
+
+        # 3) OTT 정보 (키 이름 수정됨)
         ott_providers = []
         ott_link = None
 
-        if 'KR' in data:
-            kr_data = data['KR']
-            ott_link = kr_data.get('link')
+        providers_data = data.get('watch/providers', {}).get('results', {}).get('KR', {})
 
+        if providers_data:
+            ott_link = providers_data.get('link')
             for provider_type in ['flatrate', 'rent', 'buy']:
-                if provider_type in kr_data:
-                    for provider in kr_data[provider_type]:
+                if provider_type in providers_data:
+                    for provider in providers_data[provider_type]:
                         ott_providers.append(provider['provider_name'])
-            
-            # 중복 제거 및 정렬
             ott_providers = sorted(list(set(ott_providers)))
 
-        return {'movie_id': movie_id, 'ott_providers': ott_providers, 'ott_link': ott_link}
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching OTT providers for movie {movie_id}: {e}")
-        return {'movie_id': movie_id, 'ott_providers': [], 'ott_link': None}
+        return {
+            'movie_id': movie_id,
+            'runtime': runtime,
+            'certification': certification,
+            'ott_providers': ott_providers,
+            'ott_link': ott_link
+        }
 
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching details for movie {movie_id}: {e}")
+        return {'movie_id': movie_id, 'runtime': 0, 'certification': '', 'ott_providers': [], 'ott_link': None}
 def generate_actions(all_movies, now_playing_ids):
-    """Elasticsearch 벌크 색인을 위한 액션 제너레이터"""
     for movie_id, movie in all_movies.items():
         r_date = movie.get('release_date')
         if not r_date:
@@ -194,6 +220,8 @@ def generate_actions(all_movies, now_playing_ids):
             "release_date": r_date,
             "genre_ids": movie.get('genre_ids'),
             "is_now_playing": is_playing,
+            "runtime": movie.get('runtime', 0),
+            "certification": movie.get('certification', ''),
             "ott_providers": movie.get('ott_providers', []), # 추가
             "ott_link": movie.get('ott_link') # 추가
         }
@@ -220,21 +248,21 @@ def fetch_and_index_movies_process():
     # 3. 각 영화의 OTT 제공자 정보 가져오기 (병렬 처리)
     logger.info("\n--- Extracting Movie Data (OTT Providers) ---")
     movie_ids_to_fetch_ott = list(all_movies.keys())
-    ott_results = {}
     session = create_requests_session()
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(get_movie_ott_providers, movie_id, session): movie_id for movie_id in movie_ids_to_fetch_ott}
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching OTT providers"):
+        futures = {executor.submit(get_movie_details, mid, session): mid for mid in movie_ids_to_fetch_ott}
+
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching Details"):
             result = future.result()
             if result:
-                ott_results[result['movie_id']] = {'ott_providers': result['ott_providers'], 'ott_link': result['ott_link']}
-    
-    # 4. OTT 정보 병합
-    for movie_id, ott_info in ott_results.items():
-        if movie_id in all_movies:
-            all_movies[movie_id]['ott_providers'] = ott_info['ott_providers']
-            all_movies[movie_id]['ott_link'] = ott_info['ott_link']
+                mid = result['movie_id']
+                if mid in all_movies:
+                    # 가져온 상세 정보를 메인 딕셔너리에 병합
+                    all_movies[mid]['runtime'] = result['runtime']
+                    all_movies[mid]['certification'] = result['certification']
+                    all_movies[mid]['ott_providers'] = result['ott_providers']
+                    all_movies[mid]['ott_link'] = result['ott_link']
 
     # 5. Elasticsearch에 데이터 적재 (벌크 API 및 진행 상황 표시)
     logger.info("\n--- Loading Data to Elasticsearch ---")
