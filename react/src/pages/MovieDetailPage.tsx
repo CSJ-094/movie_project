@@ -452,6 +452,7 @@ const MovieDetailPage: React.FC = () => {
       alert('리뷰 삭제에 실패했습니다.');
     }
   };
+  //런타임
   const formatRuntime = (minutes: number | undefined) => {
     if (!minutes) return '';
     const h = Math.floor(minutes / 60);
@@ -459,10 +460,11 @@ const MovieDetailPage: React.FC = () => {
     return `${h}시간 ${m}분`;
   };
 
+  //등급 색상
   const getCertColor = (cert: string | undefined) => {
     if (!cert) return 'bg-gray-500';
     if (cert === 'All' || cert === 'ALL') return 'bg-green-600';
-    if (cert === '12') return 'bg-yellow-500 text-black'; // 12세는 노랑
+    if (cert === '12') return 'bg-yellow-500 text-black';
     if (cert === '15') return 'bg-orange-600';
     if (cert === '18' || cert.includes('청불')) return 'bg-red-600';
     return 'bg-gray-600';
@@ -519,8 +521,6 @@ const MovieDetailPage: React.FC = () => {
                       <span>{formatRuntime(movie.runtime)}</span>
                     </>
                 )}
-
-                {/* [추가] 관람 등급 뱃지 */}
                 {movie.certification && (
                     <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ml-2 ${getCertColor(movie.certification)}`}>
                 {movie.certification === 'All' ? '전체' : `${movie.certification}세`}
