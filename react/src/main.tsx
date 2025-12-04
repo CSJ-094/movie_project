@@ -15,6 +15,7 @@ import AdminRoute from './components/AdminRoute.tsx';
 import AdminPage from './pages/AdminPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
+import OAuth2CallbackPage from './pages/OAuth2CallbackPage.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 
 
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: "reset-password",
         element: <ResetPasswordPage />,
+      },
+      {
+        path: "oauth2/callback",
+        element: <OAuth2CallbackPage />,
       },
       // 보호된 라우트 설정
       {
