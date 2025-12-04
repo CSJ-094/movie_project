@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional; // Optional import 추가
 import java.util.UUID;
 
 @Service
@@ -28,6 +29,18 @@ public class UserService {
     private final EmailService emailService;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
     private final JwtTokenProvider jwtTokenProvider;
+
+    // 이메일로 사용자 조회 (ReviewService에서 사용)
+    @Transactional(readOnly = true)
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    // ID로 사용자 조회 (ReviewService에서 사용)
+    @Transactional(readOnly = true)
+    public Optional<User> findById(Long id) {
+        return userRepository.findById(id);
+    }
 
     @Transactional
     public void signUp(UserSignUpDto userSignUpDto) {
