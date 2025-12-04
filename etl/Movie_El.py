@@ -92,7 +92,9 @@ INDEX_SETTINGS = {
             "vote_average": { "type": "float" },
             "release_date": { "type": "date" },
             "genre_ids": { "type": "keyword" },
-            "is_now_playing": { "type": "boolean" }
+            "is_now_playing": { "type": "boolean" },
+            "ott_providers": { "type": "keyword" }, # 추가
+            "ott_link": { "type": "keyword", "index": False } # 추가
         }
     }
 }
@@ -142,6 +144,37 @@ def get_movies_from_tmdb_parallel(endpoint, pages=1):
             all_movies_data.update(page_movies)
     return all_movies_data
 
+def get_movie_ott_providers(movie_id, session):
+    """TMDB API에서 특정 영화의 OTT 제공자 정보를 가져오는 함수"""
+    url = f"{TMDB_BASE_URL}{movie_id}/watch/providers?api_key={API_KEY}"
+    
+    time.sleep(API_REQUEST_DELAY_SECONDS) # API 요청 간 지연 시간
+
+    try:
+        response = session.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json().get('results', {})
+        
+        ott_providers = []
+        ott_link = None
+
+        if 'KR' in data:
+            kr_data = data['KR']
+            ott_link = kr_data.get('link')
+
+            for provider_type in ['flatrate', 'rent', 'buy']:
+                if provider_type in kr_data:
+                    for provider in kr_data[provider_type]:
+                        ott_providers.append(provider['provider_name'])
+            
+            # 중복 제거 및 정렬
+            ott_providers = sorted(list(set(ott_providers)))
+
+        return {'movie_id': movie_id, 'ott_providers': ott_providers, 'ott_link': ott_link}
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching OTT providers for movie {movie_id}: {e}")
+        return {'movie_id': movie_id, 'ott_providers': [], 'ott_link': None}
+
 def generate_actions(all_movies, now_playing_ids):
     """Elasticsearch 벌크 색인을 위한 액션 제너레이터"""
     for movie_id, movie in all_movies.items():
@@ -159,7 +192,9 @@ def generate_actions(all_movies, now_playing_ids):
             "vote_average": movie.get('vote_average'),
             "release_date": r_date,
             "genre_ids": movie.get('genre_ids'),
-            "is_now_playing": is_playing
+            "is_now_playing": is_playing,
+            "ott_providers": movie.get('ott_providers', []), # 추가
+            "ott_link": movie.get('ott_link') # 추가
         }
         yield {
             "_index": INDEX_NAME,
@@ -169,7 +204,7 @@ def generate_actions(all_movies, now_playing_ids):
 
 def fetch_and_index_movies_process():
     # 1. '현재 상영작'과 '인기작' 목록을 모두 가져옴 (병렬 처리)
-    logger.info("\n--- Extracting Movie Data ---")
+    logger.info("\n--- Extracting Movie Data (Basic Info) ---")
     now_playing_movies = get_movies_from_tmdb_parallel('now_playing', pages=NOW_PLAYING_PAGES)
     logger.info(f"Found {len(now_playing_movies)} now playing movies.")
 
@@ -179,9 +214,28 @@ def fetch_and_index_movies_process():
     # 2. 두 목록을 합치되, 중복을 제거 (id 기준)
     all_movies = {**popular_movies, **now_playing_movies}
     now_playing_ids = set(now_playing_movies.keys())
-    logger.info(f"Total unique movies to index: {len(all_movies)}")
+    logger.info(f"Total unique movies to process: {len(all_movies)}")
 
-    # 3. Elasticsearch에 데이터 적재 (벌크 API 및 진행 상황 표시)
+    # 3. 각 영화의 OTT 제공자 정보 가져오기 (병렬 처리)
+    logger.info("\n--- Extracting Movie Data (OTT Providers) ---")
+    movie_ids_to_fetch_ott = list(all_movies.keys())
+    ott_results = {}
+    session = create_requests_session()
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(get_movie_ott_providers, movie_id, session): movie_id for movie_id in movie_ids_to_fetch_ott}
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching OTT providers"):
+            result = future.result()
+            if result:
+                ott_results[result['movie_id']] = {'ott_providers': result['ott_providers'], 'ott_link': result['ott_link']}
+    
+    # 4. OTT 정보 병합
+    for movie_id, ott_info in ott_results.items():
+        if movie_id in all_movies:
+            all_movies[movie_id]['ott_providers'] = ott_info['ott_providers']
+            all_movies[movie_id]['ott_link'] = ott_info['ott_link']
+
+    # 5. Elasticsearch에 데이터 적재 (벌크 API 및 진행 상황 표시)
     logger.info("\n--- Loading Data to Elasticsearch ---")
     if not all_movies:
         logger.warning("No movies to index. Skipping bulk indexing.")
@@ -189,7 +243,6 @@ def fetch_and_index_movies_process():
 
     actions = generate_actions(all_movies, now_playing_ids)
     
-    # 벌크 색인 시 오류 발생 시 재시도 로직을 포함할 수 있지만, 여기서는 간단히 처리
     success_count, errors = helpers.bulk(es, actions, chunk_size=BULK_CHUNK_SIZE, request_timeout=30, raise_on_error=False, raise_on_exception=False)
     
     if errors:
