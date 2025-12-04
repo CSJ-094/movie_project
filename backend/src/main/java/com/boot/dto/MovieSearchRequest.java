@@ -14,7 +14,7 @@ public class MovieSearchRequest {
 	    @Schema(description = "현재 상영작 필터", example = "true")
 	    private Boolean nowPlaying;
 
-	    @Schema(description = "장르 필터", example = "[\"Action\", \"SF\"]")
+	    @Schema(description = "장르 필터", example = "[\"28\", \"878\"]") // 장르 ID로 변경
 	    private List<Integer> genres;
 
 	    @Schema(description = "최소 평점", example = "7.5")

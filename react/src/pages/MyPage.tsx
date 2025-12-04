@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom'; // Link 추가
+import { useNavigate } from 'react-router-dom'; // Link 추가
 import axiosInstance from '../api/axiosInstance';
 import MovieCard from '../components/MovieCard';
 import StarRating from '../components/StarRating';
@@ -45,7 +45,7 @@ interface MovieSummary {
 }
 
 const MyPage: React.FC = () => {
-    const { userEmail, logout, isLoggedIn } = useAuth(); // isLoggedIn 추가
+    const { userEmail, isLoggedIn } = useAuth(); // isLoggedIn 추가
     const navigate = useNavigate();
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');

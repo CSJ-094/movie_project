@@ -98,7 +98,7 @@ const MovieDetailPage: React.FC = () => {
   const [movie, setMovie] = useState<MovieDetails | null>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [cast, setCast] = useState<Cast[]>([]);
-  const [collection, setCollection] = useState<Collection | null>(null);
+  const [collection] = useState<Collection | null>(null);
   const [recommendedMovies, setRecommendedMovies] = useState<RecommendedMovie[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
