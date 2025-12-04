@@ -2,6 +2,8 @@ package com.boot.config;
 
 import com.boot.jwt.JwtAuthenticationFilter;
 import com.boot.jwt.JwtTokenProvider;
+import com.boot.security.oauth2.OAuth2AuthenticationSuccessHandler;
+import com.boot.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,48 +30,38 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtTokenProvider jwtTokenProvider;
+        private final JwtTokenProvider jwtTokenProvider;
+        private final CustomOAuth2UserService customOAuth2UserService;
+        private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults())
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .csrf(AbstractHttpConfigurer::disable)
+                // CORS 설정을 Spring Security와 통합
+                .cors(cors -> cors.disable())
+                // HTTP Basic 인증 비활성화
+                .httpBasic(httpBasic -> httpBasic.disable())
+                // Form Login 비활성화
+                .formLogin(formLogin -> formLogin.disable())
+                // CSRF 보호 비활성화 (JWT 사용 시)
+                .csrf(csrf -> csrf.disable())
+                // 세션을 사용하지 않으므로 STATELESS로 설정
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .authorizeHttpRequests(authz -> authz
+                // 요청에 대한 인가 규칙 설정
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/auth/**", "/oauth2/**", "/login/**").permitAll() // 인증 없이 접근 허용
+                        .anyRequest().authenticated()) // 그 외 모든 요청은 인증 필요
 
-                        .anyRequest().permitAll()
-                )
+                // OAuth2 로그인 설정
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService)) // 소셜 로그인 성공 시 후속 조치를 진행할 UserService 인터페이스의 구현체 등록
+                        .successHandler(oAuth2AuthenticationSuccessHandler)) // 로그인 성공 시 핸들러
 
+                // JWT 인증 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // 프론트엔드 주소 허용 (마지막에 슬래시 없는지 확인!)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
 }
