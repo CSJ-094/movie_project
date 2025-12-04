@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 // 세션을 사용하지 않으므로 STATELESS로 설정
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 // HTTP 요청에 대한 접근 권한 설정
                 .authorizeHttpRequests(authz -> authz
                         // Swagger 관련 API는 누구나 접근 허용
@@ -56,15 +57,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify").permitAll()
                         // 관리자 API는 ADMIN 역할만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/movies/**").permitAll()
-                        // 그 외 모든 요청은 인증된 사용자만 접근 가능
-                        .anyRequest().authenticated())
-
-                // 요청에 대한 인가 규칙 설정
-                .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/movies/**", "/api/search/**").permitAll() // 영화 정보 조회, 검색 등 GET 요청 허용
                         .requestMatchers("/", "/auth/**", "/oauth2/**", "/login/**", "/error").permitAll() // 인증 없이 접근 허용
-                        .anyRequest().authenticated()) // 그 외 모든 요청은 인증 필요
+                        // 그 외 모든 요청은 인증된 사용자만 접근 가능
+                        .anyRequest().authenticated())
 
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2

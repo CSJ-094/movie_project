@@ -38,6 +38,8 @@ public class MovieSearchController {
     public FilterOptionsResponse getFilters() {
         return movieSearchService.getFilterOptions();
 
+    }
+
     @Operation(summary = "영화 상세 조회 API", description = "영화 ID로 상세 정보를 조회합니다.")
     @GetMapping("/{id}") // URL: /api/movies/{id}
     public ResponseEntity<Movie> getMovieById(@PathVariable String id) {
