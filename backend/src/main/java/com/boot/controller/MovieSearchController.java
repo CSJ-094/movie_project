@@ -1,14 +1,11 @@
 package com.boot.controller;
 
+import com.boot.dto.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.boot.dto.MovieSearchResponse;
-import com.boot.dto.AutocompleteRequest;
-import com.boot.dto.AutocompleteResponse;
 import com.boot.service.MovieSearchService;
-import com.boot.dto.MovieSearchRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -30,5 +27,11 @@ public class MovieSearchController {
     @GetMapping("/autocomplete")
     public AutocompleteResponse autocomplete(AutocompleteRequest request) {
         return movieSearchService.autocomplete(request);
+    }
+
+    @Operation(summary = "필터 옵션 조회 API", description = "영화 검색 화면에서 사용할 장르 목록과 평점 범위를 반환")
+    @GetMapping("/filters")
+    public FilterOptionsResponse getFilters() {
+        return movieSearchService.getFilterOptions();
     }
 }

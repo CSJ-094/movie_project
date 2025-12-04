@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // HTTP 요청에 대한 접근 권한 설정
                 .authorizeHttpRequests(authz -> authz
+                        // Swagger 관련 API는 누구나 접근 허용
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         // 로그인, 회원가입, 이메일 인증, 영화 검색 API는 누구나 접근 허용
                         .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify").permitAll()
                         // 관리자 API는 ADMIN 역할만 접근 가능
