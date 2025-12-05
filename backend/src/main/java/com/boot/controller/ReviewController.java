@@ -28,7 +28,8 @@ public class ReviewController {
     @PostMapping
     public ResponseEntity<ReviewResponseDto> createReview(@RequestBody ReviewRequestDto requestDto) {
         try {
-            Review review = reviewService.createReview(requestDto.getMovieId(), requestDto.getRating(), requestDto.getComment());
+            Review review = reviewService.createReview(requestDto.getMovieId(), requestDto.getRating(),
+                    requestDto.getComment());
             return ResponseEntity.status(HttpStatus.CREATED).body(ReviewResponseDto.fromEntity(review));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 이미 리뷰 작성 시 409 Conflict
@@ -39,7 +40,7 @@ public class ReviewController {
 
     @Operation(summary = "특정 영화의 모든 리뷰 조회", description = "특정 영화 ID에 해당하는 모든 리뷰를 조회합니다.")
     @GetMapping("/movie/{movieId}")
-    public ResponseEntity<List<ReviewResponseDto>> getReviewsByMovieId(@PathVariable String movieId) {
+    public ResponseEntity<List<ReviewResponseDto>> getReviewsByMovieId(@PathVariable("movieId") String movieId) {
         List<Review> reviews = reviewService.getReviewsByMovieId(movieId);
         List<ReviewResponseDto> responseDtos = reviews.stream()
                 .map(ReviewResponseDto::fromEntity)
@@ -49,9 +50,11 @@ public class ReviewController {
 
     @Operation(summary = "리뷰 수정", description = "기존 리뷰를 수정합니다.")
     @PutMapping("/{reviewId}")
-    public ResponseEntity<ReviewResponseDto> updateReview(@PathVariable Long reviewId, @RequestBody ReviewRequestDto requestDto) {
+    public ResponseEntity<ReviewResponseDto> updateReview(@PathVariable("reviewId") Long reviewId,
+            @RequestBody ReviewRequestDto requestDto) {
         try {
-            Review updatedReview = reviewService.updateReview(reviewId, requestDto.getRating(), requestDto.getComment());
+            Review updatedReview = reviewService.updateReview(reviewId, requestDto.getRating(),
+                    requestDto.getComment());
             return ResponseEntity.ok(ReviewResponseDto.fromEntity(updatedReview));
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 리뷰를 찾을 수 없을 때 404 Not Found
@@ -62,7 +65,7 @@ public class ReviewController {
 
     @Operation(summary = "리뷰 삭제", description = "기존 리뷰를 삭제합니다.")
     @DeleteMapping("/{reviewId}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId) {
+    public ResponseEntity<Void> deleteReview(@PathVariable("reviewId") Long reviewId) {
         try {
             reviewService.deleteReview(reviewId);
             return ResponseEntity.noContent().build(); // 성공적으로 삭제 시 204 No Content
@@ -75,7 +78,7 @@ public class ReviewController {
 
     @Operation(summary = "특정 영화에 대한 현재 사용자의 리뷰 조회", description = "현재 로그인한 사용자가 특정 영화에 작성한 리뷰를 조회합니다.")
     @GetMapping("/movie/{movieId}/my-review")
-    public ResponseEntity<ReviewResponseDto> getMyReviewForMovie(@PathVariable String movieId) {
+    public ResponseEntity<ReviewResponseDto> getMyReviewForMovie(@PathVariable("movieId") String movieId) {
         try {
             String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
             User currentUser = reviewService.getUserService().findByEmail(userEmail)
