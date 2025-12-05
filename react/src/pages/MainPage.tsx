@@ -75,23 +75,18 @@ const MainPage: React.FC = () => {
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        const response = await axiosInstance.get<FilterOptionsResponse>('/movies/filters');
-        setGenres(response.data.genres);
-        // 필요하면 나중에 min/maxRating도 여기서 세팅
-        // setMinRating(response.data.minRating);
-        // setMaxRating(response.data.maxRating);
+        // 이 부분은 TMDB API를 사용하도록 롤백
+        const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
+        const response = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${apiKey}&language=ko-KR`);
+        if (!response.ok) throw new Error('Failed to fetch genres from TMDB');
+        const data = await response.json();
+        setGenres(data.genres);
       } catch (err) {
         console.error("필터 옵션을 가져오는데 실패했습니다.", err);
       }
     };
     fetchFilterOptions();
   }, []);
-
-  useEffect(() => {
-    setMovies([]);
-    setCurrentPage(1);
-    setTotalPages(0);
-  }, [selectedGenres, selectedYear, minRating]);
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -143,7 +138,7 @@ const MainPage: React.FC = () => {
       await axiosInstance.post(`/favorites/${movieId}`);
     } catch (err) {
       console.error("찜 상태 변경에 실패했습니다.", err);
-      setFavoriteMovieIds(originalFavorites); // 에러 시 원상 복구
+      setFavoriteMovieIds(originalFavorites);
       alert("찜 상태 변경에 실패했습니다. 다시 시도해주세요.");
     }
   };
@@ -157,23 +152,6 @@ const MainPage: React.FC = () => {
     setSelectedYear('');
     setMinRating(0);
   };
-
-  if (loading && currentPage === 1) {
-    return (
-      <div className="max-w-screen-xl mx-auto">
-        <div className="flex flex-col md:flex-row">
-          <aside className="w-full md:w-64 p-5 bg-gray-100 dark:bg-gray-800"><h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">필터</h2></aside>
-          <main className="flex-1 p-5">
-            <div className="w-full h-96 bg-gray-300 dark:bg-gray-700 animate-pulse rounded-lg mb-8"></div>
-            <h1 className="text-3xl font-bold text-center my-4 text-gray-800 dark:text-white">인기 영화</h1>
-            <div className="flex flex-wrap justify-center">
-              {Array.from({ length: 10 }).map((_, index) => <MovieCardSkeleton key={index} />)}
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return <div className="text-center p-12 text-2xl text-red-500">에러가 발생했습니다: {error.message}</div>;
@@ -212,21 +190,29 @@ const MainPage: React.FC = () => {
         </aside>
         <main className="flex-1 p-5 min-w-0">
           <MovieCarousel />
-          <h1 className="text-3xl font-bold text-center my-4 text-gray-800 dark:text-white">인기 영화</h1>
-          <div className="flex flex-wrap justify-center">
-            {movies.length > 0 ? movies.map(movie => (
-              <MovieCard
-                key={movie.id}
-                id={movie.id}
-                title={movie.title}
-                posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
-                isFavorite={favoriteMovieIds.has(movie.id)}
-                onToggleFavorite={handleToggleFavorite}
-              />
-            )) : !loading && <p className="mt-8 text-gray-800 dark:text-white text-center">선택한 조건에 맞는 영화가 없습니다.</p>}
-            {loadingMore && Array.from({ length: 4 }).map((_, index) => <MovieCardSkeleton key={`loading-${index}`} />)}
-          </div>
-          <div ref={loadMoreRef} style={{ height: '20px' }} />
+          <h1 className="text-3xl font-bold text-center my-4 text-gray-800 dark:text-white">영화 목록</h1>
+          {loading && currentPage === 1 ? (
+            <div className="flex flex-wrap justify-center">
+              {Array.from({ length: 10 }).map((_, index) => <MovieCardSkeleton key={index} />)}
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap justify-center">
+                {movies.length > 0 ? movies.map(movie => (
+                  <MovieCard
+                    key={movie.id}
+                    id={movie.id}
+                    title={movie.title}
+                    posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
+                    isFavorite={favoriteMovieIds.has(movie.id)}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                )) : !loading && <p className="mt-8 text-gray-800 dark:text-white text-center">선택한 조건에 맞는 영화가 없습니다.</p>}
+                {loadingMore && Array.from({ length: 4 }).map((_, index) => <MovieCardSkeleton key={`loading-${index}`} />)}
+              </div>
+              <div ref={loadMoreRef} style={{ height: '20px' }} />
+            </>
+          )}
         </main>
       </div>
     </div>
