@@ -34,7 +34,6 @@ interface RecommendedMovie { id: number; title: string; poster_path: string; }
 interface Cast { id: number; name: string; character: string; profile_path: string | null; }
 interface Collection { id: number; name: string; overview: string; poster_path: string | null; backdrop_path: string | null; parts: RecommendedMovie[]; }
 
-// 새로 추가될 리뷰 인터페이스
 interface Review {
   id: number;
   movieId: string;
@@ -113,19 +112,29 @@ const MovieDetailPage: React.FC = () => {
 
   // 찜하기 & 별점 상태
   const [isFavorite, setIsFavorite] = useState(false);
-  const [userRating, setUserRating] = useState(0);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
 
   // 리뷰 관련 상태
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [isEditingReview, setIsEditingReview] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
 
   // Movie details fetching
   useEffect(() => {
     if (!movieId) return;
+    
+    // 상태 초기화
+    setMovie(null);
+    setAllReviews([]);
+    setMyReview(null);
+    setReviewRating(0);
+    setReviewComment('');
+    setIsEditingReview(false);
+    setAverageRating(0);
+
     const fetchAllDetails = async () => {
       setLoading(true);
       try {
@@ -170,21 +179,12 @@ const MovieDetailPage: React.FC = () => {
   useEffect(() => {
     if (!movieId || !isLoggedIn) {
       setIsFavorite(false);
-      setUserRating(0);
       return;
     }
     const fetchUserInteractions = async () => {
       try {
-        const [favResponse, ratingsResponse] = await Promise.all([
-          axiosInstance.get(`/favorites/${movieId}`),
-          axiosInstance.get<Record<string, number>>('/ratings')
-        ]);
+        const favResponse = await axiosInstance.get(`/favorites/${movieId}`);
         setIsFavorite(favResponse.data.isFavorited);
-        if (ratingsResponse.data[movieId]) {
-          setUserRating(ratingsResponse.data[movieId]);
-        } else {
-          setUserRating(0);
-        }
       } catch (error) {
         console.error("Failed to fetch user interactions:", error);
       }
@@ -231,19 +231,27 @@ const MovieDetailPage: React.FC = () => {
       }
     };
     fetchWatchlistStatus();
-  }, [movieId, isLoggedIn]); // isLoggedIn 의존성 추가
+  }, [movieId, isLoggedIn]);
 
-  // 리뷰 데이터 fetching
+  // 리뷰 데이터 fetching 및 평균 별점 계산
   useEffect(() => {
     if (!movieId) return;
 
-    const fetchReviews = async () => {
+    const fetchAllReviews = async () => {
       try {
         const response = await axiosInstance.get<Review[]>(`/reviews/movie/${movieId}`);
-        setReviews(response.data);
+        const reviews = response.data;
+        setAllReviews(reviews);
+
+        if (reviews.length > 0) {
+          const totalRating = reviews.reduce((acc, cur) => acc + cur.rating, 0);
+          setAverageRating(totalRating / reviews.length);
+        } else {
+          setAverageRating(0);
+        }
       } catch (error) {
-        console.error("Failed to fetch reviews:", error);
-        setReviews([]); // 오류 발생 시 빈 배열로 설정
+        console.error("Failed to fetch all reviews:", error);
+        setAllReviews([]);
       }
     };
 
@@ -260,10 +268,9 @@ const MovieDetailPage: React.FC = () => {
         setMyReview(response.data);
         setReviewRating(response.data.rating);
         setReviewComment(response.data.comment);
-        setIsEditingReview(true); // 내 리뷰가 있으면 수정 모드로 시작
+        setIsEditingReview(true);
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
-          // 내 리뷰가 없으면 새로 작성 모드
           setMyReview(null);
           setReviewRating(0);
           setReviewComment('');
@@ -274,7 +281,7 @@ const MovieDetailPage: React.FC = () => {
       }
     };
 
-    fetchReviews();
+    fetchAllReviews();
     fetchMyReview();
   }, [movieId, isLoggedIn]);
 
@@ -303,18 +310,33 @@ const MovieDetailPage: React.FC = () => {
       return;
     }
     if (!movieId) return;
-    const originalRating = userRating;
-    setUserRating(newRating);
+    
+    setReviewRating(newRating); // UI 즉시 업데이트
+
+    const reviewData = {
+      movieId: movieId,
+      rating: newRating,
+      comment: myReview?.comment || reviewComment || " ", // 코멘트가 없으면 기본값 전달
+    };
+
     try {
-      await axiosInstance.post(`/ratings/${movieId}`, { rating: newRating });
+      if (myReview) {
+        await axiosInstance.put(`/reviews/${myReview.id}`, reviewData);
+      } else {
+        const response = await axiosInstance.post('/reviews', reviewData);
+        setMyReview(response.data);
+        setIsEditingReview(true);
+      }
+      // 리뷰 목록 새로고침
+      const allReviewsResponse = await axiosInstance.get<Review[]>(`/reviews/movie/${movieId}`);
+      setAllReviews(allReviewsResponse.data);
     } catch (error) {
       console.error("Failed to update rating:", error);
-      setUserRating(originalRating);
-      alert("별점 등록에 실패했습니다.");
+      alert("별점 등록/수정에 실패했습니다.");
     }
   };
 
-  const toggleWatchlist = async () => { // async 추가
+  const toggleWatchlist = async () => {
     if (!isLoggedIn) {
       alert('로그인이 필요한 기능입니다.');
       navigate('/login');
@@ -324,7 +346,7 @@ const MovieDetailPage: React.FC = () => {
 
     try {
       const response = await axiosInstance.post<boolean>(`/watchlist/${movieId}`);
-      setIsInWatchlist(response.data); // 백엔드에서 반환된 추가/제거 여부로 상태 업데이트
+      setIsInWatchlist(response.data);
       alert(response.data ? 'Watchlist에 추가되었습니다.' : 'Watchlist에서 제거되었습니다.');
     } catch (error) {
       console.error("Failed to toggle watchlist:", error);
@@ -402,20 +424,17 @@ const MovieDetailPage: React.FC = () => {
 
     try {
       if (isEditingReview && myReview) {
-        // 리뷰 수정
         const response = await axiosInstance.put(`/reviews/${myReview.id}`, reviewData);
         setMyReview(response.data);
         alert('리뷰가 수정되었습니다.');
       } else {
-        // 새 리뷰 작성
         const response = await axiosInstance.post('/reviews', reviewData);
         setMyReview(response.data);
         setIsEditingReview(true);
         alert('리뷰가 작성되었습니다.');
       }
-      // 리뷰 목록 새로고침
       const allReviewsResponse = await axiosInstance.get<Review[]>(`/reviews/movie/${movieId}`);
-      setReviews(allReviewsResponse.data);
+      setAllReviews(allReviewsResponse.data);
     } catch (error) {
       console.error("Failed to submit review:", error);
       if (axios.isAxiosError(error) && error.response?.status === 409) {
@@ -444,9 +463,8 @@ const MovieDetailPage: React.FC = () => {
       setReviewComment('');
       setIsEditingReview(false);
       alert('리뷰가 삭제되었습니다.');
-      // 리뷰 목록 새로고침
       const allReviewsResponse = await axiosInstance.get<Review[]>(`/reviews/movie/${movieId}`);
-      setReviews(allReviewsResponse.data);
+      setAllReviews(allReviewsResponse.data);
     } catch (error) {
       console.error("Failed to delete review:", error);
       alert('리뷰 삭제에 실패했습니다.');
@@ -496,13 +514,11 @@ const MovieDetailPage: React.FC = () => {
               <div className="flex items-center justify-center md:justify-start gap-x-4">
                 <h1 className="text-3xl md:text-5xl font-bold">{movie.title}</h1>
                 <div className="flex items-center gap-x-2">
-                  {/* 즐겨찾기 버튼 */}
                   <button onClick={toggleFavorite} className="p-2 rounded-full bg-black bg-opacity-30 hover:bg-opacity-50 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isFavorite ? 'text-red-500' : 'text-white'}`} fill={isFavorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
                     </svg>
                   </button>
-                  {/* 관심 목록 버튼 */}
                   <button onClick={toggleWatchlist} className="p-2 rounded-full bg-black bg-opacity-30 hover:bg-opacity-50 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isInWatchlist ? 'text-yellow-400' : 'text-white'}`} fill={isInWatchlist ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -512,8 +528,14 @@ const MovieDetailPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-center md:justify-start space-x-4 mt-2">
-                <span>⭐ {movie.vote_average.toFixed(1)}</span>
+                <span>TMDB 평점: ⭐ {movie.vote_average.toFixed(1)}</span>
                 <span>|</span>
+                {averageRating > 0 && (
+                  <>
+                    <span>앱 평점: ⭐ {averageRating.toFixed(1)}</span>
+                    <span>|</span>
+                  </>
+                )}
                 <span>{movie.release_date}</span>
                 {movie.runtime && (
                     <>
@@ -527,19 +549,13 @@ const MovieDetailPage: React.FC = () => {
     </span>
                 )}
               </div>
-              {/* 장르 표시를 점(·)으로 구분하여 한 줄로 간결하게 표시합니다. */}
               <div className="flex items-center justify-center md:justify-start gap-x-2 mt-3 text-gray-300 text-sm">
                 {movie.genres.map((g, index) => (
                     <React.Fragment key={g.id}>
                       <span>{g.name}</span>
-                      {/* 마지막 장르가 아닐 경우에만 구분점을 추가합니다. */}
                       {index < movie.genres.length - 1 && <span>·</span>}
                     </React.Fragment>
                 ))}
-              </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">내 별점</h3>
-                <StarRating rating={userRating} onRatingChange={handleRatingChange} size="lg" />
               </div>
               <div className="mt-4 max-w-2xl">
                 <p
@@ -680,24 +696,20 @@ const MovieDetailPage: React.FC = () => {
             <div className="mt-12">
               <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">비슷한 장르의 추천 영화</h2>
               <div className="relative">
-                {/* 왼쪽 스크롤 버튼 */}
                 <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
                   &#10094;
                 </button>
-                {/* 캐러셀 컨테이너 */}
                 <div
                     ref={recommendationsRef}
                     className="flex overflow-x-auto space-x-4 p-2 -m-2 scroll-smooth"
-                    style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' } as React.CSSProperties}
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
                 >
                   {recommendedMovies.map(recMovie => (
-                      // 각 카드가 줄어들지 않도록 flex-shrink-0을 추가합니다.
                       <div key={recMovie.id} className="flex-shrink-0">
                         <MovieCard id={recMovie.id} title={recMovie.title} posterUrl={recMovie.poster_path ? `https://image.tmdb.org/t/p/w500${recMovie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} isFavorite={false} onToggleFavorite={() => {}} />
                       </div>
                   ))}
                 </div>
-                {/* 오른쪽 스크롤 버튼 */}
                 <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
                   &#10095;
                 </button>
@@ -709,14 +721,14 @@ const MovieDetailPage: React.FC = () => {
         <div className="mt-12">
           <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">리뷰</h2>
 
-          {isLoggedIn ? (
+          {isLoggedIn && (
               <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
                   {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
                 </h3>
                 <div className="flex items-center mb-4">
-                  <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
-                  <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" />
+                  <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">내 평점:</span>
+                  <StarRating rating={reviewRating} onRatingChange={handleRatingChange} size="md" />
                 </div>
 
                 <textarea
@@ -743,19 +755,15 @@ const MovieDetailPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-          ) : (
-              <p className="text-gray-600 dark:text-gray-400 text-center py-4">
-                리뷰를 작성하려면 <Link to="/login" className="text-blue-500 hover:underline">로그인</Link> 해주세요.
-              </p>
           )}
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({reviews.length})</h3>
-            {reviews && Array.isArray(reviews) && reviews.length === 0 ? ( // reviews && Array.isArray(reviews) 추가
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({allReviews.length})</h3>
+            {allReviews.length === 0 ? (
                 <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
             ) : (
                 <div className="space-y-6">
-                  {reviews && Array.isArray(reviews) && reviews.map((review) => ( // reviews && Array.isArray(reviews) 추가
+                  {allReviews.map((review) => (
                       <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center">
