@@ -18,7 +18,7 @@ public class RatingController {
     // 영화에 별점 추가/수정
     @PostMapping("/{movieId}")
     public ResponseEntity<Void> addOrUpdateRating(
-            @PathVariable Long movieId,
+            @PathVariable String movieId, // Long -> String
             @RequestBody Map<String, Double> payload,
             Authentication authentication) {
         String userEmail = authentication.getName();
@@ -32,9 +32,9 @@ public class RatingController {
 
     // 현재 사용자가 매긴 모든 별점 정보 조회
     @GetMapping
-    public ResponseEntity<Map<Long, Double>> getUserRatings(Authentication authentication) {
+    public ResponseEntity<Map<String, Double>> getUserRatings(Authentication authentication) { // Map<Long, Double> -> Map<String, Double>
         String userEmail = authentication.getName();
-        Map<Long, Double> userRatings = ratingService.getRatingsByUser(userEmail);
+        Map<String, Double> userRatings = ratingService.getRatingsByUser(userEmail);
         return ResponseEntity.ok(userRatings);
     }
 }
