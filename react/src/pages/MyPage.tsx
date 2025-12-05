@@ -5,6 +5,7 @@ import axiosInstance from '../api/axiosInstance';
 import MovieCard from '../components/MovieCard';
 import StarRating from '../components/StarRating';
 import axios from 'axios';
+import MovieCardSkeleton from '../components/MovieCardSkeleton'; // MovieCardSkeleton 임포트
 
 // 백엔드 UserProfileDto와 유사한 인터페이스 정의
 interface UserProfile {
@@ -315,16 +316,108 @@ const MyPage: React.FC = () => {
         return <div className="text-center p-12 text-2xl text-red-500">로그인이 필요합니다.</div>;
     }
 
-    if (loading) {
-        return <div className="text-center p-12 text-2xl dark:text-white">프로필 정보를 불러오는 중...</div>;
-    }
-
     if (pageError) {
         return <div className="text-center p-12 text-2xl text-red-500">{pageError}</div>;
     }
 
-    if (!profile) {
+    if (!profile && !loading) { // 로딩이 끝났는데 프로필이 없으면 에러
         return <div className="text-center p-12 text-2xl dark:text-white">프로필 정보를 찾을 수 없습니다.</div>;
+    }
+
+    // 로딩 중일 때 스켈레톤 UI를 보여줍니다.
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8">
+                <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+                    <h1 className="text-4xl font-bold mb-8 text-center animate-pulse bg-gray-200 dark:bg-gray-700 h-10 w-1/2 mx-auto rounded"></h1>
+
+                    {/* 감정 분석 영화 추천 섹션 스켈레톤 */}
+                    <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/3 rounded"></h2>
+                        <div className="flex items-center space-x-4 mb-4">
+                            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <MovieCardSkeleton key={index} size="sm" staggerIndex={index} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 찜한 영화 스켈레톤 */}
+                    <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/4 rounded"></h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <MovieCardSkeleton key={index} size="sm" staggerIndex={index} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Watchlist 영화 스켈레톤 */}
+                    <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/4 rounded"></h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <MovieCardSkeleton key={index} size="sm" staggerIndex={index} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 평점 매긴 영화 스켈레톤 */}
+                    <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/4 rounded"></h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {Array.from({ length: 2 }).map((_, index) => (
+                                <div key={index} className="flex items-center bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm p-4 animate-pulse">
+                                    <div className="w-16 h-24 bg-gray-300 dark:bg-gray-600 rounded-md mr-4"></div>
+                                    <div>
+                                        <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+                                        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 작성한 리뷰 스켈레톤 */}
+                    <div className="mb-10">
+                        <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/5 rounded"></h2>
+                        <div className="space-y-6">
+                            {Array.from({ length: 2 }).map((_, index) => (
+                                <div key={index} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 animate-pulse">
+                                    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
+                                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 계정 관리 스켈레톤 */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-10">
+                        <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/4 rounded"></h2>
+                        <p className="text-lg mb-6 animate-pulse bg-gray-200 dark:bg-gray-700 h-6 w-1/3 rounded"></p>
+
+                        <div className="border-t pt-6 border-gray-200 dark:border-gray-700">
+                            <h2 className="text-2xl font-semibold mb-4 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/3 rounded"></h2>
+                            <div className="space-y-4">
+                                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 border-t pt-6 border-red-300 dark:border-red-700">
+                            <h2 className="text-2xl font-semibold mb-4 text-red-500 animate-pulse bg-gray-200 dark:bg-gray-700 h-8 w-1/4 rounded"></h2>
+                            <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -505,7 +598,7 @@ const MyPage: React.FC = () => {
                         </form>
                     </div>
 
-                    <div className="mt-8 border-t pt-6 border-red-300 dark:border-red-700">
+                    <div className="mt-8 border-t pt-6 border-red-300 dark:border-gray-700">
                         <h2 className="text-2xl font-semibold mb-4 text-red-500">계정 삭제</h2>
                         <button onClick={handleDeleteAccount} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">회원 탈퇴</button>
                     </div>
