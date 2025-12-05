@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
 interface Movie {
-  id: number;
+  id: string; // number -> string
   title: string;
   poster_path: string;
 }
@@ -43,7 +43,7 @@ const MainPage: React.FC = () => {
   const [minRating, setMinRating] = useState<number>(0);
 
   const { isLoggedIn } = useAuth();
-  const [favoriteMovieIds, setFavoriteMovieIds] = useState<Set<number>>(new Set());
+  const [favoriteMovieIds, setFavoriteMovieIds] = useState<Set<string>>(new Set()); // Set<number> -> Set<string>
 
   const observer = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback((node: HTMLDivElement) => {
@@ -57,21 +57,22 @@ const MainPage: React.FC = () => {
     if (node) observer.current.observe(node);
   }, [loading, loadingMore, currentPage, totalPages]);
 
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      if (isLoggedIn) {
-        try {
-          const response = await axiosInstance.get<number[]>('/favorites');
-          setFavoriteMovieIds(new Set(response.data));
-        } catch (err) {
-          console.error("찜 목록을 불러오는데 실패했습니다.", err);
-        }
-      } else {
-        setFavoriteMovieIds(new Set());
+  const fetchFavorites = useCallback(async () => {
+    if (isLoggedIn) {
+      try {
+        const response = await axiosInstance.get<string[]>('/favorites'); // number[] -> string[]
+        setFavoriteMovieIds(new Set(response.data));
+      } catch (err) {
+        console.error("찜 목록을 불러오는데 실패했습니다.", err);
       }
-    };
-    fetchFavorites();
+    } else {
+      setFavoriteMovieIds(new Set());
+    }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -104,7 +105,8 @@ const MainPage: React.FC = () => {
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Network response was not ok');
         const data: ApiResult = await response.json();
-        setMovies(prev => currentPage === 1 ? data.results : [...prev, ...data.results]);
+        const stringIdMovies = data.results.map(movie => ({ ...movie, id: String(movie.id) }));
+        setMovies(prev => currentPage === 1 ? stringIdMovies : [...prev, ...stringIdMovies]);
         setTotalPages(data.total_pages);
       } catch (e) {
         setError(e as Error);
@@ -116,7 +118,7 @@ const MainPage: React.FC = () => {
     fetchMovies();
   }, [selectedGenres, selectedYear, minRating, currentPage]);
 
-  const handleToggleFavorite = async (movieId: number, e: React.MouseEvent) => {
+  const handleToggleFavorite = async (movieId: string, e: React.MouseEvent) => { // number -> string
     e.preventDefault();
     e.stopPropagation();
 
@@ -136,6 +138,9 @@ const MainPage: React.FC = () => {
 
     try {
       await axiosInstance.post(`/favorites/${movieId}`);
+      // 찜 상태 변경 성공 시, 최신 상태를 다시 불러올 수 있습니다.
+      // 하지만, 낙관적 업데이트가 잘 동작하므로 필수는 아닙니다.
+      // await fetchFavorites();
     } catch (err) {
       console.error("찜 상태 변경에 실패했습니다.", err);
       setFavoriteMovieIds(originalFavorites);
@@ -179,9 +184,9 @@ const MainPage: React.FC = () => {
 
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 추가된 영화 섹션들 */}
-        <MovieSectionCarousel title="인기 영화" fetchUrl="https://api.themoviedb.org/3/movie/popular" />
-        <MovieSectionCarousel title="높은 평점 영화" fetchUrl="https://api.themoviedb.org/3/movie/top_rated" />
-        <MovieSectionCarousel title="개봉 예정 영화" fetchUrl="https://api.themoviedb.org/3/movie/upcoming" />
+        <MovieSectionCarousel title="인기 영화" fetchUrl="https://api.themoviedb.org/3/movie/popular" onToggleFavorite={handleToggleFavorite} favoriteMovieIds={favoriteMovieIds} />
+        <MovieSectionCarousel title="높은 평점 영화" fetchUrl="https://api.themoviedb.org/3/movie/top_rated" onToggleFavorite={handleToggleFavorite} favoriteMovieIds={favoriteMovieIds} />
+        <MovieSectionCarousel title="개봉 예정 영화" fetchUrl="https://api.themoviedb.org/3/movie/upcoming" onToggleFavorite={handleToggleFavorite} favoriteMovieIds={favoriteMovieIds} />
 
         <div className="flex flex-col md:flex-row gap-8 mt-12"> {/* gap 추가 */}
           <aside className="w-full md:w-64 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-shrink-0">
