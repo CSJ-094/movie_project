@@ -1,6 +1,7 @@
 package com.boot.service;
 
 import com.boot.dto.TokenInfo;
+import com.boot.dto.UserAdminDto;
 import com.boot.dto.UserSignUpDto;
 import com.boot.entity.User;
 import com.boot.entity.VerificationToken;
@@ -16,8 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional; // Optional import 추가
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -115,6 +118,26 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         // 연관된 토큰 삭제 (Cascade 설정이 안되어 있을 경우를 대비)
+        tokenRepository.deleteByUser(user);
+
+        userRepository.delete(user);
+    }
+
+    // 관리자용: 모든 사용자 조회
+    @Transactional(readOnly = true)
+    public List<UserAdminDto> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(UserAdminDto::from)
+                .collect(Collectors.toList());
+    }
+
+    // 관리자용: 특정 사용자 삭제
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 연관된 토큰 삭제
         tokenRepository.deleteByUser(user);
 
         userRepository.delete(user);

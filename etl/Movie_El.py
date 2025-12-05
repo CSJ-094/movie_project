@@ -54,11 +54,13 @@ INDEX_SETTINGS = {
                 "nori_analyzer": {
                     "type": "custom",
                     "tokenizer": "nori_tokenizer",
-                    "filter": [ "nori_part_of_speech" ]
+                    "filter": [ "lowercase", "nori_part_of_speech",
+                                "my_synonyms"]
                 },
                 "ngram_analyzer": {
                     "type": "custom",
-                    "tokenizer": "ngram_tokenizer"
+                    "tokenizer": "ngram_tokenizer",
+                    "filter": [ "lowercase" ]
                 }
             },
             "tokenizer": {
@@ -70,6 +72,14 @@ INDEX_SETTINGS = {
                 }
             },
             "filter": {
+                "my_synonyms": {
+                    "type": "synonym",
+                    "synonyms": [
+                        "마블, marvel, mcu",
+                        "디즈니, disney",
+                        "픽사, pixar"
+                    ]
+                },
                 "nori_part_of_speech": {
                     "type": "nori_part_of_speech",
                     "stoptags": [ "E", "J"]
@@ -88,6 +98,7 @@ INDEX_SETTINGS = {
                     "keyword": { "type": "keyword" }
                 }
             },
+
             "overview": { "type": "text", "analyzer": "nori_analyzer" },
             "poster_path": { "type": "keyword", "index": False },
             "vote_average": { "type": "float" },
@@ -97,7 +108,14 @@ INDEX_SETTINGS = {
             "runtime": { "type": "integer" },
             "certification": { "type": "keyword" },
             "ott_providers": { "type": "keyword" },
-            "ott_link": { "type": "keyword", "index": False }
+            "ott_link": { "type": "keyword", "index": False },
+            "companies":{
+                "type": "text",
+                "analyzer": "nori_analyzer",
+                "fields": {
+                    "keyword":{ "type": "keyword" }
+                }
+            }
         }
     }
 }
@@ -162,11 +180,11 @@ def get_movie_details(movie_id, session):
 
         data = response.json()
 
-        # 1) 러닝타임
+        # 러닝타임
         runtime = data.get('runtime', 0)
         if runtime is None: runtime = 0
 
-        # 2) 관람 등급 (한국 KR 기준)
+        # 관람등급
         certification = ""
         release_dates_results = data.get('release_dates', {}).get('results', [])
         for item in release_dates_results:
@@ -178,7 +196,7 @@ def get_movie_details(movie_id, session):
                         break
             if certification: break
 
-        # 3) OTT 정보 (키 이름 수정됨)
+        # OTT
         ott_providers = []
         ott_link = None
 
@@ -192,12 +210,18 @@ def get_movie_details(movie_id, session):
                         ott_providers.append(provider['provider_name'])
             ott_providers = sorted(list(set(ott_providers)))
 
+        #제작사
+        companies = []
+        if 'production_companies' in data:
+            companies = [c['name'] for c in data['production_companies']]
+
         return {
             'movie_id': movie_id,
             'runtime': runtime,
             'certification': certification,
             'ott_providers': ott_providers,
-            'ott_link': ott_link
+            'ott_link': ott_link,
+            'companies': companies,
         }
 
     except requests.exceptions.RequestException as e:
@@ -223,7 +247,8 @@ def generate_actions(all_movies, now_playing_ids):
             "runtime": movie.get('runtime', 0),
             "certification": movie.get('certification', ''),
             "ott_providers": movie.get('ott_providers', []), # 추가
-            "ott_link": movie.get('ott_link') # 추가
+            "ott_link": movie.get('ott_link'), # 추가
+            "companies": movie.get('companies', [])
         }
         yield {
             "_index": INDEX_NAME,
@@ -263,6 +288,7 @@ def fetch_and_index_movies_process():
                     all_movies[mid]['certification'] = result['certification']
                     all_movies[mid]['ott_providers'] = result['ott_providers']
                     all_movies[mid]['ott_link'] = result['ott_link']
+                    all_movies[mid]['companies'] = result['companies']
 
     # 5. Elasticsearch에 데이터 적재 (벌크 API 및 진행 상황 표시)
     logger.info("\n--- Loading Data to Elasticsearch ---")
