@@ -20,6 +20,8 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger; // Logger import 추가
+import org.slf4j.LoggerFactory; // LoggerFactory import 추가
 
 import com.boot.dto.MovieDoc;
 import com.boot.dto.MovieSearchRequest;
@@ -29,6 +31,8 @@ import com.boot.dto.MovieSearchResponse;
 @Service
 @RequiredArgsConstructor
 public class MovieSearchService {
+    private static final Logger logger = LoggerFactory.getLogger(MovieSearchService.class); // Logger 인스턴스 생성
+
     private final ElasticsearchClient elasticsearchClient;
 
     private static final List<GenreOption> GENRE_OPTIONS = List.of(
@@ -260,11 +264,11 @@ public class MovieSearchService {
             if (response.found()) {
                 return response.source();
             } else {
+                logger.warn("Elasticsearch에서 영화 ID {}를 찾을 수 없습니다.", id); // 로그 추가
                 return null;
             }
         } catch (Exception e) {
-            // 로그를 남기는 것이 좋지만, 일단 null 반환
-            e.printStackTrace();
+            logger.error("Elasticsearch에서 영화 ID {} 조회 중 오류 발생: {}", id, e.getMessage()); // 로그 추가
             return null;
         }
     }

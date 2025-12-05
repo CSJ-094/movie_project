@@ -766,12 +766,12 @@ const MovieDetailPage: React.FC = () => {
           )}
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({reviews.length})</h3>
-            {reviews && Array.isArray(reviews) && reviews.length === 0 ? ( // reviews && Array.isArray(reviews) 추가
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({allReviews.length})</h3>
+            {allReviews && Array.isArray(allReviews) && allReviews.length === 0 ? ( // reviews -> allReviews
               <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
             ) : (
               <div className="space-y-6">
-                {reviews && Array.isArray(reviews) && reviews.map((review) => ( // reviews && Array.isArray(reviews) 추가
+                {allReviews && Array.isArray(allReviews) && allReviews.map((review) => ( // reviews -> allReviews
                   <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center">

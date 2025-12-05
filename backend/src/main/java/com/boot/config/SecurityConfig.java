@@ -41,10 +41,10 @@ public class SecurityConfig {
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http,
                         CustomOAuth2UserService customOAuth2UserService) throws Exception { // 파라미터로 주입
-                CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+                // CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler(); // CSRF 비활성화로 인해 이 코드는 필요 없습니다.
                 // Spring Security 6.1 이상에서는 CSRF 토큰을 request attribute에서 찾는 것을 기본으로 하므로,
                 // 헤더에서 찾도록 하려면 이 핸들러가 필요합니다.
-                requestHandler.setCsrfRequestAttributeName(null);
+                // requestHandler.setCsrfRequestAttributeName(null); // CSRF 비활성화로 인해 이 코드는 필요 없습니다.
 
                 http
                                 // CORS 설정을 Spring Security와 통합
