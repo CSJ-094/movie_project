@@ -4,16 +4,16 @@ import TrailerModal from './TrailerModal';
 import axios from 'axios';
 
 interface MovieCardProps {
-  id: number;
+  id: string;
   title: string;
   posterUrl: string;
   isFavorite?: boolean;
-  onToggleFavorite?: (movieId: number, e: React.MouseEvent) => void;
+  onToggleFavorite?: (movieId: string, e: React.MouseEvent) => void;
   size?: 'sm' | 'md' | 'lg';
   showTitle?: boolean;
   isWatched?: boolean;
   showWatchlistControls?: boolean;
-  onToggleWatched?: (movieId: number) => void;
+  onToggleWatched?: (movieId: string) => void;
   staggerIndex?: number;
 }
 
@@ -77,16 +77,15 @@ const MovieCard: React.FC<MovieCardProps> = ({
     }
   };
 
-  // size에 따라 높이만 정의하도록 변경
+  // size에 따라 높이만 정의
   const sizeClassName = {
-    sm: 'h-64', // w-40에 맞는 대략적인 높이
-    md: 'h-72', // w-48에 맞는 대략적인 높이
-    lg: 'h-96', // w-64에 맞는 대략적인 높이
+    sm: 'h-64',
+    md: 'h-72',
+    lg: 'h-96',
   }[size];
 
   const cardWrapperClassName = `
-    relative group no-underline flex-shrink-0 w-full // w-full 추가, 고정 너비 제거
-    ${sizeClassName} // 높이만 적용
+    relative group no-underline flex-shrink-0 h-full w-full
     transition-all duration-300 ease-in-out
     hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:z-10
   `;
@@ -100,7 +99,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
           <img 
             src={posterUrl} 
             alt={`${title} poster`} 
-            className="w-full h-full object-cover block" // w-full h-full 유지
+            className="w-full h-full object-cover block"
           />
           
           {isWatched && (

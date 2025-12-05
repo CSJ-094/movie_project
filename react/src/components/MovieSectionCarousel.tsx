@@ -60,7 +60,9 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
       {loading ? (
         <div className="flex space-x-4 overflow-hidden">
           {Array.from({ length: 5 }).map((_, index) => (
-            <MovieCardSkeleton key={index} size="md" staggerIndex={index} />
+            <div key={index} className="w-48 h-72 flex-shrink-0"> {/* 스켈레톤 크기 지정 */}
+              <MovieCardSkeleton size="md" staggerIndex={index} />
+            </div>
           ))}
         </div>
       ) : (
@@ -86,9 +88,9 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
           className="movie-section-swiper"
         >
           {movies.map((movie, index) => (
-            <SwiperSlide key={movie.id}>
+            <SwiperSlide key={movie.id} className="h-72"> {/* SwiperSlide에 높이 지정 */}
               <MovieCard
-                id={movie.id}
+                id={String(movie.id)} // id를 string으로 변환
                 title={movie.title}
                 posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
                 size="md"
