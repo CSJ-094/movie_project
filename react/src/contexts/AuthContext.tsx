@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState<string | null>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true); // 초기 인증 상태 확인 중 로딩 상태
 
     useEffect(() => {
         // 앱 시작 시 localStorage에서 토큰을 확인
@@ -50,6 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 localStorage.removeItem('accessToken');
             }
         }
+        // 토큰 확인 작업이 끝났으므로 로딩 상태를 false로 변경
+        setIsLoading(false);
     }, []);
 
     const login = (newToken: string, navigate: NavigateFunction) => {
@@ -72,6 +75,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const isLoggedIn = !!token;
+
+    // 초기 인증 상태를 확인하는 동안에는 아무것도 렌더링하지 않거나 로딩 스피너를 보여줍니다.
+    if (isLoading) {
+        return null; // 또는 <LoadingSpinner /> 같은 로딩 컴포넌트
+    }
 
     return (
         <AuthContext.Provider value={{ isLoggedIn, userEmail, userRole, login, logout }}>

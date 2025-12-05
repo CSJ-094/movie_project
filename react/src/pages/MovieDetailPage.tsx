@@ -624,17 +624,17 @@ const MovieDetailPage: React.FC = () => {
         {/* 주요 출연진 섹션 */}
         {cast.length > 0 && (
             <div className="mt-12">
-              <h2 className="text-3xl font-bold mb-4">주요 출연진</h2>
+              <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">주요 출연진</h2>
               <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
                 {cast.map((actor) => (
-                    <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline text-current">
+                    <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline">
                       <div>
                         <img
                             src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
                             alt={actor.name}
                             className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
                         />
-                        <p className="mt-2 font-semibold text-sm">{actor.name}</p>
+                        <p className="mt-2 font-semibold text-sm text-gray-900 dark:text-white">{actor.name}</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400">{actor.character} 역</p>
                       </div>
                     </Link>
@@ -678,7 +678,7 @@ const MovieDetailPage: React.FC = () => {
         {/* 추천 영화 섹션 */}
         {recommendedMovies.length > 0 && (
             <div className="mt-12">
-              <h2 className="text-3xl font-bold mb-4">비슷한 장르의 추천 영화</h2>
+              <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">비슷한 장르의 추천 영화</h2>
               <div className="relative">
                 {/* 왼쪽 스크롤 버튼 */}
                 <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">

@@ -7,19 +7,16 @@ import com.boot.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher; // [필수] 이 import 확인!
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -42,6 +39,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOAuth2UserService customOAuth2UserService) throws Exception { // 파라미터로 주입
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+        // Spring Security 6.1 이상에서는 CSRF 토큰을 request attribute에서 찾는 것을 기본으로 하므로,
+        // 헤더에서 찾도록 하려면 이 핸들러가 필요합니다.
+        requestHandler.setCsrfRequestAttributeName(null);
+
         http
                 // CORS 설정을 Spring Security와 통합
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -49,21 +51,25 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable())
                 // Form Login 비활성화
                 .formLogin(formLogin -> formLogin.disable())
-                // CSRF 보호 비활성화 (JWT 사용 시)
-                .csrf(csrf -> csrf.disable())
+                // CSRF 보호 활성화 및 쿠키 설정
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(requestHandler)
+                        // 로그인, 회원가입 경로는 CSRF 보호를 적용하지 않음
+                        .ignoringRequestMatchers("/api/user/login", "/api/user/signup")
+                )
                 // 세션을 사용하지 않으므로 STATELESS로 설정
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // HTTP 요청에 대한 접근 권한 설정
                 .authorizeHttpRequests(authz -> authz
+                        // 로그인, 회원가입, 이메일 인증, OAuth2 관련 경로는 누구나 접근 허용 (가장 먼저 선언)
+                        .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify", "/", "/auth/**", "/oauth2/**", "/login/**", "/error").permitAll()
                         // Swagger 관련 API는 누구나 접근 허용
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
-                        // 로그인, 회원가입, 이메일 인증, 영화 검색 API는 누구나 접근 허용
-                        .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify").permitAll()
                         // 관리자 API는 ADMIN 역할만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/movies/**", "/api/search/**").permitAll() // 영화 정보 조회, 검색 등 GET 요청 허용
-                        .requestMatchers("/", "/auth/**", "/oauth2/**", "/login/**", "/error").permitAll() // 인증 없이 접근 허용
                         // 그 외 모든 요청은 인증된 사용자만 접근 가능
                         .anyRequest().authenticated())
 

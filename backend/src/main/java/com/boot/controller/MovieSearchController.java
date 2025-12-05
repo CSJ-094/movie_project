@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/movies")
-@CrossOrigin(origins = "http://localhost:5173") // React 개발 서버의 주소를 허용
+@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class MovieSearchController {
 
