@@ -56,42 +56,42 @@ const AppHeader: React.FC = () => {
   ];
 
   return (
-      <header className="bg-gray-900 bg-opacity-80 backdrop-blur-sm text-white shadow-lg sticky top-0 z-40">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center h-16">
-            <div className="flex items-baseline space-x-4">
-              {categories.map((category) => (
-                  <Link
-                      key={category.name}
-                      to={category.path}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${location.pathname === category.path
-                          ? 'bg-red-600 text-white'
-                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                      }`}
-                  >{category.name}</Link>
-              ))}
-            </div>
+    <header className="bg-gray-900 bg-opacity-80 backdrop-blur-sm text-white shadow-lg sticky top-0 z-40">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-16">
+          <div className="flex items-baseline space-x-4">
+            {categories.map((category) => (
+              <Link
+                key={category.name}
+                to={category.path}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${location.pathname === category.path
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+              >{category.name}</Link>
+            ))}
           </div>
-        </nav>
-      </header>
+        </div>
+      </nav>
+    </header>
   );
 };
 
 // --- 스켈레톤 UI ---
 const MovieDetailSkeleton: React.FC = () => (
-    <div className="animate-pulse">
-        <div className="relative w-full h-[60vh] bg-gray-300 dark:bg-gray-700">
-            <div className="relative max-w-5xl mx-auto p-4 md:p-8 h-full flex items-center">
-                <div className="w-48 md:w-64 h-72 md:h-96 bg-gray-400 dark:bg-gray-600 rounded-lg shadow-2xl z-10" />
-                <div className="md:ml-8 mt-5 md:mt-0 flex-1">
-                    <div className="h-10 bg-gray-400 dark:bg-gray-600 rounded w-3/4" />
-                    <div className="h-5 bg-gray-400 dark:bg-gray-600 rounded w-24 mt-4" />
-                    <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-full mt-4" />
-                    <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-5/6 mt-2" />
-                </div>
-            </div>
+  <div className="animate-pulse">
+    <div className="relative w-full h-[60vh] bg-gray-300 dark:bg-gray-700">
+      <div className="relative max-w-5xl mx-auto p-4 md:p-8 h-full flex items-center">
+        <div className="w-48 md:w-64 h-72 md:h-96 bg-gray-400 dark:bg-gray-600 rounded-lg shadow-2xl z-10" />
+        <div className="md:ml-8 mt-5 md:mt-0 flex-1">
+          <div className="h-10 bg-gray-400 dark:bg-gray-600 rounded w-3/4" />
+          <div className="h-5 bg-gray-400 dark:bg-gray-600 rounded w-24 mt-4" />
+          <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-full mt-4" />
+          <div className="h-4 bg-gray-400 dark:bg-gray-600 rounded w-5/6 mt-2" />
         </div>
+      </div>
     </div>
+  </div>
 );
 
 const MovieDetailPage: React.FC = () => {
@@ -160,7 +160,7 @@ const MovieDetailPage: React.FC = () => {
             if (myData.certification) detailsData.certification = myData.certification;
           }
         } catch (error) { console.warn("OTT info not found in backend."); }
-        
+
         setMovie(detailsData);
         const officialTrailer = videosData.results.find((v: Video) => v.type === 'Trailer') || videosData.results[0];
         if (officialTrailer) setTrailerKey(officialTrailer.key);
@@ -390,13 +390,13 @@ const MovieDetailPage: React.FC = () => {
 
   const getProviderLogoUrl = (providerName: string) => {
     const lowerName = providerName.toLowerCase();
-      if (lowerName.includes('netflix')) return 'https://image.tmdb.org/t/p/original/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg';
-      if (lowerName.includes('disney')) return 'https://image.tmdb.org/t/p/original/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg';
-      if (lowerName.includes('watcha')) return 'https://image.tmdb.org/t/p/original/5qeRb2pQn5877y98t3tE5uEae5.jpg';
-      if (lowerName.includes('wavve')) return 'https://media.themoviedb.org/t/p/original/hPcjSaWfMwEqXaCMu7Fkb529Dkc.jpg';
-      if (lowerName.includes('apple')) return 'https://image.tmdb.org/t/p/original/q6tl6Ib6X5FT80RMlcDbexIo4St.jpg';
-      if (lowerName.includes('tving')) return 'https://media.themoviedb.org/t/p/original/qHThQdkJuROK0k5QTCrknaNukWe.jpg';
-      return undefined;
+    if (lowerName.includes('netflix')) return 'https://image.tmdb.org/t/p/original/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg';
+    if (lowerName.includes('disney')) return 'https://image.tmdb.org/t/p/original/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg';
+    if (lowerName.includes('watcha')) return 'https://image.tmdb.org/t/p/original/5qeRb2pQn5877y98t3tE5uEae5.jpg';
+    if (lowerName.includes('wavve')) return 'https://media.themoviedb.org/t/p/original/hPcjSaWfMwEqXaCMu7Fkb529Dkc.jpg';
+    if (lowerName.includes('apple')) return 'https://image.tmdb.org/t/p/original/q6tl6Ib6X5FT80RMlcDbexIo4St.jpg';
+    if (lowerName.includes('tving')) return 'https://media.themoviedb.org/t/p/original/qHThQdkJuROK0k5QTCrknaNukWe.jpg';
+    return undefined;
   }
 
   // 리뷰 제출 (작성 또는 수정)
@@ -503,8 +503,8 @@ const MovieDetailPage: React.FC = () => {
 
       {/* 상단 정보 섹션 */}
       <div
-          className="relative w-full h-[60vh] bg-cover bg-center"
-          style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})` }}
+        className="relative w-full h-[60vh] bg-cover bg-center"
+        style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})` }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-60" />
         <div className="relative max-w-5xl mx-auto p-4 md:p-8 h-full flex items-center">
@@ -538,96 +538,96 @@ const MovieDetailPage: React.FC = () => {
                 )}
                 <span>{movie.release_date}</span>
                 {movie.runtime && (
-                    <>
-                      <span>|</span>
-                      <span>{formatRuntime(movie.runtime)}</span>
-                    </>
+                  <>
+                    <span>|</span>
+                    <span>{formatRuntime(movie.runtime)}</span>
+                  </>
                 )}
                 {movie.certification && (
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ml-2 ${getCertColor(movie.certification)}`}>
-                {movie.certification === 'All' ? '전체' : `${movie.certification}세`}
-    </span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ml-2 ${getCertColor(movie.certification)}`}>
+                    {movie.certification === 'All' ? '전체' : `${movie.certification}세`}
+                  </span>
                 )}
               </div>
               <div className="flex items-center justify-center md:justify-start gap-x-2 mt-3 text-gray-300 text-sm">
                 {movie.genres.map((g, index) => (
-                    <React.Fragment key={g.id}>
-                      <span>{g.name}</span>
-                      {index < movie.genres.length - 1 && <span>·</span>}
-                    </React.Fragment>
+                  <React.Fragment key={g.id}>
+                    <span>{g.name}</span>
+                    {/* 마지막 장르가 아닐 경우에만 구분점을 추가합니다. */}
+                    {index < movie.genres.length - 1 && <span>·</span>}
+                  </React.Fragment>
                 ))}
               </div>
               <div className="mt-4 max-w-2xl">
                 <p
-                    ref={overviewRef}
-                    className={`text-sm md:text-base transition-all duration-300 ${!isOverviewExpanded && 'line-clamp-3'}`}
+                  ref={overviewRef}
+                  className={`text-sm md:text-base transition-all duration-300 ${!isOverviewExpanded && 'line-clamp-3'}`}
                 >
                   {movie.overview}
                 </p>
                 {isClamped && (
-                    <button onClick={() => setIsOverviewExpanded(!isOverviewExpanded)} className="text-gray-300 hover:text-white font-semibold mt-1">
-                      {isOverviewExpanded ? '접기' : '더보기'}
-                    </button>
+                  <button onClick={() => setIsOverviewExpanded(!isOverviewExpanded)} className="text-gray-300 hover:text-white font-semibold mt-1">
+                    {isOverviewExpanded ? '접기' : '더보기'}
+                  </button>
                 )}
               </div>
 
               <div className="mt-8 flex items-center justify-center md:justify-start space-x-4">
                 <button
-                    onClick={handleBooking}
-                    disabled={!movie.is_now_playing}
-                    className={`font-bold py-3 px-8 rounded-lg text-lg transition-colors ${
-                        movie.is_now_playing
-                            ? 'bg-red-600 text-white hover:bg-red-700'
-                            : 'bg-red-400 text-gray-300 cursor-not-allowed'
+                  onClick={handleBooking}
+                  disabled={!movie.is_now_playing}
+                  className={`font-bold py-3 px-8 rounded-lg text-lg transition-colors ${movie.is_now_playing
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-red-400 text-gray-300 cursor-not-allowed'
                     }`}
                 >
                   {movie.is_now_playing ? '예매 하기' : '예매 불가'}
                 </button>
 
                 {trailerKey && (
-                    <button
-                        onClick={openTrailerModal}
-                        className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-colors text-lg"
-                    >
-                      트레일러 보기
-                    </button>
+                  <button
+                    onClick={openTrailerModal}
+                    className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-colors text-lg"
+                  >
+                    트레일러 보기
+                  </button>
                 )}
                 {movie.ott_providers && movie.ott_providers.length > 0 && (
-                    <div className="relative group">
-                      <button className="bg-gray-800 border border-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2 text-lg">
-                        <span>▶</span> 시청하기
-                      </button>
-                      <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden z-50 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform origin-top-left">
-                        <div className="py-2">
-                          {movie.ott_providers.map((provider, index) => {
-                            const logoUrl = getProviderLogoUrl(provider);
+                  <div className="relative group">
+                    <button className="bg-gray-800 border border-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-all flex items-center gap-2 text-lg">
+                      <span>▶</span> 시청하기
+                    </button>
+                    <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden z-50 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform origin-top-left">
+                      <div className="py-2">
+                        {movie.ott_providers.map((provider, index) => {
+                          const logoUrl = getProviderLogoUrl(provider);
 
-                            return (
-                                <a
-                                    key={index}
-                                    href={getOttSearchLink(provider, movie.title)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center px-4 py-3 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-600 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
-                                >
-                                  {logoUrl ? (
-                                      <img
-                                          src={logoUrl}
-                                          alt={provider}
-                                          className="w-6 h-6 rounded-md mr-3 object-cover shadow-sm border border-gray-200 dark:border-gray-600"
-                                      />
-                                  ) : (
-                                      <span className="w-6 h-6 rounded-md mr-3 bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-500">
-                                        {provider.charAt(0)}
-                                      </span>
-                                  )}
-                                  <span className="font-medium">{provider}</span>
-                                </a>
-                            );
-                          })}
-                        </div>
+                          return (
+                            <a
+                              key={index}
+                              href={getOttSearchLink(provider, movie.title)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center px-4 py-3 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-red-600 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                            >
+                              {logoUrl ? (
+                                <img
+                                  src={logoUrl}
+                                  alt={provider}
+                                  className="w-6 h-6 rounded-md mr-3 object-cover shadow-sm border border-gray-200 dark:border-gray-600"
+                                />
+                              ) : (
+                                <span className="w-6 h-6 rounded-md mr-3 bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-500">
+                                  {provider.charAt(0)}
+                                </span>
+                              )}
+                              <span className="font-medium">{provider}</span>
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -639,148 +639,156 @@ const MovieDetailPage: React.FC = () => {
       <div className="p-4 md:p-8 max-w-5xl mx-auto">
         {/* 주요 출연진 섹션 */}
         {cast.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">주요 출연진</h2>
-              <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
-                {cast.map((actor) => (
-                    <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline">
-                      <div>
-                        <img
-                            src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
-                            alt={actor.name}
-                            className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
-                        />
-                        <p className="mt-2 font-semibold text-sm text-gray-900 dark:text-white">{actor.name}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">{actor.character} 역</p>
-                      </div>
-                    </Link>
-                ))}
-              </div>
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">주요 출연진</h2>
+            <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
+              {cast.map((actor) => (
+                <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline">
+                  <div>
+                    <img
+                      src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
+                      alt={actor.name}
+                      className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
+                    />
+                    <p className="mt-2 font-semibold text-sm text-gray-900 dark:text-white">{actor.name}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{actor.character} 역</p>
+                  </div>
+                </Link>
+              ))}
             </div>
+          </div>
         )}
 
         {/* 컬렉션/시리즈 정보 섹션 */}
         {collection && (
-            <div className="mt-12">
-              <div
-                  className="relative rounded-xl p-8 bg-cover bg-center text-white"
-                  style={{
-                    backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(https://image.tmdb.org/t/p/w1280${collection.backdrop_path})`
-                  }}
-              >
-                <h2 className="text-3xl font-bold mb-2">'{collection.name}'의 일부입니다</h2>
-                <p className="text-lg mb-6">이 컬렉션에 포함된 다른 영화들도 확인해보세요.</p>
-                <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
-                  {collection.parts.map((part) => (
-                      <div key={part.id} className="flex-shrink-0">
-                        <MovieCard
-                            id={part.id}
-                            title={part.title}
-                            posterUrl={
-                              part.poster_path
-                                  ? `https://image.tmdb.org/t/p/w500${part.poster_path}`
-                                  : 'https://via.placeholder.com/200x300?text=No+Image'
-                            }
-                            isFavorite={false}
-                            onToggleFavorite={() => {}}
-                        />
-                      </div>
-                  ))}
-                </div>
+          <div className="mt-12">
+            <div
+              className="relative rounded-xl p-8 bg-cover bg-center text-white"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(https://image.tmdb.org/t/p/w1280${collection.backdrop_path})`
+              }}
+            >
+              <h2 className="text-3xl font-bold mb-2">'{collection.name}'의 일부입니다</h2>
+              <p className="text-lg mb-6">이 컬렉션에 포함된 다른 영화들도 확인해보세요.</p>
+              <div className="flex overflow-x-auto space-x-4 pb-4" style={{ scrollbarWidth: 'thin' }}>
+                {collection.parts.map((part) => (
+                  <div key={part.id} className="flex-shrink-0">
+                    <MovieCard
+                      id={part.id}
+                      title={part.title}
+                      posterUrl={
+                        part.poster_path
+                          ? `https://image.tmdb.org/t/p/w500${part.poster_path}`
+                          : 'https://via.placeholder.com/200x300?text=No+Image'
+                      }
+                      isFavorite={false}
+                      onToggleFavorite={() => { }}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
+          </div>
         )}
 
         {/* 추천 영화 섹션 */}
         {recommendedMovies.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">비슷한 장르의 추천 영화</h2>
-              <div className="relative">
-                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
-                  &#10094;
-                </button>
-                <div
-                    ref={recommendationsRef}
-                    className="flex overflow-x-auto space-x-4 p-2 -m-2 scroll-smooth"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
-                >
-                  {recommendedMovies.map(recMovie => (
-                      <div key={recMovie.id} className="flex-shrink-0">
-                        <MovieCard id={recMovie.id} title={recMovie.title} posterUrl={recMovie.poster_path ? `https://image.tmdb.org/t/p/w500${recMovie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} isFavorite={false} onToggleFavorite={() => {}} />
-                      </div>
-                  ))}
-                </div>
-                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
-                  &#10095;
-                </button>
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">비슷한 장르의 추천 영화</h2>
+            <div className="relative">
+              {/* 왼쪽 스크롤 버튼 */}
+              <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
+                &#10094;
+              </button>
+              {/* 캐러셀 컨테이너 */}
+              <div
+                ref={recommendationsRef}
+                className="flex overflow-x-auto space-x-4 p-2 -m-2 scroll-smooth"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+              >
+                {recommendedMovies.map(recMovie => (
+                  // 각 카드가 줄어들지 않도록 flex-shrink-0을 추가합니다.
+                  <div key={recMovie.id} className="flex-shrink-0">
+                    <MovieCard id={recMovie.id} title={recMovie.title} posterUrl={recMovie.poster_path ? `https://image.tmdb.org/t/p/w500${recMovie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'} isFavorite={false} onToggleFavorite={() => { }} />
+                  </div>
+                ))}
               </div>
+              {/* 오른쪽 스크롤 버튼 */}
+              <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity">
+                &#10095;
+              </button>
             </div>
+          </div>
         )}
 
         {/* 리뷰 섹션 */}
         <div className="mt-12">
           <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">리뷰</h2>
 
-          {isLoggedIn && (
-              <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
-                  {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
-                </h3>
-                <div className="flex items-center mb-4">
-                  <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">내 평점:</span>
-                  <StarRating rating={reviewRating} onRatingChange={handleRatingChange} size="md" />
-                </div>
-
-                <textarea
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    rows={4}
-                    placeholder="이 영화에 대한 당신의 생각을 공유해주세요..."
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                ></textarea>
-                <div className="flex justify-end mt-4 space-x-3">
-                  {isEditingReview && (
-                      <button
-                          onClick={handleDeleteReview}
-                          className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-semibold"
-                      >
-                        삭제
-                      </button>
-                  )}
-                  <button
-                      onClick={handleSubmitReview}
-                      className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-semibold"
-                  >
-                    {isEditingReview ? '수정' : '작성'}
-                  </button>
-                </div>
+          {isLoggedIn ? (
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+              <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+                {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
+              </h3>
+              <div className="flex items-center mb-4">
+                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
+                <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" />
               </div>
+
+              <textarea
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                rows={4}
+                placeholder="이 영화에 대한 당신의 생각을 공유해주세요..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+              ></textarea>
+              <div className="flex justify-end mt-4 space-x-3">
+                {isEditingReview && (
+                  <button
+                    onClick={handleDeleteReview}
+                    className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-semibold"
+                  >
+                    삭제
+                  </button>
+                )}
+                <button
+                  onClick={handleSubmitReview}
+                  className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-semibold"
+                >
+                  {isEditingReview ? '수정' : '작성'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400 text-center py-4">
+              리뷰를 작성하려면 <Link to="/login" className="text-blue-500 hover:underline">로그인</Link> 해주세요.
+            </p>
           )}
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({allReviews.length})</h3>
-            {allReviews.length === 0 ? (
-                <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({reviews.length})</h3>
+            {reviews && Array.isArray(reviews) && reviews.length === 0 ? ( // reviews && Array.isArray(reviews) 추가
+              <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
             ) : (
-                <div className="space-y-6">
-                  {allReviews.map((review) => (
-                      <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <span className="font-bold text-lg text-gray-900 dark:text-white">{review.userName}</span>
-                            <span className="ml-3 text-yellow-500 flex items-center">
-                              {'⭐'.repeat(review.rating)}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/5)</span>
-                            </span>
-                          </div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(review.updatedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{review.comment}</p>
+              <div className="space-y-6">
+                {reviews && Array.isArray(reviews) && reviews.map((review) => ( // reviews && Array.isArray(reviews) 추가
+                  <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <span className="font-bold text-lg text-gray-900 dark:text-white">{review.userName}</span>
+                        <span className="ml-3 text-yellow-500 flex items-center">
+                          {'⭐'.repeat(review.rating)}
+                          <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/5)</span>
+                        </span>
                       </div>
-                  ))}
-                </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(review.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -788,24 +796,24 @@ const MovieDetailPage: React.FC = () => {
 
       {/* 트레일러 모달 */}
       {isTrailerModalOpen && trailerKey && (
-          <div
-              className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
+          onClick={closeTrailerModal}
+        >
+          <div className="relative w-11/12 md:w-3/4 lg:w-2/3 aspect-w-16 aspect-h-9" onClick={(e) => e.stopPropagation()}>
+            <iframe
+              src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
+              title="YouTube video player"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full rounded-lg shadow-lg"
+            ></iframe>
+            <button
               onClick={closeTrailerModal}
-          >
-            <div className="relative w-11/12 md:w-3/4 lg:w-2/3 aspect-w-16 aspect-h-9" onClick={(e) => e.stopPropagation()}>
-              <iframe
-                  src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
-                  title="YouTube video player"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full rounded-lg shadow-lg"
-              ></iframe>
-              <button
-                  onClick={closeTrailerModal}
-                  className="absolute -top-10 -right-2 text-white text-4xl font-bold"
-              >&times;</button>
-            </div>
+              className="absolute -top-10 -right-2 text-white text-4xl font-bold"
+            >&times;</button>
           </div>
+        </div>
       )}
     </div>
   );
