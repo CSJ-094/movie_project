@@ -44,6 +44,33 @@ interface MovieSummary {
   watched?: boolean; // watched 필드 추가
 }
 
+// 예매 내역 인터페이스
+interface Booking {
+  bookingId: number;
+  bookingStatus: string;
+  seats: string[];
+  seatCount: number;
+  totalPrice: number;
+  createdAt: string;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  showtimeId: number;
+  startTime: string;
+  endTime: string;
+  movieId: string;
+  movieTitle: string;
+  posterPath: string;
+  runtime: number;
+  theaterId: number;
+  theaterName: string;
+  theaterChain: string;
+  theaterAddress: string;
+  screenId: number;
+  screenName: string;
+  screenType: string;
+}
+
 const MyPage: React.FC = () => {
     const { userEmail, isLoggedIn } = useAuth();
     const navigate = useNavigate();
@@ -61,6 +88,7 @@ const MyPage: React.FC = () => {
     const [favoriteMoviesDetails, setFavoriteMoviesDetails] = useState<MovieSummary[]>([]);
     const [watchlistMoviesDetails, setWatchlistMoviesDetails] = useState<MovieSummary[]>([]);
     const [ratedMoviesDetails, setRatedMoviesDetails] = useState<MovieSummary[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
 
 
     useEffect(() => {
@@ -109,6 +137,20 @@ const MyPage: React.FC = () => {
 
                 const ratedDetails = await fetchMovieDetails(Object.keys(fetchedProfile.ratedMovies || {}));
                 setRatedMoviesDetails(ratedDetails);
+
+                // 예매 내역 가져오기
+                if (fetchedProfile.id) {
+                    try {
+                        console.log('예매 내역 조회 시작, userId:', fetchedProfile.id);
+                        const bookingsResponse = await axiosInstance.get<Booking[]>(`/bookings/user/${fetchedProfile.id}`);
+                        console.log('예매 내역 응답:', bookingsResponse.data);
+                        setBookings(bookingsResponse.data || []);
+                    } catch (err: any) {
+                        console.error("예매 내역을 불러오는데 실패했습니다.", err);
+                        console.error("에러 상세:", err.response?.data || err.message);
+                        setBookings([]);
+                    }
+                }
 
             } catch (err) {
                 console.error("사용자 프로필 및 영화 목록을 불러오는데 실패했습니다.", err);
@@ -193,6 +235,77 @@ const MyPage: React.FC = () => {
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8">
             <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
                 <h1 className="text-4xl font-bold mb-8 text-center">내 프로필</h1>
+
+                {/* 예매 내역 */}
+                <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings.length})</h2>
+                    {bookings.length === 0 ? (
+                        <p className="text-gray-600 dark:text-gray-400">예매 내역이 없습니다.</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {bookings.map((booking) => (
+                                <div key={booking.bookingId} className="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600">
+                                    <div className="flex gap-4">
+                                        {/* 포스터 이미지 */}
+                                        <div className="flex-shrink-0">
+                                            <img
+                                                src={booking.posterPath ? `https://image.tmdb.org/t/p/w200${booking.posterPath}` : 'https://via.placeholder.com/100x150?text=No+Image'}
+                                                alt={booking.movieTitle}
+                                                className="w-20 h-28 object-cover rounded-md"
+                                            />
+                                        </div>
+                                        
+                                        {/* 예매 정보 */}
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                                                        {booking.movieTitle}
+                                                    </h3>
+                                                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                                                        booking.bookingStatus === 'CONFIRMED' 
+                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    }`}>
+                                                        {booking.bookingStatus === 'CONFIRMED' ? '예매완료' : '취소됨'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                                                <p>
+                                                    <span className="font-semibold">극장:</span> {booking.theaterName}
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold">상영관:</span> {booking.screenName} ({booking.screenType})
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold">상영시간:</span>{' '}
+                                                    {new Date(booking.startTime).toLocaleString('ko-KR', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold">좌석:</span> {booking.seats.join(', ')} ({booking.seatCount}석)
+                                                </p>
+                                                <p className="text-lg font-bold text-red-600 dark:text-red-400 mt-2">
+                                                    {booking.totalPrice.toLocaleString()}원
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    예매일시: {new Date(booking.createdAt).toLocaleString('ko-KR')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 {/* 찜한 영화 */}
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">

@@ -7,19 +7,16 @@ import com.boot.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher; // [필수] 이 import 확인!
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -63,6 +60,9 @@ public class SecurityConfig {
                         // 관리자 API는 ADMIN 역할만 접근 가능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/movies/**", "/api/search/**").permitAll() // 영화 정보 조회, 검색 등 GET 요청 허용
+                        .requestMatchers(HttpMethod.GET, "/api/theaters/**", "/api/showtimes/**").permitAll() // 극장, 상영시간 조회 허용
+                        .requestMatchers("/api/bookings/**").permitAll() // 예매 관련 API 모두 허용 (테스트용)
+                        .requestMatchers("/api/payment/**").permitAll() // 결제 관련 API 모두 허용 (테스트용)
                         .requestMatchers("/", "/auth/**", "/oauth2/**", "/login/**", "/error").permitAll() // 인증 없이 접근 허용
                         // 그 외 모든 요청은 인증된 사용자만 접근 가능
                         .anyRequest().authenticated())

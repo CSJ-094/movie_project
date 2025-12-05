@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -12,20 +12,61 @@ interface Movie {
   voteAverage: number;
   releaseDate: string;
   overview: string;
+  // 상영 정보 추가
+  firstShowDate?: string;
+  lastShowDate?: string;
+  totalShowtimes?: number;
+  isNowPlaying?: boolean;
+}
+
+interface Theater {
+  id: number;
+  name: string;
+  chain: string;
+  region: string;
+  city: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface RegionGroup {
+  name: string;
+  theaters: Theater[];
+}
+
+interface Showtime {
+  id: number;
+  movieId: string;
+  screenId: number;
+  startTime: string;
+  endTime: string;
+  price: number;
+  availableSeats: number;
+  movieTitle: string;
+  posterPath: string;
+  runtime: number;
+  voteAverage: number;
+  theaterName: string;
+  screenName: string;
+  screenType: string;
 }
 
 export default function BookingPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const movieFromDetail = location.state as { movieId?: number; title?: string; posterUrl?: string; voteAverage?: number; releaseDate?: string } | null;
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [selectedTheater, setSelectedTheater] = useState<string | null>(null);
+  const [selectedTheater, setSelectedTheater] = useState<Theater | null>(null);
+  const [selectedShowtime, setSelectedShowtime] = useState<Showtime | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [regions, setRegions] = useState<RegionGroup[]>([]);
+  const [showtimes, setShowtimes] = useState<Showtime[]>([]);
+  const [loadingShowtimes, setLoadingShowtimes] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [dateScrollOffset, setDateScrollOffset] = useState(0);
-  const datePickerRef = useRef<DatePicker>(null);
 
   // 날짜 배열 생성 (오늘부터 30일)
   const generateDates = () => {
@@ -92,19 +133,15 @@ export default function BookingPage() {
     }
   };
 
-  // API에서 현재 상영중인 영화 10개 가져오기
+  // API에서 예매 가능한 영화 목록 가져오기 (부산 지역 상영 중)
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const response = await axios.get('http://localhost:8484/api/movies/search', {
-          params: {
-            nowPlaying: true,
-            page: 0,
-            size: 10
-          }
+        const response = await axios.get('http://localhost:8484/api/bookings/movies', {
+          params: { region: '부산' }
         });
         
-        let movieList = response.data.movies;
+        let movieList = response.data;
         
         // MovieDetailPage에서 전달받은 영화 정보가 있으면 처리
         if (movieFromDetail && movieFromDetail.movieId) {
@@ -116,14 +153,15 @@ export default function BookingPage() {
             // 목록에 이미 있는 경우 해당 영화 선택
             setSelectedMovie(matchedMovie);
           } else {
-            // 목록에 없는 경우 맨 앞에 추가
+            // 목록에 없는 경우 (상영 중이 아님) 맨 앞에 추가
             const newMovie: Movie = {
               movieId: movieFromDetail.movieId,
               title: movieFromDetail.title || '',
               posterUrl: movieFromDetail.posterUrl || '',
               voteAverage: movieFromDetail.voteAverage || 0,
               releaseDate: movieFromDetail.releaseDate || '',
-              overview: ''
+              overview: '',
+              isNowPlaying: false
             };
             movieList = [newMovie, ...movieList];
             setSelectedMovie(newMovie);
@@ -131,27 +169,85 @@ export default function BookingPage() {
         }
         
         setMovies(movieList);
-        setLoading(false);
       } catch (error) {
         console.error('영화 목록 가져오기 실패:', error);
-        setLoading(false);
       }
     };
 
     fetchMovies();
   }, [movieFromDetail]);
 
-  // 극장 데이터
-  const regions = [
-    { name: '서울', count: 20 },
-    { name: '경기', count: 32 },
-    { name: '인천', count: 7 },
-    { name: '대전/충청/세종', count: 18 },
-    { name: '부산/대구/경상', count: 27 },
-    { name: '광주/전라', count: 9 },
-    { name: '강원', count: 4 },
-    { name: '제주', count: 3 },
-  ];
+  // 부산 극장 데이터 가져오기
+  useEffect(() => {
+    const fetchTheaters = async () => {
+      try {
+        const response = await axios.get('http://localhost:8484/api/theaters', {
+          params: { region: '부산' }
+        });
+        
+        const theaterList: Theater[] = response.data;
+        
+        // 체인별로 그룹핑
+        const groupedByChain = theaterList.reduce((acc, theater) => {
+          const chain = theater.chain;
+          if (!acc[chain]) {
+            acc[chain] = [];
+          }
+          acc[chain].push(theater);
+          return acc;
+        }, {} as Record<string, Theater[]>);
+        
+        // RegionGroup 형식으로 변환
+        const regionGroups: RegionGroup[] = Object.keys(groupedByChain).map(chain => ({
+          name: chain,
+          theaters: groupedByChain[chain]
+        }));
+        
+        setRegions(regionGroups);
+      } catch (error) {
+        console.error('극장 목록 가져오기 실패:', error);
+      }
+    };
+
+    fetchTheaters();
+  }, []);
+
+  // 상영시간표 가져오기 (영화, 극장, 날짜 선택 시)
+  useEffect(() => {
+    const fetchShowtimes = async () => {
+      if (!selectedMovie || !selectedTheater) {
+        setShowtimes([]);
+        return;
+      }
+
+      setLoadingShowtimes(true);
+      try {
+        const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        const response = await axios.get('http://localhost:8484/api/showtimes', {
+          params: {
+            movieId: `tmdb_${selectedMovie.movieId}`,
+            theaterId: selectedTheater.id,
+            date: formattedDate
+          },
+          timeout: 5000 // 5초 타임아웃 설정
+        });
+        
+        setShowtimes(response.data);
+      } catch (error) {
+        console.error('상영시간표 가져오기 실패:', error);
+        setShowtimes([]);
+      } finally {
+        setLoadingShowtimes(false);
+      }
+    };
+
+    // 약간의 지연(debounce) 추가하여 빠른 선택 변경 시 불필요한 요청 방지
+    const timeoutId = setTimeout(() => {
+      fetchShowtimes();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedMovie, selectedTheater, selectedDate]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -294,8 +390,18 @@ export default function BookingPage() {
                     alt={movie.title}
                     className="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0"
                   />
-                  {/* 영화 제목 */}
-                  <span className="text-sm text-gray-900 dark:text-gray-200 flex-1">{movie.title}</span>
+                  {/* 영화 정보 */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900 dark:text-gray-200 font-medium truncate">{movie.title}</p>
+                    {movie.isNowPlaying && movie.firstShowDate && movie.lastShowDate && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {new Date(movie.firstShowDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ {new Date(movie.lastShowDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
+                    {!movie.isNowPlaying && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">상영 종료</p>
+                    )}
+                  </div>
                   {/* 좋아요 아이콘 */}
                   <div className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 cursor-pointer flex-shrink-0">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,22 +421,30 @@ export default function BookingPage() {
               </div>
             </div>
             <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 250px)' }}>
-              {regions.map((region) => (
-                <button
-                  key={region.name}
-                  onClick={() => setSelectedTheater(region.name)}
-                  className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b dark:border-gray-700 ${
-                    selectedTheater === region.name ? 'bg-red-50 dark:bg-red-900/20' : ''
-                  }`}
-                >
-                  <span className="text-sm text-gray-900 dark:text-gray-200">{region.name}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-500 ml-1">({region.count})</span>
-                </button>
+              {regions.map((regionGroup) => (
+                <div key={regionGroup.name} className="border-b dark:border-gray-700">
+                  <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2">
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{regionGroup.name}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({regionGroup.theaters.length})</span>
+                  </div>
+                  {regionGroup.theaters.map((theater) => (
+                    <button
+                      key={theater.id}
+                      onClick={() => setSelectedTheater(theater)}
+                      className={`w-full px-6 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm ${
+                        selectedTheater?.id === theater.id ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {theater.name.replace(theater.chain, '').trim()}
+                    </button>
+                  ))}
+                </div>
               ))}
-              <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                <p className="font-medium mb-2">전체극장</p>
-                <p>목록에서 극장을 선택하세요.</p>
-              </div>
+              {regions.length === 0 && (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="font-medium mb-2">극장 로딩 중...</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -363,10 +477,65 @@ export default function BookingPage() {
                   <div className="text-center text-gray-500 dark:text-gray-400 mt-20">
                     <p className="text-sm">극장을 선택해주세요.</p>
                   </div>
-                ) : (
+                ) : loadingShowtimes ? (
                   <div className="text-center text-gray-500 dark:text-gray-400 mt-20">
-                    <p className="text-sm">선택하신 영화와 극장의</p>
-                    <p className="text-sm">상영 시간표가 여기에 표시됩니다.</p>
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+                    <p className="text-sm font-medium">상영시간표 조회 중...</p>
+                    <p className="text-xs mt-1">잠시만 기다려주세요</p>
+                  </div>
+                ) : showtimes.length === 0 ? (
+                  <div className="text-center text-gray-500 dark:text-gray-400 mt-20">
+                    <svg className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-medium mb-1">죄송합니다</p>
+                    <p className="text-sm">선택하신 날짜에 상영 일정이 없습니다.</p>
+                    <p className="text-xs mt-2 text-gray-400 dark:text-gray-500">다른 날짜를 선택해주세요.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6 p-2">
+                    {showtimes.map((showtime, index) => {
+                      const startTime = new Date(showtime.startTime);
+                      const isSelected = selectedShowtime?.id === showtime.id;
+                      
+                      return (
+                        <button
+                          key={`${showtime.id}-${index}`}
+                          onClick={() => setSelectedShowtime(showtime)}
+                          className={`w-full p-4 rounded-lg text-left transition-all duration-300 ${
+                            isSelected 
+                              ? 'border-[3px] border-red-600 bg-white dark:bg-gray-800 shadow-2xl' 
+                              : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <span className="font-bold text-lg text-gray-900 dark:text-white">
+                                {startTime.getHours().toString().padStart(2, '0')}:{startTime.getMinutes().toString().padStart(2, '0')}
+                              </span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                                ~ {new Date(showtime.endTime).getHours().toString().padStart(2, '0')}:{new Date(showtime.endTime).getMinutes().toString().padStart(2, '0')}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">{showtime.screenName}</span>
+                              <span className="text-gray-500 dark:text-gray-500 mx-2">|</span>
+                              <span className="text-gray-600 dark:text-gray-400">{showtime.screenType}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-gray-600 dark:text-gray-400">
+                                잔여 {showtime.availableSeats}/{showtime.availableSeats}석
+                              </div>
+                              <div className="text-red-600 dark:text-red-400 font-bold">
+                                {showtime.price.toLocaleString()}원
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )
               ) : (
@@ -382,6 +551,63 @@ export default function BookingPage() {
           </div>
         </div>
       </div>
+
+      {/* 하단 고정 예매 버튼 */}
+      {selectedShowtime && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-lg z-50">
+          <div className="max-w-[1400px] mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">영화</p>
+                  <p className="font-bold text-gray-900 dark:text-white">{selectedMovie?.title}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">극장</p>
+                  <p className="font-bold text-gray-900 dark:text-white">{selectedTheater?.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">상영시간</p>
+                  <p className="font-bold text-gray-900 dark:text-white">
+                    {new Date(selectedShowtime.startTime).toLocaleString('ko-KR', { 
+                      month: 'long', 
+                      day: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">상영관</p>
+                  <p className="font-bold text-gray-900 dark:text-white">{selectedShowtime.screenName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  // 좌석 선택 페이지로 이동
+                  navigate('/seat-selection', {
+                    state: {
+                      movieTitle: selectedMovie?.title,
+                      theaterName: selectedTheater?.name,
+                      screenName: selectedShowtime.screenName,
+                      startTime: selectedShowtime.startTime,
+                      price: selectedShowtime.price,
+                      availableSeats: selectedShowtime.availableSeats,
+                      showtimeId: selectedShowtime.showtimeId || selectedShowtime.id,
+                      totalSeats: selectedShowtime.totalSeats,
+                      screenId: selectedShowtime.screenId,
+                      screenType: selectedShowtime.screenType,
+                    },
+                  });
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-12 rounded-lg text-lg transition-colors shadow-lg"
+              >
+                좌석지정
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

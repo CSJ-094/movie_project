@@ -7,6 +7,10 @@ import SearchPage from './pages/SearchPage.tsx';
 import MovieDetailPage from './pages/MovieDetailPage.tsx';
 import MainPage from './pages/MainPage.tsx';
 import BookingPage from './pages/BookingPage.tsx';
+import SeatSelectionPage from './pages/SeatSelectionPage.tsx';
+import PaymentPage from './pages/PaymentPage.tsx';
+import PaymentSuccessPage from './pages/PaymentSuccessPage.tsx';
+import PaymentFailPage from './pages/PaymentFailPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
@@ -35,6 +39,22 @@ const router = createBrowserRouter([
       {
         path: "booking", // '/booking' 경로
         element: <BookingPage />,
+      },
+      {
+        path: "seat-selection", // '/seat-selection' 경로
+        element: <SeatSelectionPage />,
+      },
+      {
+        path: "payment", // '/payment' 경로
+        element: <PaymentPage />,
+      },
+      {
+        path: "payment/success", // '/payment/success' 경로
+        element: <PaymentSuccessPage />,
+      },
+      {
+        path: "payment/fail", // '/payment/fail' 경로
+        element: <PaymentFailPage />,
       },
       {
         path: "search", // '/search' 경로
