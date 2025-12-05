@@ -15,4 +15,6 @@ public class MovieDoc { // 영화 한 개
     private Boolean isNowPlaying;
     private List<String> ottProviders;
     private String ottLink;
+    private Integer runtime;
+    private String certification;
 }

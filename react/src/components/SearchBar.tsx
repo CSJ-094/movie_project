@@ -75,9 +75,16 @@ const SearchBar: React.FC = () => {
   // AuthContext에서 필요한 값들을 가져옵니다.
   const { isLoggedIn, userEmail, userRole, logout } = useAuth();
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => { // async 추가
     e.preventDefault();
     if (query.trim() !== '') {
+      if (isLoggedIn) { // 로그인 상태일 때만 검색 기록 저장
+        try {
+          await axiosInstance.post('/search-history', { query: query.trim() });
+        } catch (error) {
+          console.error('검색 기록 저장 실패:', error);
+        }
+      }
       navigate(`/search?q=${query}`);
       setQuery('');
       setShowSuggestions(false);

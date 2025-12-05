@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 public class User {
 
-    @jakarta.persistence.Id // Use the correct Id annotation for JPA
+    @jakarta.persistence.Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     private Long id;
@@ -32,12 +32,20 @@ public class User {
     @Column(name = "enabled", nullable = false)
     private boolean enabled = false;
 
+    @Column(name = "provider")
+    private String provider;
+
+    @Column(name = "provider_id")
+    private String providerId;
+
     @Builder
-    public User(String email, String password, String name, String role) {
+    public User(String email, String password, String name, String role, String provider, String providerId) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.role = role;
+        this.provider = provider;
+        this.providerId = providerId;
         this.enabled = false;
     }
 

@@ -23,7 +23,13 @@ const RegisterPage: React.FC = () => {
 
         } catch (err: any) {
             // axios 에러는 err.response.data에 서버가 보낸 메시지가 담겨 있습니다.
-            const errorMessage = err.response?.data || err.message || '회원가입에 실패했습니다.';
+            const errorMessage = //register 작동안해서 수정했는데 안되면 다시 지우고 주석처리한거로 교체해주세요
+                err.response?.data?.message ||
+                (typeof err.response?.data === 'string' ? err.response.data : "") ||
+                err.message ||
+                '회원가입에 실패했습니다.';
+            // const errorMessage = err.response?.data || err.message || '회원가입에 실패했습니다.';
+            // setError(errorMessage);
             setError(errorMessage);
         } finally {
             setLoading(false);

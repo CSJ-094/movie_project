@@ -1,10 +1,13 @@
 package com.boot.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import co.elastic.clients.elasticsearch._types.aggregations.StatsAggregate;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.GetResponse;
+
 import com.boot.dto.*;
 import com.boot.dto.AutocompleteResponse.Item;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,28 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MovieSearchService {
     private final ElasticsearchClient elasticsearchClient;
+
+    private static final List<GenreOption> GENRE_OPTIONS = List.of(
+            new GenreOption(28, "액션"),
+            new GenreOption(12, "모험"),
+            new GenreOption(16, "애니메이션"),
+            new GenreOption(35, "코미디"),
+            new GenreOption(80, "범죄"),
+            new GenreOption(99, "다큐멘터리"),
+            new GenreOption(18, "드라마"),
+            new GenreOption(10751, "가족"),
+            new GenreOption(14, "판타지"),
+            new GenreOption(36, "역사"),
+            new GenreOption(27, "공포"),
+            new GenreOption(10402, "음악"),
+            new GenreOption(9648, "미스터리"),
+            new GenreOption(10749, "로맨스"),
+            new GenreOption(878, "SF"),
+            new GenreOption(10770, "TV 영화"),
+            new GenreOption(53, "스릴러"),
+            new GenreOption(10752, "전쟁"),
+            new GenreOption(37, "서부")
+    );
 
     // 1. 메인 검색 API 로직
     public MovieSearchResponse search(MovieSearchRequest request) {
@@ -179,6 +204,50 @@ public class MovieSearchService {
         }
     }
 
+
+
+    public FilterOptionsResponse getFilterOptions() {
+
+        Double minRating = 0.0;
+        Double maxRating = 10.0;
+
+        try {
+            SearchResponse<Void> response = elasticsearchClient.search(s -> s
+                            .index("movies")
+                            .size(0)
+                            .aggregations("rating_stats", a -> a
+                                    .stats(st -> st.field("vote_average"))
+                            ),
+                    Void.class);
+
+            StatsAggregate stats = response.aggregations()
+                    .get("rating_stats")
+                    .stats();
+
+            if (stats != null) {
+                double minValue = stats.min();
+                double maxValue = stats.max();
+
+                if (!Double.isNaN(minValue) && !Double.isInfinite(minValue)) {
+                    minRating = minValue;
+                }
+                if (!Double.isNaN(maxValue) && !Double.isInfinite(maxValue)) {
+                    maxRating = maxValue;
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("필터 옵션 조회 중 오류 발생: " + e.getMessage());
+        }
+
+        return FilterOptionsResponse.builder()
+                .genres(GENRE_OPTIONS)   // 🔹 여기서 매핑 리스트 내려줌
+                .minRating(minRating)
+                .maxRating(maxRating)
+                .build();
+    }
+
+
     public Movie getMovieById(String id) {
         try {
             GetResponse<Movie> response = elasticsearchClient.get(g -> g
@@ -219,6 +288,8 @@ public class MovieSearchService {
         doc.setVoteAverage(movie.getVoteAverage());
         doc.setReleaseDate(movie.getReleaseDate());
         doc.setIsNowPlaying(movie.getIsNowPlaying());
+        doc.setRuntime(movie.getRuntime());
+        doc.setCertification(movie.getCertification());
         doc.setOttProviders(movie.getOttProviders());
         doc.setOttLink(movie.getOttLink());
 

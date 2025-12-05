@@ -1,23 +1,23 @@
 package com.boot.controller;
 
+import com.boot.dto.*;
+
 import com.boot.elastic.Movie;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.boot.dto.MovieSearchResponse;
-import com.boot.dto.AutocompleteRequest;
-import com.boot.dto.AutocompleteResponse;
 import com.boot.service.MovieSearchService;
-import com.boot.dto.MovieSearchRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/movies")
+@CrossOrigin(origins = "http://localhost:5173") // React 개발 서버의 주소를 허용
 @RequiredArgsConstructor
 public class MovieSearchController {
 
@@ -35,9 +35,15 @@ public class MovieSearchController {
         return movieSearchService.autocomplete(request);
     }
 
+    @Operation(summary = "필터 옵션 조회 API", description = "영화 검색 화면에서 사용할 장르 목록과 평점 범위를 반환")
+    @GetMapping("/filters")
+    public FilterOptionsResponse getFilters() {
+        return movieSearchService.getFilterOptions();
+    }
+
     @Operation(summary = "영화 상세 조회 API", description = "영화 ID로 상세 정보를 조회합니다.")
     @GetMapping("/{id}") // URL: /api/movies/{id}
-    public ResponseEntity<Movie> getMovieById(@PathVariable String id) {
+    public ResponseEntity<Movie> getMovieById(@PathVariable("id") String id) {
         Movie movie = movieSearchService.getMovieById(id);
         if (movie != null) {
             return ResponseEntity.ok(movie);
