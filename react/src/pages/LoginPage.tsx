@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
+import { AxiosError } from 'axios';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -21,9 +22,20 @@ const LoginPage: React.FC = () => {
 
             login(response.data.accessToken, navigate); // AuthContext의 login 함수 호출
 
-        } catch (err: any) {
-            const errorMessage = err.response?.data || err.message || '로그인에 실패했습니다.';
-            setError(errorMessage);
+        } catch (err) {
+            let displayMessage = '로그인에 실패했습니다. 다시 시도해주세요.';
+
+            if (err instanceof AxiosError && err.response) {
+                // 백엔드에서 { message: "..." } 형태의 객체로 응답이 올 경우
+                if (typeof err.response.data === 'object' && err.response.data.message) {
+                    displayMessage = err.response.data.message;
+                // 백엔드에서 텍스트로만 응답이 올 경우
+                } else if (typeof err.response.data === 'string' && err.response.data) {
+                    displayMessage = err.response.data;
+                }
+            }
+
+            setError(displayMessage);
         } finally {
             setLoading(false);
         }
@@ -90,7 +102,7 @@ const LoginPage: React.FC = () => {
                     </a>
                 </div>
                 <p className="text-center mt-4 text-gray-600 dark:text-gray-400">
-                    계정이 없으신가요? <Link to="/register" className="text-blue-500 hover:underline">회원가입</Link>
+                    계정이 없으신가요? <Link to="/signup" className="text-blue-500 hover:underline">회원가입</Link>
                 </p>
                 <p className="text-center mt-2 text-sm text-gray-500">
                     <Link to="/forgot-password" className="hover:underline">비밀번호를 잊으셨나요?</Link>
