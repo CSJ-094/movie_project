@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/movies/**", "/api/search/**", "/api/reviews/**").permitAll() // 리뷰 GET 요청도 허용
+                        .requestMatchers("/api/quickmatch/**").permitAll() //퀵매칭 허용
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))

@@ -4,6 +4,7 @@ import MovieCardSkeleton from '../components/MovieCardSkeleton';
 import MovieCarousel from '../components/MovieCarousel';
 import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
+import { useNavigate } from 'react-router-dom';
 
 interface Movie {
   id: number;
@@ -44,6 +45,11 @@ const MainPage: React.FC = () => {
   const { isLoggedIn } = useAuth();
   const [favoriteMovieIds, setFavoriteMovieIds] = useState<Set<number>>(new Set());
 
+   const navigate = useNavigate();  
+   const handleQuickMatchClick = () => {         
+    navigate('/quickmatch');
+  };
+  
   const observer = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback((node: HTMLDivElement) => {
     if (loading) return;
@@ -184,6 +190,9 @@ const MainPage: React.FC = () => {
       <div className="flex flex-col md:flex-row">
         <aside className="w-full md:w-64 p-5 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
           <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">필터</h2>
+          <button onClick={handleQuickMatchClick} className="w-full p-2 mb-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors">
+          30초 영화 퀵매칭 시작
+          </button>
           <button onClick={handleResetFilters} className="w-full p-2 mb-4 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
             필터 초기화
           </button>
