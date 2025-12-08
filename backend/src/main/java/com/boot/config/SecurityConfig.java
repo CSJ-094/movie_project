@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,8 +26,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-        private final JwtTokenProvider jwtTokenProvider;
-        private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -36,25 +35,64 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, CustomOAuth2UserService customOAuth2UserService) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   CustomOAuth2UserService customOAuth2UserService) throws Exception {
+
         http
+                // CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                // CSRF 보호 비활성화
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // HTTP Basic 인증 비활성화
+                .httpBasic(httpBasic -> httpBasic.disable())
+                // Form Login 비활성화
+                .formLogin(formLogin -> formLogin.disable())
+                // CSRF 비활성화 (JWT)
+                .csrf(csrf -> csrf.disable())
+                // 세션 사용 안 함
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                // 인가 설정
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/user/login", "/api/user/signup", "/api/user/verify", "/", "/auth/**", "/oauth2/**", "/login/**", "/error").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
+                        // 로그인/회원가입/이메일 인증/소셜 로그인 등 공개
+                        .requestMatchers("/api/user/login", "/api/user/signup",
+                                "/api/user/verify", "/", "/auth/**", "/oauth2/**",
+                                "/login/**", "/error")
+                        .permitAll()
+
+                        // Swagger 공개
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
+                                "/swagger-ui/**", "/swagger-resources/**",
+                                "/webjars/**")
+                        .permitAll()
+
+                        // 관리자 전용
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/movies/**", "/api/search/**", "/api/reviews/**").permitAll() // 리뷰 GET 요청도 허용
-                        .requestMatchers("/api/quickmatch/**").permitAll() //퀵매칭 허용
-                        .anyRequest().authenticated())
+
+                        // 영화/검색/리뷰 조회는 GET이면 누구나
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/movies/**",
+                                "/api/search/**",
+                                "/api/reviews/**")
+                        .permitAll()
+
+                        // 퀵매칭 전체 공개 (모든 메서드)
+                        .requestMatchers("/api/quickmatch/**").permitAll()
+
+                        // 나머지는 인증 필요
+                        .anyRequest().authenticated()
+                )
+
+                // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .successHandler(oAuth2AuthenticationSuccessHandler))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(customOAuth2UserService))
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                )
+
+                // JWT 필터 추가
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -68,8 +106,7 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // 모든 경로에 대해 위 설정 적용
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 }

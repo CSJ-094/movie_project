@@ -12,7 +12,7 @@ import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-@Document(indexName = "movies", createIndex = false)
+@Document(indexName = "movies", createIndex = false) // createIndex를 false로 롤백
 public class Movie {
 
     @Id
@@ -47,6 +47,11 @@ public class Movie {
     @JsonProperty("genre_ids")
     private List<String> genreIds;
 
+    // genre_names 필드 제거
+    // @MultiField(...)
+    // @JsonProperty("genre_names")
+    // private List<String> genreNames;
+
     @Field(name = "runtime", type = FieldType.Integer)
     @JsonProperty("runtime")
     private Integer runtime;
@@ -62,6 +67,4 @@ public class Movie {
     @Field(name = "ott_link", type = FieldType.Keyword)
     @JsonProperty("ott_link")
     private String ottLink;
-
-
 }

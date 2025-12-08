@@ -24,12 +24,12 @@ public class Rating {
     private User user;
 
     @Column(name = "movie_id", nullable = false)
-    private Long movieId;
+    private String movieId; // Long -> String
 
     @Column(name = "rating", nullable = false)
     private double rating; // 0.5 ~ 5.0
 
-    public Rating(User user, Long movieId, double rating) {
+    public Rating(User user, String movieId, double rating) { // Long -> String
         this.user = user;
         this.movieId = movieId;
         this.rating = rating;
