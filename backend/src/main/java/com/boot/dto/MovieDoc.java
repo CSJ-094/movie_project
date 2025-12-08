@@ -17,4 +17,5 @@ public class MovieDoc { // 영화 한 개
     private String ottLink;
     private Integer runtime;
     private String certification;
+    private List<Integer> genreIds;
 }

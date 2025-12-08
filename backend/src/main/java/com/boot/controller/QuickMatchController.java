@@ -75,11 +75,16 @@ public class QuickMatchController {
     ) {
         Long userId = getCurrentUserId();
 
+        // "like" / "dislike" / "LIKE" / "DISLIKE" 다 받게 변환
+        QuickMatchFeedback.Action action = QuickMatchFeedback.Action.valueOf(
+                request.getAction().toUpperCase()
+        );
+
         QuickMatchSession session = quickMatchService.saveFeedback(
                 request.getSessionId(),
                 userId,
                 request.getMovieId(),
-                QuickMatchFeedback.Action.valueOf(request.getAction())
+                action
         );
 
         return new QuickMatchFeedbackResponse(
@@ -88,6 +93,7 @@ public class QuickMatchController {
                 session.getTargetCount()
         );
     }
+
 
     /**
      * 퀵매칭 결과 조회
