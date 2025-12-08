@@ -21,7 +21,7 @@ public class FavoriteService {
     private final UserRepository userRepository;
 
     // 찜 추가/삭제 토글
-    public boolean toggleFavorite(String userEmail, String movieId) { // Long -> String
+    public boolean toggleFavorite(String userEmail, String movieId) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
 
@@ -33,27 +33,27 @@ public class FavoriteService {
                 })
                 .orElseGet(() -> {
                     // 찜하지 않은 경우, 추가
-                    favoriteRepository.save(new Favorite(user, movieId)); // Long -> String
+                    favoriteRepository.save(new Favorite(user, movieId));
                     return true; // 찜 추가됨
                 });
     }
 
     // 특정 영화에 대한 찜 상태 확인
     @Transactional(readOnly = true)
-    public boolean isFavorite(String userEmail, String movieId) { // Long -> String
+    public boolean isFavorite(String userEmail, String movieId) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
-        return favoriteRepository.existsByUserIdAndMovieId(user.getId(), movieId); // Long -> String
+        return favoriteRepository.existsByUserIdAndMovieId(user.getId(), movieId);
     }
 
     // 사용자가 찜한 모든 영화 ID 목록 조회
     @Transactional(readOnly = true)
-    public List<String> getFavoriteMovieIds(String userEmail) { // List<Long> -> List<String>
+    public List<String> getFavoriteMovieIds(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
         List<Favorite> favorites = favoriteRepository.findByUserId(user.getId());
         return favorites.stream()
-                .map(Favorite::getMovieId)
+                .map(fav -> fav.getMovieId().toString())
                 .collect(Collectors.toList());
     }
 }

@@ -106,7 +106,7 @@ const MyPage: React.FC = () => {
 
                 const fetchedProfile = profileResponse.data;
 
-                const fetchMovieDetails = async (movieIds: string[]) => {
+                const fetchMovieDetails = async (movieIds: string[]): Promise<MovieSummary[]> => {
                     if (movieIds.length === 0) return [];
                     const movieDetailsPromises = movieIds.map(id =>
                         axiosInstance.get<MovieSummary>(`/movies/${id}`)
@@ -200,7 +200,7 @@ const MyPage: React.FC = () => {
         }
     };
 
-    const handleToggleWatched = async (movieId: number) => {
+    const handleToggleWatched = async (movieId: string) => {
         try {
             const response = await axiosInstance.patch<boolean>(`/watchlist/${movieId}/watched`);
             setWatchlistMoviesDetails(prevDetails =>
@@ -412,6 +412,7 @@ const MyPage: React.FC = () => {
                                 <MovieCard
                                     key={movie.id}
                                     id={parseInt(movie.id)}
+                                    id={movie.id}
                                     title={movie.title}
                                     posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
                                     isFavorite={true}
@@ -435,11 +436,13 @@ const MyPage: React.FC = () => {
                                 <MovieCard
                                     key={movie.id}
                                     id={parseInt(movie.id)}
+                                    id={movie.id}
                                     title={movie.title}
                                     posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
                                     isWatched={movie.watched || false}
                                     showWatchlistControls={true}
                                     onToggleWatched={() => handleToggleWatched(parseInt(movie.id))}
+                                    onToggleWatched={() => handleToggleWatched(movie.id)}
                                     size="sm"
                                     staggerIndex={index}
                                 />
@@ -483,9 +486,9 @@ const MyPage: React.FC = () => {
                                 <div key={review.id} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-bold text-lg">
-                                            {favoriteMoviesDetails.find(m => m.id === review.movieId)?.title ||
-                                             watchlistMoviesDetails.find(m => m.id === review.movieId)?.title ||
-                                             ratedMoviesDetails.find(m => m.id === review.movieId)?.title ||
+                                            {ratedMoviesDetails.find(m => m.id === review.movieId)?.title ??
+                                             watchlistMoviesDetails.find(m => m.id === review.movieId)?.title ??
+                                             favoriteMoviesDetails.find(m => m.id === review.movieId)?.title ??
                                              `영화 ID: ${review.movieId}`}
                                         </h3>
                                         <span className="ml-3 text-yellow-500 flex items-center">

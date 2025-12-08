@@ -18,7 +18,6 @@ interface Movie {
   totalShowtimes?: number;
   isNowPlaying?: boolean;
 }
-
 interface Theater {
   id: number;
   name: string;
@@ -29,12 +28,10 @@ interface Theater {
   latitude: number;
   longitude: number;
 }
-
 interface RegionGroup {
   name: string;
   theaters: Theater[];
 }
-
 interface Showtime {
   id: number;
   movieId: string;
@@ -93,7 +90,6 @@ export default function BookingPage() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
     if (date.toDateString() === today.toDateString()) return '오늘';
     if (date.toDateString() === tomorrow.toDateString()) return '내일';
     return getDayOfWeek(date);
@@ -118,11 +114,10 @@ export default function BookingPage() {
   };
 
   // 캘린더에서 날짜 선택 시 처리
-  const handleDatePickerChange = (date: Date | null) => {
+  const handleDatePickerChange = async (date: Date | null) => {
     if (date) {
       setSelectedDate(date);
       setShowCalendar(false);
-      
       // 선택한 날짜가 표시되도록 스크롤 위치 조정
       const daysDiff = Math.floor((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff >= 0 && daysDiff < 30) {
@@ -131,24 +126,33 @@ export default function BookingPage() {
         setDateScrollOffset(newOffset);
       }
     }
-  };
+};
 
-  // API에서 예매 가능한 영화 목록 가져오기 (부산 지역 상영 중)
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         const response = await axios.get('http://localhost:8484/api/bookings/movies', {
           params: { region: '부산' }
         });
-        
         let movieList = response.data;
-        
+        if (!Array.isArray(movieList) && Array.isArray(response.data.movies)) {
+          movieList = response.data.movies;
+        }
+        // 배열이 아니면 빈 배열로 초기화 (find 오류 방지)
+        if (!Array.isArray(movieList)) {
+          movieList = [];
+        }
+        // API 응답의 is_now_playing 값을 Movie 타입에 맞게 변환
+        movieList = movieList.map((m: any) => ({
+          ...m,
+          isNowPlaying: m.is_now_playing ?? m.isNowPlaying
+        }));
+
         // MovieDetailPage에서 전달받은 영화 정보가 있으면 처리
         if (movieFromDetail && movieFromDetail.movieId) {
           const matchedMovie = movieList.find(
             (m: Movie) => m.movieId === movieFromDetail.movieId
           );
-          
           if (matchedMovie) {
             // 목록에 이미 있는 경우 해당 영화 선택
             setSelectedMovie(matchedMovie);
@@ -161,19 +165,18 @@ export default function BookingPage() {
               voteAverage: movieFromDetail.voteAverage || 0,
               releaseDate: movieFromDetail.releaseDate || '',
               overview: '',
-              isNowPlaying: false
+              isNowPlaying: true // 예매하기 진입 시 기본값 true로 설정
             };
             movieList = [newMovie, ...movieList];
             setSelectedMovie(newMovie);
           }
         }
-        
-        setMovies(movieList);
+        // 항상 10개만 보여주기
+        setMovies(movieList.slice(0, 10));
       } catch (error) {
         console.error('영화 목록 가져오기 실패:', error);
       }
     };
-
     fetchMovies();
   }, [movieFromDetail]);
 
@@ -184,9 +187,10 @@ export default function BookingPage() {
         const response = await axios.get('http://localhost:8484/api/theaters', {
           params: { region: '부산' }
         });
-        
-        const theaterList: Theater[] = response.data;
-        
+        console.log('극장 API 응답:', response.data);
+        // API 응답이 배열이 아니거나, 객체 안에 theaters 배열이 있는 경우 모두 처리
+        const theaterList: Theater[] = Array.isArray(response.data) ? response.data : (response.data?.theaters || []);
+
         // 체인별로 그룹핑
         const groupedByChain = theaterList.reduce((acc, theater) => {
           const chain = theater.chain;
@@ -196,13 +200,11 @@ export default function BookingPage() {
           acc[chain].push(theater);
           return acc;
         }, {} as Record<string, Theater[]>);
-        
         // RegionGroup 형식으로 변환
         const regionGroups: RegionGroup[] = Object.keys(groupedByChain).map(chain => ({
           name: chain,
           theaters: groupedByChain[chain]
         }));
-        
         setRegions(regionGroups);
       } catch (error) {
         console.error('극장 목록 가져오기 실패:', error);
@@ -593,8 +595,7 @@ export default function BookingPage() {
                       startTime: selectedShowtime.startTime,
                       price: selectedShowtime.price,
                       availableSeats: selectedShowtime.availableSeats,
-                      showtimeId: selectedShowtime.showtimeId || selectedShowtime.id,
-                      totalSeats: selectedShowtime.totalSeats,
+                      showtimeId: selectedShowtime.id,
                       screenId: selectedShowtime.screenId,
                       screenType: selectedShowtime.screenType,
                     },

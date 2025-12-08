@@ -28,6 +28,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -69,15 +70,22 @@ public class SecurityConfig {
                         // 관리자 전용
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // 영화/검색/리뷰 조회는 GET이면 누구나
+                        // GET 요청은 누구나 가능하도록 설정
                         .requestMatchers(HttpMethod.GET,
                                 "/api/movies/**",
                                 "/api/search/**",
-                                "/api/reviews/**")
+                                "/api/reviews/**",
+                                "/api/theaters/**",
+                                "/api/showtimes/**",
+                                "/api/favorites/**",
+                                "/api/watchlist/**")
                         .permitAll()
 
                         // 퀵매칭 전체 공개 (모든 메서드)
                         .requestMatchers("/api/quickmatch/**").permitAll()
+
+                        // 리뷰 작성(POST)은 인증된 사용자만 가능
+                        .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
 
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
@@ -91,8 +99,7 @@ public class SecurityConfig {
                 )
 
                 // JWT 필터 추가
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
