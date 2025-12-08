@@ -18,6 +18,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
 import OAuth2CallbackPage from './pages/OAuth2CallbackPage.tsx';
 // import ProfilePage from './pages/ProfilePage.tsx'; // ProfilePage 임포트 제거
 import { AuthProvider } from './contexts/AuthContext.tsx';
+import QuickMatchPage from './pages/QuickMatchPage.tsx';
 
 
 // 라우터(길잡이) 설정을 만듭니다.
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
       {
         path: "movie/:movieId", // '/movie/:movieId' 경로
         element: <MovieDetailPage />,
+      },
+      {
+        path: "quickmatch",              
+        element: <QuickMatchPage />,
       },
       {
         path: "login", // '/login' 경로
