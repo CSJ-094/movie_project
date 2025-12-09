@@ -1,13 +1,18 @@
 package com.boot.service;
 
+import java.time.LocalDate;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.StatsAggregate;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.GetResponse;
+import co.elastic.clients.elasticsearch.core.search.Suggestion; // Corrected import for Suggestion
+import co.elastic.clients.elasticsearch._types.SuggestMode; // Corrected import for SuggestMode
 
 import com.boot.dto.*;
 import com.boot.dto.AutocompleteResponse.Item;
@@ -56,23 +61,61 @@ public class MovieSearchService {
             new GenreOption(10752, "전쟁"),
             new GenreOption(37, "서부"));
 
+    public List<MovieDoc> getWideCandidatePool() {
+
+        // 인기 TOP 800
+        MovieSearchRequest req1 = new MovieSearchRequest();
+        req1.setPage(0);
+        req1.setSize(800);
+
+        List<MovieDoc> popular = search(req1).getMovies();
+
+        // 평점 TOP 800
+        MovieSearchRequest req2 = new MovieSearchRequest();
+        req2.setPage(1);
+        req2.setSize(800);
+        req2.setMinRating(7.0f);
+
+        List<MovieDoc> topRated = search(req2).getMovies();
+
+        // 최근 10년 신작 TOP 300
+        MovieSearchRequest req3 = new MovieSearchRequest();
+        req3.setPage(0);
+        req3.setSize(300);
+        req3.setReleaseDateFrom(LocalDate.now().minusYears(10));
+
+        List<MovieDoc> recent = search(req3).getMovies();
+
+        // 합치고 중복 제거
+        Map<String, MovieDoc> merged = new HashMap<>();
+        for (MovieDoc m : popular) merged.put(m.getMovieId(), m);
+        for (MovieDoc m : topRated) merged.put(m.getMovieId(), m);
+        for (MovieDoc m : recent) merged.put(m.getMovieId(), m);
+
+        return new ArrayList<>(merged.values()); // 약 1500개
+    }
+
+
     // 1. 메인 검색 API 로직
     public MovieSearchResponse search(MovieSearchRequest request) {
         int page = request.getPage();
         int size = request.getSize();
         int from = page * size;
+
         // 1. bool query 조립
         BoolQuery.Builder bool = new BoolQuery.Builder();
+
         // (1) 키워드 검색: title
         if (request.getKeyword() != null && !request.getKeyword().isBlank()) {
             String keyword = request.getKeyword();
-            // 제목에 keyword가 매칭되는 영화만 검색
+            // 제목/줄거리/회사에 keyword가 매칭되는 영화만 검색
             bool.must(m -> m
                     .multiMatch(mt -> mt
                             .fields("title", "title.ngram", "companies"/* ,"overview" */)
                             .query(keyword)
                             .operator(Operator.Or))); // Operator.And -> Operator.Or로 변경
         }
+
         // (2) nowPlaying 필터
         if (request.getNowPlaying() != null) {
             bool.filter(f -> f
@@ -390,6 +433,53 @@ public class MovieSearchService {
                 .toList();
     }
 
+    // 4. 오타 교정 제안 (Suggester)
+    public List<String> suggestKeywords(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            SearchResponse<Void> response = elasticsearchClient.search(s -> s
+                    .index("movies")
+                    .suggest(su -> su
+                            .suggesters("title-suggester", ts -> ts // suggester 이름
+                                    .text(keyword) // 제안을 받을 텍스트
+                                    .term(t -> t
+                                            .field("title.keyword") // 제안을 생성할 필드
+                                            .suggestMode(SuggestMode.Always) // 항상 제안
+                                            .minDocFreq(1.0f) // 최소 문서 빈도
+                                            .prefixLength(1) // 접두사 길이
+                                            .maxEdits(2) // 최대 편집 거리 (오타 허용 범위)
+                                            .size(5) // 최대 제안 개수
+                                    )
+                            )
+                    ),
+                    Void.class // 실제 문서가 필요 없으므로 Void.class 사용
+            );
+
+            // 제안 결과 파싱
+            List<String> suggestions = new ArrayList<>();
+            response.suggest().get("title-suggester").forEach(suggestion -> {
+                // completion suggester 결과 처리 (현재는 term suggester만 사용하므로 이 부분은 필요 없을 수 있음)
+                // if (suggestion.completion() != null) {
+                //     suggestion.completion().options().forEach(option -> {
+                //         suggestions.add(option.text());
+                //     });
+                // }
+                if (suggestion.term() != null) { // term suggester 결과 처리
+                    suggestion.term().options().forEach(option -> {
+                        suggestions.add(option.text());
+                    });
+                }
+            });
+            return suggestions.stream().distinct().collect(Collectors.toList()); // 중복 제거
+        } catch (Exception e) {
+            logger.error("Elasticsearch 키워드 제안 중 오류 발생. 키워드: {}, 에러: {}", keyword, e.getMessage(), e);
+            return List.of();
+        }
+    }
+
     // 3. 공통 변환 메서드
     private MovieDoc toMovieDoc(Movie movie) {
         if (movie == null)
@@ -414,6 +504,25 @@ public class MovieSearchService {
         doc.setCertification(movie.getCertification());
         doc.setOttProviders(movie.getOttProviders());
         doc.setOttLink(movie.getOttLink());
+
+        if (movie.getGenreIds() != null) {
+            List<Integer> gids = new ArrayList<>();
+            for (Object raw : movie.getGenreIds()) {
+                if (raw == null) continue;
+                try {
+                    if (raw instanceof Integer i) {
+                        gids.add(i);
+                    } else if (raw instanceof Number n) {
+                        gids.add(n.intValue());
+                    } else if (raw instanceof String s) {
+                        gids.add(Integer.parseInt(s));
+                    }
+                } catch (Exception ignore) {
+                    // 이상한 값은 무시
+                }
+            }
+            doc.setGenreIds(gids);
+        }
 
         return doc;
     }
