@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam; // @RequestParam 임포트 추가
 import org.springframework.web.bind.annotation.RestController;
 
 import com.boot.service.MovieSearchService;
@@ -59,5 +60,12 @@ public class MovieSearchController {
     public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable String movieId) {
         List<MovieDoc> recommendations = movieSearchService.recommend(movieId);
         return ResponseEntity.ok(recommendations);
+    }
+
+    @Operation(summary = "오타 교정 제안 API", description = "입력된 키워드에 대한 오타 교정 제안을 제공하는 API")
+    @GetMapping("/suggest")
+    public ResponseEntity<List<String>> suggestKeywords(@RequestParam String keyword) {
+        List<String> suggestions = movieSearchService.suggestKeywords(keyword);
+        return ResponseEntity.ok(suggestions);
     }
 }

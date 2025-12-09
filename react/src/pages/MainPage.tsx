@@ -11,6 +11,9 @@ interface Movie {
   id: string;
   title: string;
   poster_path: string;
+  vote_average?: number; // 추가: 평점
+  genre_ids?: number[]; // 추가: 장르 ID 목록
+  overview?: string; // 추가: 줄거리
 }
 
 interface ApiResult {
@@ -334,7 +337,7 @@ const MainPage: React.FC = () => {
               영화 목록
             </h1>
             {loading && currentPage === 1 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+              <div className="grid grid-cols-auto-fill-minmax-250 gap-x-6 gap-y-10"> {/* 변경된 Grid 클래스 */}
                 {Array.from({ length: 10 }).map((_, index) => (
                   <MovieCardSkeleton key={index} staggerIndex={index} />
                 ))}
@@ -342,7 +345,7 @@ const MainPage: React.FC = () => {
             ) : (
               <>
                 {movies.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+                  <div className="grid grid-cols-auto-fill-minmax-250 gap-x-6 gap-y-10"> {/* 변경된 Grid 클래스 */}
                     {movies.map((movie, index) => (
                       <MovieCard
                         key={movie.id}
@@ -353,12 +356,21 @@ const MainPage: React.FC = () => {
                             ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
                             : 'https://via.placeholder.com/200x300?text=No+Image'
                         }
+                        rating={movie.vote_average} // 추가: 평점 전달
+                        genre={
+                          movie.genre_ids // 장르 ID를 이름으로 변환
+                            ?.map(id => genres.find(g => g.id === id)?.name)
+                            .filter(Boolean)
+                            .join(', ') || '장르 정보 없음'
+                        }
+                        overview={movie.overview || '줄거리 정보 없음'} // 추가: 줄거리 전달
                         isFavorite={favoriteMovieIds.has(movie.id)}
                         onToggleFavorite={handleToggleFavorite}
                         isWatched={watchlistMovieIds.has(movie.id)}
                         // showWatchlistControls={true} // 이 부분을 제거합니다.
                         onToggleWatched={handleToggleWatchlist}
                         staggerIndex={index}
+                        className="w-full" // MovieCard에 w-full 추가
                       />
                     ))}
                   </div>
@@ -371,7 +383,7 @@ const MainPage: React.FC = () => {
                 )}
 
                 {loadingMore && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10 mt-10">
+                  <div className="grid grid-cols-auto-fill-minmax-250 gap-x-6 gap-y-10 mt-10"> {/* 변경된 Grid 클래스 */}
                     {Array.from({ length: 5 }).map((_, index) => (
                       <MovieCardSkeleton
                         key={`loading-more-${index}`}
