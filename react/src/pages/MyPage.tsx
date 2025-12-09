@@ -106,7 +106,7 @@ const MyPage: React.FC = () => {
 
                 // TMDB API를 사용하여 영화 상세 정보 가져오기
                 const fetchMovieDetailsFromTmdb = async (movieIds: string[]): Promise<MovieSummary[]> => {
-                    if (movieIds.length === 0) return [];
+                    if (!movieIds || movieIds.length === 0) return [];
                     const movieDetailsPromises = movieIds.map(id =>
                         axios.get(`https://api.themoviedb.org/3/movie/${id}?api_key=${tmdbApiKey}&language=ko-KR`)
                             .then(res => ({
@@ -124,11 +124,11 @@ const MyPage: React.FC = () => {
                     return details;
                 };
 
-                const favDetails = await fetchMovieDetailsFromTmdb(fetchedProfile.favoriteMovieIds || []);
+                const favDetails = await fetchMovieDetailsFromTmdb(fetchedProfile.favoriteMovieIds);
                 setFavoriteMoviesDetails(favDetails);
 
-                const watchlistMovieIds = fetchedProfile.watchlistMovies?.map(item => item.movieId) || [];
-                const watchDetails = await fetchMovieDetailsFromTmdb(watchlistMovieIds);
+                const watchlistMovieIds = fetchedProfile.watchlistMovies?.map(item => item.movieId);
+                const watchDetails = await fetchMovieDetailsFromTmdb(watchlistMovieIds || []);
                 const watchDetailsWithWatched = watchDetails.map(movie => ({
                     ...movie,
                     watched: fetchedProfile.watchlistMovies?.find(item => item.movieId === movie.id)?.watched || false
@@ -257,12 +257,12 @@ const MyPage: React.FC = () => {
                 </div>
 
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings.length})</h2>
-                    {bookings.length === 0 ? (
+                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings?.length || 0})</h2>
+                    {(bookings?.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">예매 내역이 없습니다.</p>
                     ) : (
                         <div className="space-y-4">
-                            {bookings.map((booking) => (
+                            {bookings?.map((booking) => (
                                 <div key={booking.bookingId} className="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600">
                                     {/* ... 예매 내역 상세 ... */}
                                 </div>
@@ -272,12 +272,12 @@ const MyPage: React.FC = () => {
                 </div>
 
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">찜한 영화 ({favoriteMoviesDetails.length})</h2>
-                    {favoriteMoviesDetails.length === 0 ? (
+                    <h2 className="text-2xl font-semibold mb-4">찜한 영화 ({favoriteMoviesDetails?.length || 0})</h2>
+                    {(favoriteMoviesDetails?.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">찜한 영화가 없습니다.</p>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-                            {favoriteMoviesDetails.map((movie, index) => (
+                            {favoriteMoviesDetails?.map((movie, index) => (
                                 <MovieCard
                                     key={movie.id}
                                     id={movie.id}
@@ -294,12 +294,12 @@ const MyPage: React.FC = () => {
                 </div>
 
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">보고싶어요 ({watchlistMoviesDetails.length})</h2>
-                    {watchlistMoviesDetails.length === 0 ? (
+                    <h2 className="text-2xl font-semibold mb-4">보고싶어요 ({watchlistMoviesDetails?.length || 0})</h2>
+                    {(watchlistMoviesDetails?.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">보고싶어요 목록에 영화가 없습니다.</p>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-                            {watchlistMoviesDetails.map((movie, index) => (
+                            {watchlistMoviesDetails?.map((movie, index) => (
                                 <div key={movie.id}>
                                     <MovieCard
                                         id={movie.id}
@@ -322,12 +322,12 @@ const MyPage: React.FC = () => {
                 </div>
 
                 <div className="mb-10">
-                    <h2 className="text-2xl font-semibold mb-4">작성한 리뷰 ({profile?.reviews.length || 0})</h2>
-                    {(profile?.reviews.length || 0) === 0 ? (
+                    <h2 className="text-2xl font-semibold mb-4">작성한 리뷰 ({profile?.reviews?.length || 0})</h2>
+                    {(profile?.reviews?.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">작성한 리뷰가 없습니다.</p>
                     ) : (
                         <div className="space-y-6">
-                            {profile?.reviews.map(review => (
+                            {profile?.reviews?.map(review => (
                                 <div key={review.id} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-bold text-lg">
