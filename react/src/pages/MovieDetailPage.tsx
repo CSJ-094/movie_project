@@ -194,17 +194,29 @@ const MovieDetailPage: React.FC = () => {
 
   // Recommended movies fetching
   useEffect(() => {
-    if (!movie || movie.genres.length === 0) return;
+    if (!movieId) return; // movie 객체 전체가 로딩되기 전이라도 ID만 있으면 요청 가능
+
     const fetchRecommendations = async () => {
-      const genreIds = movie.genres.map(g => g.id).join(',');
       try {
-        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR&with_genres=${genreIds}&sort_by=popularity.desc`);
-        const data = await response.json();
-        setRecommendedMovies(data.results.filter((rec: RecommendedMovie) => rec.id !== movie.id).slice(0, 10));
-      } catch (error) { console.error("Failed to fetch recommendations:", error); }
+        // 백엔드 API 호출
+        const response = await axiosInstance.get(`/movies/${movieId}/recommendations`);
+
+        // 백엔드에서 주는 데이터는 MovieDoc 형태이므로 필요한 필드만 매핑
+        const recommendations = response.data.map((item: any) => ({
+          id: Number(item.movieId), // 백엔드는 String ID일 수 있으므로 변환
+          title: item.title,
+          poster_path: item.posterUrl ? item.posterUrl.replace('https://image.tmdb.org/t/p/w500', '') : null
+        }));
+
+        setRecommendedMovies(recommendations);
+      } catch (error) {
+        console.error("Failed to fetch recommendations from Backend:", error);
+        setRecommendedMovies([]);
+      }
     };
+
     fetchRecommendations();
-  }, [movie]);
+  }, [movieId]);
 
   // Overview clamping
   useEffect(() => {

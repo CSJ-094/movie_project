@@ -2,6 +2,7 @@ package com.boot.controller;
 
 import java.util.List;
 
+import com.boot.dto.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,11 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.boot.dto.AutocompleteRequest;
-import com.boot.dto.AutocompleteResponse;
-import com.boot.dto.FilterOptionsResponse;
-import com.boot.dto.MovieSearchRequest;
-import com.boot.dto.MovieSearchResponse;
 import com.boot.service.MovieSearchService;
 import com.boot.elastic.Movie;
 
@@ -58,5 +54,10 @@ public class MovieSearchController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+    @GetMapping("/{movieId}/recommendations")
+    public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable String movieId) {
+        List<MovieDoc> recommendations = movieSearchService.recommend(movieId);
+        return ResponseEntity.ok(recommendations);
     }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.StatsAggregate;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.GetResponse;
@@ -306,6 +307,87 @@ public class MovieSearchService {
         MovieSearchResponse resp = search(req);
 
         return resp.getMovies();
+    }
+
+    // MovieDetailPage 추천영화 섹션
+    public List<MovieDoc> recommend(String movieId) {
+        List<Movie> finalResults = new ArrayList<>();
+        int targetSize = 10; // 갯수
+
+        // MLT(More Like This) 쿼리 사용 (유사도 기반)
+        // 대표 키워드set을 가지고 리턴
+        try {
+            SearchResponse<Movie> mltResponse = elasticsearchClient.search(s -> s
+                            .index("movies") //movies 인덱스에서 검색하여 targetSize만큼 가져오겠다.
+                            .size(targetSize)
+                            .query(q -> q
+                                    .moreLikeThis(mlt -> mlt //MLT 필드 시작
+                                            .fields("overview", "title", "actors", "director", "companies") //유사도 분석 필드
+                                            .like(l -> l.document(d -> d.index("movies").id(movieId))) // 기준이 되는 항목 -> 현재 영화 id
+                                            .minTermFreq(1) // 기준 항목에서 [최소 1번] 이상 등장한 단어 사용
+                                            .minDocFreq(1) // DB에서 최소 1번 이상 등장해야 사용
+                                    )
+                            ),
+                    Movie.class
+            );
+
+            finalResults.addAll(mltResponse.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .toList()); //추천 정보 저장
+
+        } catch (Exception e) {
+            logger.warn("MLT기반 추천중 오류 (ID: {}): {}", movieId, e.getMessage());
+        }
+
+        if (finalResults.size() < targetSize) { //추천 정보 갯수가 너무 적으면 ->
+            try {
+                // 현재 영화의 장르를 조회
+                Movie currentMovie = getMovieById(movieId);
+
+                if (currentMovie != null && currentMovie.getGenreIds() != null && !currentMovie.getGenreIds().isEmpty()) {
+                    List<String> excludeIds = new ArrayList<>(); //리스트 생성
+                    excludeIds.add(movieId); //현재 보고있는 영화와
+                    finalResults.forEach(m -> excludeIds.add(m.getId())); //위에서 저장한 추천 정보들 excludeIds에 저장
+
+                    int more = targetSize - finalResults.size(); //추가해야할 size 계산
+
+                    SearchResponse<Movie> genreResponse = elasticsearchClient.search(s -> s
+                                    .index("movies")
+                                    .size(more)
+                                    .query(q -> q
+                                            .bool(b -> b
+                                                    //같은 장르 기반 추천
+                                                    .filter(f -> f
+                                                            .terms(t -> t
+                                                                    .field("genre_ids")
+                                                                    .terms(v -> v.value(currentMovie.getGenreIds().stream()
+                                                                            .map(FieldValue::of)
+                                                                            .toList()))
+                                                            )
+                                                    )
+                                                    .mustNot(mn -> mn
+                                                            .ids(i -> i.values(excludeIds)) //excludeIds에 있는 값은 추가 x
+                                                    )
+                                            )
+                                    )
+                                    // 평점 높은 순으로 채우기
+                                    .sort(sort -> sort.field(f -> f.field("vote_average").order(SortOrder.Desc)))
+                            , Movie.class);
+
+                    finalResults.addAll(genreResponse.hits().hits().stream()
+                            .map(Hit::source)
+                            .filter(Objects::nonNull)
+                            .toList()); //추천 항목 리스트 추가
+                }
+            } catch (Exception e) {
+                logger.error("장르기반 추천 중 오류: {}", e.getMessage());
+            }
+        }
+
+        return finalResults.stream()
+                .map(this::toMovieDoc)
+                .toList();
     }
 
     // 3. 공통 변환 메서드
