@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // axiosInstance 대신 일반 axios 사용
+import axios from 'axios';
 import axiosInstance from '../api/axiosInstance';
 import MovieCard from '../components/MovieCard';
 import StarRating from '../components/StarRating';
+import MovieCardSkeleton from '../components/MovieCardSkeleton';
+import type { AxiosResponse } from 'axios'; // 👈 여기를 'import type'으로 수정!
 
-// ... (인터페이스 정의는 이전과 동일) ...
+// ... 나머지 인터페이스 정의 및 컴포넌트 로직 ...
 
+// TMDB 설정 상수화
+const TMDB_API_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3/movie/';
+const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const NO_IMAGE_URL = 'https://via.placeholder.com/200x300?text=No+Image';
+
+// --- 인터페이스 정의 (중복 방지를 위해 그대로 유지) ---
 interface UserProfile {
     id: number;
     email: string;
@@ -39,38 +48,168 @@ interface MovieSummary {
     id: string;
     title: string;
     poster_path: string;
-    vote_average?: number; // 추가: 평점
-    genre_ids?: number[]; // 추가: 장르 ID 목록
-    overview?: string; // 추가: 줄거리
-    watched?: boolean; // 보고싶어요 목록에서 사용
+    vote_average: number;
+    watched?: boolean;
 }
 
 interface Booking {
-  bookingId: number;
-  bookingStatus: string;
-  seats: string[];
-  seatCount: number;
-  totalPrice: number;
-  createdAt: string;
-  userId: number;
-  userName: string;
-  userEmail: string;
-  showtimeId: number;
-  startTime: string;
-  endTime: string;
-  movieId: string;
-  movieTitle: string;
-  posterPath: string;
-  runtime: number;
-  theaterId: number;
-  theaterName: string;
-  theaterChain: string;
-  theaterAddress: string;
-  screenId: number;
-  screenName: string;
-  screenType: string;
+    bookingId: number;
+    bookingStatus: string;
+    seats: string[];
+    seatCount: number;
+    totalPrice: number;
+    createdAt: string;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    showtimeId: number;
+    startTime: string;
+    endTime: string;
+    movieId: string;
+    movieTitle: string;
+    posterPath: string;
+    runtime: number;
+    theaterId: number;
+    theaterName: string;
+    theaterChain: string;
+    theaterAddress: string;
+    screenId: number;
+    screenName: string;
+    screenType: string;
+}
+// --- 인터페이스 끝 ---
+
+// 분리된 컴포넌트들을 임시로 이 파일에 정의했다고 가정합니다.
+// 실제 프로젝트에서는 위에서 제안한 대로 별도 파일로 분리해야 합니다.
+const BookingItem: React.FC<{ booking: Booking }> = ({ booking }) => {
+    // ... BookingItem 구현 내용 (위의 1단계 참고) ...
+    const posterUrl = booking.posterPath ? `${IMAGE_BASE_URL}${booking.posterPath}` : NO_IMAGE_URL.replace('200x300', '100x150');
+
+    const statusClasses = {
+        'CONFIRMED': 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200',
+        'PENDING': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200',
+        'CANCELLED': 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200',
+    };
+    const statusClass = statusClasses[booking.bookingStatus as keyof typeof statusClasses] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+
+    return (
+        <div className="flex space-x-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600 transition-shadow hover:shadow-lg">
+            <img src={posterUrl} alt={`${booking.movieTitle} 포스터`} className="w-16 h-24 object-cover rounded-md flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-xl font-bold truncate text-gray-900 dark:text-white">{booking.movieTitle}</h3>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusClass}`}>
+                        {booking.bookingStatus === 'CONFIRMED' ? '예매 완료' : booking.bookingStatus === 'CANCELLED' ? '취소됨' : '처리 중'}
+                    </span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-semibold">{new Date(booking.startTime).toLocaleString()}</span>
+                </p>
+                <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-0.5 mt-2">
+                    <li><strong className='font-bold'>극장:</strong> {booking.theaterName} ({booking.screenName})</li>
+                    <li><strong className='font-bold'>좌석:</strong> {booking.seats.join(', ')} ({booking.seatCount}석)</li>
+                    <li><strong className='font-bold'>총 금액:</strong> {booking.totalPrice.toLocaleString()}원</li>
+                </ul>
+            </div>
+        </div>
+    );
+};
+
+// MovieSection 및 ReviewList 컴포넌트도 위에서처럼 정의되었다고 가정하고 MainPage에 적용합니다.
+
+// ReviewList.tsx (별도 파일로 분리)
+interface ReviewListProps {
+    reviews: Review[];
+    movieDetails: MovieSummary[];
 }
 
+const ReviewList: React.FC<ReviewListProps> = ({ reviews, movieDetails }) => {
+    return (
+        <div className="mb-10">
+            <h2 className="text-2xl font-semibold mb-4">작성한 리뷰 ({reviews?.length || 0})</h2>
+            {(reviews?.length || 0) === 0 ? (
+                <p className="text-gray-600 dark:text-gray-400">작성한 리뷰가 없습니다.</p>
+            ) : (
+                <div className="space-y-6">
+                    {reviews.map(review => {
+                        const movieTitle = movieDetails.find(m => m.id === review.movieId)?.title ?? `영화 ID: ${review.movieId}`;
+
+                        return (
+                            <div key={review.id} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">{movieTitle}</h3>
+                                    <span className="ml-3 text-yellow-500 flex items-center">
+                                        {'⭐'.repeat(review.rating)}
+                                        <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/5)</span>
+                                    </span>
+                                </div>
+                                <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2">{review.comment}</p>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                    작성일: {new Date(review.createdAt).toLocaleDateString()}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// PasswordChangeForm.tsx (별도 파일로 분리)
+interface PasswordChangeFormProps {
+    error: string | null;
+    success: string | null;
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+    setCurrentPassword: (pw: string) => void;
+    setNewPassword: (pw: string) => void;
+    setConfirmPassword: (pw: string) => void;
+    handleChangePassword: (e: React.FormEvent) => void;
+    handleDeleteAccount: () => void;
+    userEmail: string;
+}
+
+const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({
+                                                                   error, success, currentPassword, newPassword, confirmPassword,
+                                                                   setCurrentPassword, setNewPassword, setConfirmPassword,
+                                                                   handleChangePassword, handleDeleteAccount, userEmail
+                                                               }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-10">
+        <h2 className="text-2xl font-semibold mb-4">계정 관리</h2>
+        <p className="text-lg mb-6"><strong className='font-bold'>이메일:</strong> {userEmail}</p>
+
+        <div className="border-t pt-6 border-gray-200 dark:border-gray-700">
+            <h2 className="text-2xl font-semibold mb-4">비밀번호 변경</h2>
+            {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+            {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+            <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                    <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="currentPassword">현재 비밀번호</label>
+                    <input type="password" id="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <div>
+                    <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="newPassword">새 비밀번호</label>
+                    <input type="password" id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <div>
+                    <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="confirmPassword">새 비밀번호 확인</label>
+                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">비밀번호 변경</button>
+            </form>
+        </div>
+
+        <div className="mt-8 border-t pt-6 border-red-300 dark:border-red-700">
+            <h2 className="text-2xl font-semibold mb-4 text-red-500">계정 삭제</h2>
+            <button onClick={handleDeleteAccount} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">회원 탈퇴</button>
+        </div>
+    </div>
+);
+
+
+// --- MyPage Main Component ---
 
 const MyPage: React.FC = () => {
     const { userEmail, isLoggedIn } = useAuth();
@@ -90,7 +229,46 @@ const MyPage: React.FC = () => {
     const [ratedMoviesDetails, setRatedMoviesDetails] = useState<MovieSummary[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
 
-    const tmdbApiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb'; // TMDB API 키
+    // 모든 관심 영화 ID 목록을 합쳐서 TMDB 호출을 최적화합니다.
+    const allRelevantMovieIds = useMemo(() => {
+        const ids = new Set<string>();
+        if (profile) {
+            profile.favoriteMovieIds?.forEach(id => ids.add(id));
+            profile.watchlistMovies?.forEach(item => ids.add(item.movieId));
+            Object.keys(profile.ratedMovies || {})?.forEach(id => ids.add(id));
+        }
+        return Array.from(ids);
+    }, [profile]);
+
+    // TMDB API에서 영화 상세 정보 목록을 한 번에 가져오는 함수
+    const fetchMovieDetailsFromTmdb = useCallback(async (movieIds: string[]): Promise<MovieSummary[]> => {
+        if (!movieIds || movieIds.length === 0) return [];
+
+        const movieDetailsPromises = movieIds.map(id =>
+            axios.get(`${TMDB_BASE_URL}${id}?api_key=${TMDB_API_KEY}&language=ko-KR`)
+                .then((res: AxiosResponse) => ({
+                    id: String(res.data.id),
+                    title: res.data.title,
+                    poster_path: res.data.poster_path,
+                    vote_average: res.data.vote_average
+                }))
+                // 실패해도 Promise.allSettled를 통해 다음 영화 처리가 가능하도록 처리
+                .catch(err => {
+                    console.error(`TMDB에서 영화 상세 정보를 가져오는데 실패했습니다. ID: ${id}:`, err);
+                    return null;
+                })
+        );
+
+        // Promise.all 대신 Promise.allSettled를 사용하여 실패한 API 호출이 전체를 중단시키지 않도록 합니다.
+        const results = await Promise.allSettled(movieDetailsPromises);
+
+        const details = results
+            .filter(result => result.status === 'fulfilled' && result.value !== null)
+            .map(result => (result as PromiseFulfilledResult<MovieSummary>).value)
+            .filter(Boolean) as MovieSummary[]; // 타입 가드
+
+        return details;
+    }, []);
 
     useEffect(() => {
         if (!isLoggedIn) {
@@ -100,58 +278,48 @@ const MyPage: React.FC = () => {
 
         const fetchUserProfileAndMovies = async () => {
             setLoading(true);
+            setPageError(null);
+
             try {
+                // 1. 프로필 정보 가져오기
                 const profileResponse = await axiosInstance.get<UserProfile>('/user/profile');
-                setProfile(profileResponse.data);
                 const fetchedProfile = profileResponse.data;
+                setProfile(fetchedProfile);
 
-                // TMDB API를 사용하여 영화 상세 정보 가져오기
-                const fetchMovieDetailsFromTmdb = async (movieIds: string[]): Promise<MovieSummary[]> => {
-                    if (!movieIds || movieIds.length === 0) return [];
-                    const movieDetailsPromises = movieIds.map(id =>
-                        axios.get(`https://api.themoviedb.org/3/movie/${id}?api_key=${tmdbApiKey}&language=ko-KR`)
-                            .then(res => ({
-                                id: res.data.id.toString(),
-                                title: res.data.title,
-                                poster_path: res.data.poster_path,
-                                vote_average: res.data.vote_average, // TMDB에서 평점 가져오기
-                                genre_ids: res.data.genres?.map((g: any) => g.id), // TMDB에서 장르 ID 가져오기
-                                overview: res.data.overview // TMDB에서 줄거리 가져오기
-                            }))
-                            .catch(err => {
-                                console.error(`TMDB에서 영화 상세 정보를 가져오는데 실패했습니다. ID: ${id}:`, err);
-                                return null;
-                            })
-                    );
-                    const details = (await Promise.all(movieDetailsPromises)).filter(Boolean) as MovieSummary[];
-                    return details;
-                };
+                // 2. 예매 내역 가져오기
+                const bookingsResponse = await axiosInstance.get<Booking[]>(`/bookings/user/${fetchedProfile.id}`);
+                setBookings(bookingsResponse.data || []);
 
-                const favDetails = await fetchMovieDetailsFromTmdb(fetchedProfile.favoriteMovieIds);
+                // 3. 모든 관련 영화 ID 추출 및 TMDB 상세 정보 일괄 패치
+                const allIds = [
+                    ...fetchedProfile.favoriteMovieIds,
+                    ...(fetchedProfile.watchlistMovies?.map(item => item.movieId) || []),
+                    ...Object.keys(fetchedProfile.ratedMovies || {})
+                ];
+                const uniqueIds = Array.from(new Set(allIds));
+                const allDetails = await fetchMovieDetailsFromTmdb(uniqueIds);
+
+                // 4. TMDB 결과와 사용자 데이터 병합
+
+                // 찜한 영화
+                const favDetails = allDetails.filter(movie => fetchedProfile.favoriteMovieIds.includes(movie.id));
                 setFavoriteMoviesDetails(favDetails);
 
-                const watchlistMovieIds = fetchedProfile.watchlistMovies?.map(item => item.movieId);
-                const watchDetails = await fetchMovieDetailsFromTmdb(watchlistMovieIds || []);
-                const watchDetailsWithWatched = watchDetails.map(movie => ({
-                    ...movie,
-                    watched: fetchedProfile.watchlistMovies?.find(item => item.movieId === movie.id)?.watched || false
-                }));
+                // 보고싶어요 (시청 여부 포함)
+                const watchlistMovieMap = new Map(fetchedProfile.watchlistMovies?.map(item => [item.movieId, item.watched]) || []);
+                const watchDetailsWithWatched = allDetails
+                    .filter(movie => watchlistMovieMap.has(movie.id))
+                    .map(movie => ({
+                        ...movie,
+                        watched: watchlistMovieMap.get(movie.id) || false
+                    }));
                 setWatchlistMoviesDetails(watchDetailsWithWatched);
 
-                const ratedDetails = await fetchMovieDetailsFromTmdb(Object.keys(fetchedProfile.ratedMovies || {}));
-                setRatedMoviesDetails(ratedDetails);
+                // 평점 준 영화 (이미 위 목록에 포함되므로 따로 렌더링에 사용하지 않고 데이터만 보존)
+                setRatedMoviesDetails(allDetails.filter(movie => Object.keys(fetchedProfile.ratedMovies || {}).includes(movie.id)));
 
-                if (fetchedProfile.id) {
-                    try {
-                        const bookingsResponse = await axiosInstance.get<Booking[]>(`/bookings/user/${fetchedProfile.id}`);
-                        setBookings(bookingsResponse.data || []);
-                    } catch (err: any) {
-                        console.error("예매 내역을 불러오는데 실패했습니다.", err);
-                        setBookings([]);
-                    }
-                }
 
-            } catch (err) {
+            } catch (err: any) {
                 console.error("사용자 프로필 및 영화 목록을 불러오는데 실패했습니다.", err);
                 setPageError("프로필 정보를 불러오는 데 실패했습니다.");
             } finally {
@@ -160,11 +328,13 @@ const MyPage: React.FC = () => {
         };
 
         fetchUserProfileAndMovies();
-    }, [isLoggedIn, navigate]);
+    }, [isLoggedIn, navigate, fetchMovieDetailsFromTmdb]); // fetchMovieDetailsFromTmdb를 종속성 배열에 추가
 
+    // --- 핸들러 함수들 (기존 로직 유지) ---
     const handleToggleFavorite = async (movieId: string) => {
         try {
             await axiosInstance.post(`/favorites/toggle/${movieId}`);
+            // UI 업데이트: 목록에서 제거
             setFavoriteMoviesDetails(prev => prev.filter(movie => movie.id !== movieId));
         } catch (err) {
             console.error(`Failed to toggle favorite status for movie ${movieId}:`, err);
@@ -175,6 +345,7 @@ const MyPage: React.FC = () => {
     const handleToggleWatched = async (movieId: string) => {
         try {
             const response = await axiosInstance.patch<boolean>(`/watchlist/${movieId}/watched`);
+            // UI 업데이트: 시청 상태 토글
             setWatchlistMoviesDetails(prevDetails =>
                 prevDetails.map(movie =>
                     movie.id === movieId ? { ...movie, watched: response.data } : movie
@@ -196,15 +367,19 @@ const MyPage: React.FC = () => {
             setError('새 비밀번호가 일치하지 않습니다.');
             return;
         }
+        if (!currentPassword || !newPassword) {
+            setError('모든 비밀번호 필드를 채워주세요.');
+            return;
+        }
 
         try {
             const response = await axiosInstance.patch('/user/password', { currentPassword, newPassword });
-            setSuccess(response.data);
+            setSuccess(response.data.message || '비밀번호가 성공적으로 변경되었습니다.');
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
         } catch (err: any) {
-            const errorMessage = err.response?.data || err.message || '비밀번호 변경에 실패했습니다.';
+            const errorMessage = err.response?.data?.message || err.response?.data || err.message || '비밀번호 변경에 실패했습니다.';
             setError(errorMessage);
         }
     };
@@ -214,6 +389,7 @@ const MyPage: React.FC = () => {
             try {
                 await axiosInstance.delete('/user');
                 alert('회원 탈퇴가 완료되었습니다. 이용해주셔서 감사합니다.');
+                // 인증 상태 초기화 및 리다이렉트 (AuthContext의 로그아웃 함수를 사용하는 것이 더 안전)
                 localStorage.removeItem('accessToken');
                 window.location.href = '/';
             } catch (error) {
@@ -222,8 +398,8 @@ const MyPage: React.FC = () => {
             }
         }
     };
-    
-    // ... (로딩 및 에러 처리 UI는 이전과 동일) ...
+
+    // --- 조건부 렌더링 ---
 
     if (!isLoggedIn) {
         return <div className="text-center p-12 text-2xl text-red-500">로그인이 필요합니다.</div>;
@@ -233,24 +409,39 @@ const MyPage: React.FC = () => {
         return <div className="text-center p-12 text-2xl text-red-500">{pageError}</div>;
     }
 
-    if (loading) {
+    if (loading || !profile) {
+        // 더 나은 스켈레톤 UI를 위해 MovieCardSkeleton을 활용할 수 있습니다.
         return (
             <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8">
-                {/* 스켈레톤 UI */}
+                <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+                    <div className="animate-pulse space-y-4">
+                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mx-auto mb-10"></div>
+                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                        <div className="grid grid-cols-4 gap-4">
+                            {[...Array(8)].map((_, i) => (
+                                <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
 
-    if (!profile) {
-        return <div className="text-center p-12 text-2xl dark:text-white">프로필 정보를 찾을 수 없습니다.</div>;
-    }
+    // 렌더링에 필요한 모든 영화 상세 정보를 통합
+    const allMovieDetails = [...favoriteMoviesDetails, ...watchlistMoviesDetails, ...ratedMoviesDetails];
+    const uniqueMovieDetails = Array.from(new Set(allMovieDetails.map(m => m.id)))
+        .map(id => allMovieDetails.find(m => m.id === id))
+        .filter(Boolean) as MovieSummary[];
+
+    // --- 최종 렌더링 ---
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8">
             <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
-                <h1 className="text-4xl font-bold mb-8 text-center"> 내 프로필</h1>
+                <h1 className="text-4xl font-bold mb-8 text-center">내 프로필</h1>
 
-                <div className="flex justify-center mb-8">
+                <div className="flex justify-center mb-12">
                     <button
                         onClick={() => navigate('/recap')}
                         className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2"
@@ -259,87 +450,56 @@ const MyPage: React.FC = () => {
                     </button>
                 </div>
 
+                {/* 예매 내역 섹션 */}
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings?.length || 0})</h2>
-                    {(bookings?.length || 0) === 0 ? (
+                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings.length || 0})</h2>
+                    {(bookings.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">예매 내역이 없습니다.</p>
                     ) : (
                         <div className="space-y-4">
-                            {bookings?.map((booking) => (
-                                <div key={booking.bookingId} className="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600">
-                                    {/* ... 예매 내역 상세 ... */}
-                                </div>
+                            {bookings.map(booking => (
+                                <BookingItem key={booking.bookingId} booking={booking} />
                             ))}
                         </div>
                     )}
                 </div>
 
-                <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">찜한 영화 ({favoriteMoviesDetails?.length || 0})</h2>
-                    {(favoriteMoviesDetails?.length || 0) === 0 ? (
-                        <p className="text-gray-600 dark:text-gray-400">찜한 영화가 없습니다.</p>
-                    ) : (
-                        <div className="grid grid-cols-auto-fill-minmax-250 gap-x-6 gap-y-10"> {/* Grid 클래스 변경 */}
-                            {favoriteMoviesDetails?.map((movie, index) => (
-                                <MovieCard
-                                    key={movie.id}
-                                    id={movie.id}
-                                    title={movie.title}
-                                    posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
-                                    rating={movie.vote_average} // 평점 전달
-                                    genre={
-                                        // TMDB API에서 가져온 장르 ID를 이름으로 변환하는 로직 필요 (MainPage와 유사)
-                                        '장르 정보 없음' // 임시
-                                    }
-                                    overview={movie.overview || '줄거리 정보 없음'} // 줄거리 전달
-                                    isFavorite={true}
-                                    onToggleFavorite={() => handleToggleFavorite(movie.id)}
-                                    size="sm"
-                                    staggerIndex={index}
-                                    className="w-full" // w-full 추가
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
+                {/* 찜한 영화 섹션 */}
+                <MovieSection
+                    title="찜한 영화"
+                    movies={favoriteMoviesDetails}
+                    onToggleFavorite={handleToggleFavorite}
+                />
 
-                <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">보고싶어요 ({watchlistMoviesDetails?.length || 0})</h2>
-                    {(watchlistMoviesDetails?.length || 0) === 0 ? (
-                        <p className="text-gray-600 dark:text-gray-400">보고싶어요 목록에 영화가 없습니다.</p>
-                    ) : (
-                        <div className="grid grid-cols-auto-fill-minmax-250 gap-x-6 gap-y-10"> {/* Grid 클래스 변경 */}
-                            {watchlistMoviesDetails?.map((movie, index) => (
-                                // MovieCard를 감싸는 불필요한 div 제거
-                                <MovieCard
-                                    key={movie.id} // key는 MovieCard에 직접 부여
-                                    id={movie.id}
-                                    title={movie.title}
-                                    posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
-                                    rating={movie.vote_average} // 평점 전달
-                                    genre={
-                                        // TMDB API에서 가져온 장르 ID를 이름으로 변환하는 로직 필요 (MainPage와 유사)
-                                        '장르 정보 없음' // 임시
-                                    }
-                                    overview={movie.overview || '줄거리 정보 없음'} // 줄거리 전달
-                                    isWatched={movie.watched || false}
-                                    showWatchlistControls={true}
-                                    onToggleWatched={() => handleToggleWatched(movie.id)}
-                                    size="sm"
-                                    staggerIndex={index}
-                                    className="w-full" // w-full 추가
-                                />
-                                // 기존의 영화 제목과 StarRating 부분은 MovieCard 뒷면으로 통합되거나 제거되어야 합니다.
-                                // <div>
-                                //     <h3 className="text-xl font-semibold">{movie.title}</h3>
-                                //     <StarRating rating={profile?.ratedMovies[movie.id] || 0} readOnly={true} size="md" />
-                                // </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                {/* 보고싶어요 섹션 */}
+                <MovieSection
+                    title="보고싶어요"
+                    movies={watchlistMoviesDetails}
+                    onToggleWatched={handleToggleWatched}
+                    showWatchlistControls={true}
+                    ratedMovies={profile.ratedMovies}
+                />
 
-                {/* ... (작성한 리뷰 및 계정 관리 부분은 동일) ... */}
+                {/* 작성한 리뷰 섹션 */}
+                <ReviewList
+                    reviews={profile.reviews}
+                    movieDetails={uniqueMovieDetails} // 모든 영화 상세 정보를 전달하여 제목 찾기
+                />
+
+                {/* 계정 관리 섹션 */}
+                <PasswordChangeForm
+                    error={error}
+                    success={success}
+                    currentPassword={currentPassword}
+                    newPassword={newPassword}
+                    confirmPassword={confirmPassword}
+                    setCurrentPassword={setCurrentPassword}
+                    setNewPassword={setNewPassword}
+                    setConfirmPassword={setConfirmPassword}
+                    handleChangePassword={handleChangePassword}
+                    handleDeleteAccount={handleDeleteAccount}
+                    userEmail={userEmail}
+                />
             </div>
         </div>
     );
