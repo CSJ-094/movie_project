@@ -24,9 +24,9 @@ public class Favorite {
     private User user;
 
     @Column(name = "movie_id", nullable = false)
-    private Long movieId;
+    private String movieId; // Long -> String
 
-    public Favorite(User user, Long movieId) {
+    public Favorite(User user, String movieId) { // Long -> String
         this.user = user;
         this.movieId = movieId;
     }

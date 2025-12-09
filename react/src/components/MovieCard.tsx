@@ -4,16 +4,16 @@ import TrailerModal from './TrailerModal';
 import axios from 'axios';
 
 interface MovieCardProps {
-  id: number;
+  id: string;
   title: string;
   posterUrl: string;
   isFavorite?: boolean;
-  onToggleFavorite?: (movieId: number, e: React.MouseEvent) => void;
+  onToggleFavorite?: (movieId: string, e: React.MouseEvent) => void;
   size?: 'sm' | 'md' | 'lg';
   showTitle?: boolean;
   isWatched?: boolean;
   showWatchlistControls?: boolean;
-  onToggleWatched?: (movieId: number) => void;
+  onToggleWatched?: (movieId: string) => void;
   staggerIndex?: number;
 }
 
@@ -32,15 +32,6 @@ const MovieCard: React.FC<MovieCardProps> = ({
 }) => {
   const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -86,24 +77,22 @@ const MovieCard: React.FC<MovieCardProps> = ({
     }
   };
 
+  // size에 따라 높이만 정의
   const sizeClassName = {
-    sm: 'w-40',
-    md: 'w-48',
-    lg: 'w-64',
+    sm: 'h-64',
+    md: 'h-72',
+    lg: 'h-96',
   }[size];
 
   const cardWrapperClassName = `
-    relative group no-underline flex-shrink-0 ${sizeClassName}
-    transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]
-    transform
-    ${isVisible ? 'opacity-100 translate-y-0 scale-100 rotate-0' : 'opacity-0 translate-y-8 scale-90 -rotate-6'}
-    hover:scale-110 hover:-translate-y-2 hover:shadow-2xl hover:z-10
+    relative group no-underline flex-shrink-0 h-full w-full
+    transition-all duration-300 ease-in-out
+    hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:z-10
   `;
 
   return (
     <div 
       className={cardWrapperClassName} 
-      style={{ transitionDelay: `${staggerIndex * 75}ms` }}
     >
       <Link to={`/movie/${id}`} className="block w-full h-full">
         <div className="relative border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg h-full flex flex-col">
@@ -127,7 +116,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
             >
               {isFavorite ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4.5 4.5 0 010-5.656z" clipRule="evenodd" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

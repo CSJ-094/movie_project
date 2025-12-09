@@ -176,21 +176,23 @@ const SearchPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="flex flex-wrap justify-center">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {Array.from({ length: 10 }).map((_, index) => (
             <MovieCardSkeleton key={index} />
           ))}
         </div>
       ) : movies.length > 0 ? (
         <>
-          <div className="flex flex-wrap justify-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {movies.map(movie => (
-              <MovieCard
-                key={movie.movieId}
-                id={Number(movie.movieId)}
-                title={movie.title}
-                posterUrl={movie.posterUrl || 'https://via.placeholder.com/200x300?text=No+Image'}
-              />
+              <div key={movie.movieId} className="w-full aspect-w-2 aspect-h-3"> {/* 비율로 크기 제어 */}
+                <MovieCard
+                  id={movie.movieId}
+                  title={movie.title}
+                  posterUrl={movie.posterUrl || 'https://via.placeholder.com/200x300?text=No+Image'}
+                  size="md"
+                />
+              </div>
             ))}
           </div>
           <div className="flex justify-center items-center mt-8 space-x-4">

@@ -36,7 +36,8 @@ public class UserProfileService {
 
         UserProfileDto profileDto = UserProfileDto.fromUser(currentUser);
 
-        profileDto.setFavoriteMovieIds(favoriteService.getFavoriteMovieIds(currentUser.getEmail()).stream().map(Object::toString).collect(Collectors.toList()));
+        // favoriteService.getFavoriteMovieIds()가 이제 List<String>을 반환하므로 map(Object::toString) 제거
+        profileDto.setFavoriteMovieIds(favoriteService.getFavoriteMovieIds(currentUser.getEmail()));
 
         profileDto.setRatedMovies(ratingService.getUserRatings(currentUser.getEmail()));
 
