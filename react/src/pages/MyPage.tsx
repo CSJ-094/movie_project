@@ -325,39 +325,18 @@ const MyPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8">
-            <h1 className="text-4xl font-bold mb-8 text-center"> 내 프로필</h1>
+            <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+                <h1 className="text-4xl font-bold mb-8 text-center"> 내 프로필</h1>
 
-            {/* Recap Button */}
-            <div className="flex justify-center mb-8">
-                <button
-                    onClick={() => navigate('/recap')}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2"
-                >
-                    <span>🎬</span> 2025 영화 여정 보기
-                </button>
-            </div>
-
-            <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h2 className="text-2xl font-semibold mb-4">찜한 영화 ({favoriteMoviesDetails.length})</h2>
-                {favoriteMoviesDetails.length === 0 ? (
-                    <p className="text-gray-600 dark:text-gray-400">찜한 영화가 없습니다.</p>
-                ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-                        {favoriteMoviesDetails.map((movie, index) => (
-                            <MovieCard
-                                key={movie.id} // key는 고유해야 합니다.
-                                title={movie.title}
-                                id={movie.id} // id prop은 한 번만 전달합니다.
-                                posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
-                                isFavorite={true}
-                                onToggleFavorite={() => { }}
-                                size="sm"
-                                staggerIndex={index}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
+                {/* Recap Button */}
+                <div className="flex justify-center mb-8">
+                    <button
+                        onClick={() => navigate('/recap')}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2"
+                    >
+                        <span>🎬</span> 2025 영화 여정 보기
+                    </button>
+                </div>
 
                 {/* 예매 내역 */}
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
@@ -440,7 +419,6 @@ const MyPage: React.FC = () => {
                             {favoriteMoviesDetails.map((movie, index) => (
                                 <MovieCard
                                     key={movie.id}
-                                    id={parseInt(movie.id)}
                                     id={movie.id}
                                     title={movie.title}
                                     posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
@@ -533,7 +511,6 @@ const MyPage: React.FC = () => {
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
                             {watchlistMoviesDetails.map((movie, index) => (
-                                // 각 영화 카드를 div로 감싸서 제목과 별점을 함께 표시합니다.
                                 <div key={movie.id}>
                                     <MovieCard
                                         id={movie.id}
@@ -545,15 +522,15 @@ const MyPage: React.FC = () => {
                                         size="sm"
                                         staggerIndex={index}
                                     />
-                                    <div className="mt-2">
-                                        <h3 className="text-sm font-semibold truncate">{movie.title}</h3>
-                                        <StarRating rating={profile?.ratedMovies[movie.id] || 0} readOnly={true} size="sm" />
+                                    <div>
+                                        <h3 className="text-xl font-semibold">{movie.title}</h3>
+                                        <StarRating rating={profile?.ratedMovies[movie.id] || 0} readOnly={true} size="md" />
                                     </div>
                                 </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 {/* 작성한 리뷰 */}
                 <div className="mb-10">
@@ -580,40 +557,42 @@ const MyPage: React.FC = () => {
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
                                         작성일: {new Date(review.createdAt).toLocaleDateString()}
                                     </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-10">
-                <h2 className="text-2xl font-semibold mb-4">계정 관리</h2>
-                <p className="text-lg mb-6"><strong>이메일:</strong> {userEmail}</p>
-
-                <div className="border-t pt-6 border-gray-200 dark:border-gray-700">
-                    <h2 className="text-2xl font-semibold mb-4">비밀번호 변경</h2>
-                    {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-                    {success && <p className="text-green-500 text-center mb-4">{success}</p>}
-                    <form onSubmit={handleChangePassword} className="space-y-4">
-                        <div>
-                            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="currentPassword">현재 비밀번호</label>
-                            <input type="password" id="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                                </div>
+                            ))}
                         </div>
-                        <div>
-                            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="newPassword">새 비밀번호</label>
-                            <input type="password" id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="confirmPassword">새 비밀번호 확인</label>
-                            <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
-                        </div>
-                        <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">비밀번호 변경</button>
-                    </form>
+                    )}
                 </div>
 
-                <div className="mt-8 border-t pt-6 border-red-300 dark:border-gray-700">
-                    <h2 className="text-2xl font-semibold mb-4 text-red-500">계정 삭제</h2>
-                    <button onClick={handleDeleteAccount} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">회원 탈퇴</button>
+                {/* 계정 관리 */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-10">
+                    <h2 className="text-2xl font-semibold mb-4">계정 관리</h2>
+                    <p className="text-lg mb-6"><strong>이메일:</strong> {userEmail}</p>
+
+                    <div className="border-t pt-6 border-gray-200 dark:border-gray-700">
+                        <h2 className="text-2xl font-semibold mb-4">비밀번호 변경</h2>
+                        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+                        {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+                        <form onSubmit={handleChangePassword} className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="currentPassword">현재 비밀번호</label>
+                                <input type="password" id="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="newPassword">새 비밀번호</label>
+                                <input type="password" id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="confirmPassword">새 비밀번호 확인</label>
+                                <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                            </div>
+                            <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">비밀번호 변경</button>
+                        </form>
+                    </div>
+
+                    <div className="mt-8 border-t pt-6 border-red-300 dark:border-red-700">
+                        <h2 className="text-2xl font-semibold mb-4 text-red-500">계정 삭제</h2>
+                        <button onClick={handleDeleteAccount} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">회원 탈퇴</button>
+                    </div>
                 </div>
             </div>
         </div>
