@@ -41,6 +41,7 @@ const SearchPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [totalHits, setTotalHits] = useState(0);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]); // 타입 변경
+  const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([]); // 제안된 키워드 상태 추가
 
   // 검색 기록 가져오는 함수
   const fetchSearchHistory = useCallback(async () => {
@@ -57,6 +58,25 @@ const SearchPage: React.FC = () => {
     }
   }, [isLoggedIn]);
 
+  // 오타 교정 제안 가져오는 함수
+  const fetchSuggestions = useCallback(async (keyword: string) => {
+    if (!keyword) {
+      setSuggestedKeywords([]);
+      return;
+    }
+    try {
+      const response = await axiosInstance.get<string[]>('/movies/suggest', {
+        params: { keyword: keyword }
+      });
+      // 현재 검색어와 다른 제안만 필터링
+      const filteredSuggestions = response.data.filter(s => s.toLowerCase() !== keyword.toLowerCase());
+      setSuggestedKeywords(filteredSuggestions);
+    } catch (error) {
+      console.error('오타 교정 제안을 불러오는데 실패했습니다:', error);
+      setSuggestedKeywords([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSearchHistory();
   }, [fetchSearchHistory]);
@@ -66,11 +86,13 @@ const SearchPage: React.FC = () => {
       setMovies([]);
       setTotalHits(0);
       setLoading(false);
+      setSuggestedKeywords([]); // 쿼리가 없으면 제안도 초기화
       return;
     }
 
     const fetchMovies = async () => {
       setLoading(true);
+      setSuggestedKeywords([]); // 새 검색 시작 시 제안 초기화
       try {
         const response = await axiosInstance.get<SearchResponse>('/movies/search', {
           params: {
@@ -82,16 +104,22 @@ const SearchPage: React.FC = () => {
 
         setMovies(response.data.movies);
         setTotalHits(response.data.totalHits);
+
+        // 검색 결과가 없을 경우에만 오타 교정 제안을 가져옵니다.
+        if (response.data.totalHits === 0) {
+          fetchSuggestions(query);
+        }
       } catch (error) {
         console.error("Failed to fetch search results:", error);
         setMovies([]);
         setTotalHits(0);
+        fetchSuggestions(query); // 에러 발생 시에도 제안을 가져옵니다.
       } finally {
         setLoading(false);
       }
     };
     fetchMovies();
-  }, [query, page]);
+  }, [query, page, fetchSuggestions]); // fetchSuggestions를 의존성 배열에 추가
 
   // 검색 기록 클릭 시
   const handleSearchHistoryClick = (historyQuery: string) => {
@@ -134,6 +162,11 @@ const SearchPage: React.FC = () => {
       console.error('모든 검색 기록 삭제 실패:', error);
       alert('모든 검색 기록 삭제에 실패했습니다.');
     }
+  };
+
+  // 제안된 키워드 클릭 시
+  const handleSuggestionClick = (suggestion: string) => {
+    navigate(`/search?q=${suggestion}`);
   };
 
 
@@ -197,7 +230,7 @@ const SearchPage: React.FC = () => {
           </div>
           <div className="flex justify-center items-center mt-8 space-x-4">
             <button
-              onClick={() => setSearchParams({ q: query || '', page: `${page - 1}` })} // 수정된 부분
+              onClick={() => setSearchParams({ q: query || '', page: `${page - 1}` })}
               disabled={page <= 1}
               className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400"
             >
@@ -205,7 +238,7 @@ const SearchPage: React.FC = () => {
             </button>
             <span className="text-lg text-gray-800 dark:text-white">{page} / {totalPages || 1}</span>
             <button
-              onClick={() => setSearchParams({ q: query || '', page: `${page + 1}` })} // 수정된 부분
+              onClick={() => setSearchParams({ q: query || '', page: `${page + 1}` })}
               disabled={page >= totalPages}
               className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400"
             >
@@ -214,7 +247,26 @@ const SearchPage: React.FC = () => {
           </div>
         </>
       ) : (
-        <p className="mt-8 text-gray-800 dark:text-white">검색 결과가 없습니다.</p>
+        // 검색 결과가 없을 때 제안된 키워드 표시
+        <div className="mt-8">
+          <p className="text-gray-800 dark:text-white text-xl mb-4">검색 결과가 없습니다.</p>
+          {suggestedKeywords.length > 0 && (
+            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+              <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">혹시 다음을 찾으셨나요?</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {suggestedKeywords.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
