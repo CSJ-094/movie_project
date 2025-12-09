@@ -22,6 +22,7 @@ import AdminPage from './pages/AdminPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
 import OAuth2CallbackPage from './pages/OAuth2CallbackPage.tsx';
+import ActorDetailPage from './pages/ActorDetailPage.tsx'; // ActorDetailPage 임포트 추가
 // import ProfilePage from './pages/ProfilePage.tsx'; // ProfilePage 임포트 제거
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import QuickMatchPage from './pages/QuickMatchPage.tsx';
@@ -65,6 +66,10 @@ const router = createBrowserRouter([
       {
         path: "movie/:movieId", // '/movie/:movieId' 경로
         element: <MovieDetailPage />,
+      },
+      {
+        path: "person/:personId", // '/person/:personId' 경로 추가
+        element: <ActorDetailPage />,
       },
       {
         path: "quickmatch",              

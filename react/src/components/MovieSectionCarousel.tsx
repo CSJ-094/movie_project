@@ -110,7 +110,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
                 isFavorite={favoriteMovieIds.has(movie.id)}
                 onToggleFavorite={onToggleFavorite}
                 isWatched={watchlistMovieIds.has(movie.id)}
-                showWatchlistControls={true}
+                // showWatchlistControls={true} // 이 부분을 제거합니다.
                 onToggleWatched={onToggleWatchlist}
               />
             </SwiperSlide>
