@@ -6,6 +6,7 @@ import axiosInstance from '../api/axiosInstance';
 import MovieCard from '../components/MovieCard';
 import StarRating from '../components/StarRating';
 import MovieCardSkeleton from '../components/MovieCardSkeleton';
+import MovieSectionCarousel from '../components/MovieSectionCarousel'; // MovieSectionCarousel 임포트 추가
 import type { AxiosResponse } from 'axios'; // 👈 여기를 'import type'으로 수정!
 
 // ... 나머지 인터페이스 정의 및 컴포넌트 로직 ...
@@ -465,16 +466,18 @@ const MyPage: React.FC = () => {
                 </div>
 
                 {/* 찜한 영화 섹션 */}
-                <MovieSection
+                <MovieSectionCarousel
                     title="찜한 영화"
                     movies={favoriteMoviesDetails}
+                    loading={loading}
                     onToggleFavorite={handleToggleFavorite}
                 />
 
                 {/* 보고싶어요 섹션 */}
-                <MovieSection
+                <MovieSectionCarousel
                     title="보고싶어요"
                     movies={watchlistMoviesDetails}
+                    loading={loading}
                     onToggleWatched={handleToggleWatched}
                     showWatchlistControls={true}
                     ratedMovies={profile.ratedMovies}

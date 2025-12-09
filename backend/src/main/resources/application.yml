@@ -76,8 +76,7 @@ spring:
     api-key: 3d3fea3abfd1ffa8c4b49dc551ddc494
     base-url: https://api.themoviedb.org/3
 openai:
-  api-key: ${OPENAI_API_KEY}
-
+  api-key: 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
 jwt:
   secret-key: WonderfulSecretKeyForJWTSigningAndParsingWithHMACSHA256
   expiration-time: 3600000 # 토큰 만료 시간 (1시간 = 3600000ms)

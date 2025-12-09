@@ -272,10 +272,7 @@ const MainPage: React.FC = () => {
 
     // --- 핸들러 함수들 ---
 
-    const handleToggleFavorite = async (movieId: string, e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
+    const handleToggleFavorite = async (movieId: string) => {
         if (!isLoggedIn) {
             alert('로그인이 필요합니다.');
             return;
@@ -393,24 +390,21 @@ const MainPage: React.FC = () => {
                     fetchUrl={`${TMDB_BASE_URL}/movie/popular`}
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
-                    onToggleWatchlist={handleToggleWatchlist}
-                    watchlistMovieIds={watchlistMovieIds}
+                    showWatchlistControls={false}
                 />
                 <MovieSectionCarousel
                     title="높은 평점 영화"
                     fetchUrl={`${TMDB_BASE_URL}/movie/top_rated`}
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
-                    onToggleWatchlist={handleToggleWatchlist}
-                    watchlistMovieIds={watchlistMovieIds}
+                    showWatchlistControls={false}
                 />
                 <MovieSectionCarousel
                     title="개봉 예정 영화"
                     fetchUrl={`${TMDB_BASE_URL}/movie/upcoming`}
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
-                    onToggleWatchlist={handleToggleWatchlist}
-                    watchlistMovieIds={watchlistMovieIds}
+                    showWatchlistControls={false}
                 />
 
                 <div className="flex flex-col md:flex-row gap-8 mt-12">
