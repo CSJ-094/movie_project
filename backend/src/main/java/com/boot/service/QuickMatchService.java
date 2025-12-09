@@ -372,10 +372,7 @@ public class QuickMatchService {
 
         // 선호 장르가 있으면 장르 필터 적용
         if (genreIdsForSearch != null && !genreIdsForSearch.isEmpty()) {
-            List<String> genreIdsAsString = genreIdsForSearch.stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.toList());
-            request.setGenres(genreIdsAsString);
+            request.setGenres(genreIdsForSearch);
         }
 
         // 연도 범위: 너무 넓으면 필터 안 걸고, 적당히 좁으면 필터 사용
