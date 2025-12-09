@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RatingRepository extends JpaRepository<Rating, Long> {
-    Optional<Rating> findByUserAndMovieId(com.boot.entity.User user, Long movieId);
-
-    List<Rating> findByUser(com.boot.entity.User user);
+    Optional<Rating> findByUserIdAndMovieId(Long userId, String movieId); // Long -> String
+    List<Rating> findByUserId(Long userId);
 }

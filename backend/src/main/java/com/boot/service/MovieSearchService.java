@@ -152,7 +152,10 @@ public class MovieSearchService {
                     .build();
 
         } catch (Exception e) {
-            throw new RuntimeException("영화 검색 중 오류 발생", e);
+            System.err.println("=== Elasticsearch 검색 오류 ===");
+            System.err.println("요청: " + request);
+            e.printStackTrace();
+            throw new RuntimeException("영화 검색 중 오류 발생: " + e.getMessage(), e);
         }
     }
 
@@ -288,6 +291,15 @@ public class MovieSearchService {
             logger.error("Elasticsearch에서 다수 영화 조회 중 오류 발생: {}", e.getMessage());
             return List.of();
         }
+    // 퀵매치용 : 인기 + 평점 순으로 상위 N개의 영화 가져오기
+    public List<MovieDoc> findPopularMovies(int size) {
+        MovieSearchRequest req = new MovieSearchRequest();
+        req.setPage(0);     // 처음에 0으로 설정
+        req.setSize(size);  // 가져올 개수
+
+        MovieSearchResponse resp = search(req);
+
+        return resp.getMovies();
     }
 
     // 3. 공통 변환 메서드

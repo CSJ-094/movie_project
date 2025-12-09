@@ -22,7 +22,7 @@ public class RatingService {
     private final UserRepository userRepository;
 
     // 별점 추가 또는 수정
-    public void addOrUpdateRating(String userEmail, Long movieId, double rating) {
+    public void addOrUpdateRating(String userEmail, String movieId, double rating) { // Long -> String
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
 
@@ -50,20 +50,20 @@ public class RatingService {
 
         return ratings.stream()
                 .collect(Collectors.toMap(
-                        rating -> String.valueOf(rating.getMovieId()), // Long -> String
+                        Rating::getMovieId, // Already String
                         rating -> (int) rating.getRating() // Double -> Integer
                 ));
     }
 
     // 기존 메서드 이름 변경 (혼동 방지)
     @Transactional(readOnly = true)
-    public Map<Long, Double> getRatingsByUser(String userEmail) {
+    public Map<String, Double> getRatingsByUser(String userEmail) { // Map<Long, Double> -> Map<String, Double>
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
 
         List<Rating> ratings = ratingRepository.findByUser(user);
 
         return ratings.stream()
-                .collect(Collectors.toMap(Rating::getMovieId, Rating::getRating));
+                .collect(Collectors.toMap(Rating::getMovieId, Rating::getRating)); // Key is already String
     }
 }

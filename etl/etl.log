@@ -196,53 +196,184 @@
 2025-12-05 12:06:40,554 - INFO - Successfully indexed 1081 movies.
 2025-12-05 12:06:40,556 - INFO - 
 --- ETL Process Finished in 50.04 seconds ---
-2025-12-08 11:28:34,789 - INFO - GET http://localhost:9200/ [status:200 duration:0.018s]
-2025-12-08 11:28:34,790 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
-2025-12-08 11:28:34,790 - INFO - --- Starting ETL Process ---
-2025-12-08 11:28:34,793 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.003s]
-2025-12-08 11:28:34,793 - INFO - Deleting existing index 'movies'...
-2025-12-08 11:28:34,934 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.140s]
-2025-12-08 11:28:34,934 - INFO - Existing index 'movies' deleted.
-2025-12-08 11:28:34,934 - INFO - Creating new index 'movies' with mappings...
-2025-12-08 11:28:35,302 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.367s]
-2025-12-08 11:28:35,302 - INFO - Index 'movies' created with mappings.
-2025-12-08 11:28:35,302 - INFO - 
+2025-12-05 15:27:55,412 - INFO - GET http://localhost:9200/ [status:200 duration:0.007s]
+2025-12-05 15:27:55,412 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-05 15:27:55,413 - INFO - --- Starting ETL Process ---
+2025-12-05 15:27:55,414 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.002s]
+2025-12-05 15:27:55,415 - INFO - Deleting existing index 'movies'...
+2025-12-05 15:27:55,480 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.065s]
+2025-12-05 15:27:55,481 - INFO - Existing index 'movies' deleted.
+2025-12-05 15:27:55,481 - INFO - Creating new index 'movies' with mappings...
+2025-12-05 15:27:55,732 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.251s]
+2025-12-05 15:27:55,733 - INFO - Index 'movies' created with mappings.
+2025-12-05 15:27:55,733 - INFO - 
 --- Extracting Movie Data (Basic Info) ---
-2025-12-08 11:28:36,319 - INFO - Found 100 now playing movies.
-2025-12-08 11:28:38,652 - INFO - Found 1000 popular movies.
-2025-12-08 11:28:38,652 - INFO - Total unique movies to process: 1081
-2025-12-08 11:28:38,652 - INFO - 
+2025-12-05 15:27:56,451 - INFO - Found 100 now playing movies.
+2025-12-05 15:27:58,459 - INFO - Found 999 popular movies.
+2025-12-05 15:27:58,459 - INFO - Total unique movies to process: 1080
+2025-12-05 15:27:58,459 - INFO - 
 --- Extracting Movie Data (OTT Providers) ---
-2025-12-08 11:29:10,241 - INFO - 
+2025-12-05 15:28:33,610 - INFO - 
 --- Loading Data to Elasticsearch ---
-2025-12-08 11:29:10,768 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.445s]
-2025-12-08 11:29:11,046 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.269s]
-2025-12-08 11:29:11,095 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.045s]
-2025-12-08 11:29:11,096 - INFO - Successfully indexed 1081 movies.
-2025-12-08 11:29:11,105 - INFO - 
---- ETL Process Finished in 35.80 seconds ---
-2025-12-08 11:32:06,959 - INFO - GET http://localhost:9200/ [status:200 duration:0.008s]
-2025-12-08 11:32:06,959 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
-2025-12-08 11:32:06,959 - INFO - --- Starting ETL Process ---
-2025-12-08 11:32:06,961 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.002s]
-2025-12-08 11:32:06,961 - INFO - Deleting existing index 'movies'...
-2025-12-08 11:32:07,006 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.045s]
-2025-12-08 11:32:07,007 - INFO - Existing index 'movies' deleted.
-2025-12-08 11:32:07,008 - INFO - Creating new index 'movies' with mappings...
-2025-12-08 11:32:07,155 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.147s]
-2025-12-08 11:32:07,155 - INFO - Index 'movies' created with mappings.
-2025-12-08 11:32:07,155 - INFO - 
---- Extracting Movie Data (Basic Info) ---
-2025-12-08 11:32:08,136 - INFO - Found 100 now playing movies.
-2025-12-08 11:32:10,628 - INFO - Found 1000 popular movies.
-2025-12-08 11:32:10,628 - INFO - Total unique movies to process: 1081
-2025-12-08 11:32:10,628 - INFO - 
---- Extracting Movie Data (OTT Providers) ---
-2025-12-08 11:32:39,490 - INFO - 
+2025-12-05 15:28:33,923 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.260s]
+2025-12-05 15:28:34,102 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.170s]
+2025-12-05 15:28:34,144 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.039s]
+2025-12-05 15:28:34,145 - INFO - Successfully indexed 1080 movies.
+2025-12-05 15:28:34,147 - INFO - 
+--- ETL Process Finished in 38.41 seconds ---
+2025-12-05 16:28:54,040 - INFO - GET http://localhost:9200/ [status:200 duration:0.009s]
+2025-12-05 16:28:54,040 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-05 16:28:54,041 - INFO - --- Starting ETL Process ---
+2025-12-05 16:28:54,042 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.002s]
+2025-12-05 16:28:54,043 - INFO - Deleting existing index 'movies'...
+2025-12-05 16:28:54,136 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.093s]
+2025-12-05 16:28:54,137 - INFO - Existing index 'movies' deleted.
+2025-12-05 16:28:54,137 - INFO - Creating new index 'movies' with mappings...
+2025-12-05 16:28:54,495 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.358s]
+2025-12-05 16:28:54,496 - INFO - Index 'movies' created with mappings.
+2025-12-05 16:28:54,496 - INFO - 
+--- Extracting Movie Data (Basic Info from various endpoints) ---
+2025-12-05 16:29:09,554 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:09,616 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:09,634 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:09,704 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:09,777 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:09,779 - INFO - Found 111 now playing movies.
+2025-12-05 16:29:10,343 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,344 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,371 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,373 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,380 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,860 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,907 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:10,931 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:26,799 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:26,810 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:26,885 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:26,907 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:26,954 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:26,956 - INFO - Found 9996 popular movies.
+2025-12-05 16:29:42,752 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:42,774 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:42,843 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:42,844 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:42,927 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:42,929 - INFO - Found 10000 top rated movies.
+2025-12-05 16:29:58,144 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:58,179 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:58,253 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:58,334 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:58,381 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:58,383 - INFO - Found 41 upcoming movies.
+2025-12-05 16:29:58,385 - INFO - Total unique movies to process: 17052
+2025-12-05 16:29:58,385 - INFO - 
+--- Extracting Movie Data (Details like OTT, Runtime, Certification, Companies) ---
+2025-12-05 16:29:58,998 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:29:59,035 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:30:03,889 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:38:14,689 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:38:14,696 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:38:14,713 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:38:14,726 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:38:14,780 - WARNING - Connection pool is full, discarding connection: api.themoviedb.org. Connection pool size: 10
+2025-12-05 16:38:14,781 - INFO - 
 --- Loading Data to Elasticsearch ---
-2025-12-08 11:32:39,914 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.370s]
-2025-12-08 11:32:40,165 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.242s]
-2025-12-08 11:32:40,208 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.039s]
-2025-12-08 11:32:40,209 - INFO - Successfully indexed 1081 movies.
-2025-12-08 11:32:40,218 - INFO - 
---- ETL Process Finished in 33.06 seconds ---
+2025-12-05 16:38:15,198 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.366s]
+2025-12-05 16:38:15,511 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.288s]
+2025-12-05 16:38:15,773 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.250s]
+2025-12-05 16:38:16,002 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.219s]
+2025-12-05 16:38:16,173 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.158s]
+2025-12-05 16:38:16,347 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.164s]
+2025-12-05 16:38:16,565 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.209s]
+2025-12-05 16:38:16,723 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.149s]
+2025-12-05 16:38:16,870 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.138s]
+2025-12-05 16:38:17,013 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.133s]
+2025-12-05 16:38:17,168 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.147s]
+2025-12-05 16:38:17,302 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.125s]
+2025-12-05 16:38:17,456 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.145s]
+2025-12-05 16:38:17,594 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.129s]
+2025-12-05 16:38:17,779 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.173s]
+2025-12-05 16:38:17,942 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.155s]
+2025-12-05 16:38:18,100 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.145s]
+2025-12-05 16:38:18,240 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.131s]
+2025-12-05 16:38:18,364 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.115s]
+2025-12-05 16:38:18,497 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.125s]
+2025-12-05 16:38:18,708 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.201s]
+2025-12-05 16:38:18,927 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.210s]
+2025-12-05 16:38:19,134 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.198s]
+2025-12-05 16:38:19,371 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.228s]
+2025-12-05 16:38:19,603 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.222s]
+2025-12-05 16:38:19,823 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.209s]
+2025-12-05 16:38:20,068 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.235s]
+2025-12-05 16:38:20,299 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.215s]
+2025-12-05 16:38:20,519 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.210s]
+2025-12-05 16:38:20,780 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.252s]
+2025-12-05 16:38:21,007 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.217s]
+2025-12-05 16:38:21,237 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.221s]
+2025-12-05 16:38:21,488 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.241s]
+2025-12-05 16:38:21,720 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.222s]
+2025-12-05 16:38:21,749 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.026s]
+2025-12-05 16:38:21,750 - INFO - Successfully indexed 17052 movies.
+2025-12-05 16:38:21,775 - INFO - 
+--- ETL Process Finished in 567.28 seconds ---
+2025-12-05 16:49:47,670 - INFO - GET http://localhost:9200/ [status:200 duration:0.021s]
+2025-12-05 16:49:47,671 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-05 16:49:47,671 - INFO - --- Starting ETL Process ---
+2025-12-05 16:49:47,672 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.001s]
+2025-12-05 16:49:47,674 - INFO - GET http://localhost:9200/ [status:200 duration:0.001s]
+2025-12-05 16:49:47,674 - INFO - HEAD http://localhost:9200/movies [status:200 duration:8.11.1]
+2025-12-05 16:49:47,674 - INFO - Deleting existing index 'movies'...
+2025-12-05 16:49:47,721 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.047s]
+2025-12-05 16:49:47,721 - INFO - Existing index 'movies' deleted.
+2025-12-05 16:49:47,721 - INFO - Creating new index 'movies' with mappings...
+2025-12-05 16:49:47,883 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.161s]
+2025-12-05 16:49:47,883 - INFO - Index 'movies' created with mappings.
+2025-12-05 16:49:47,883 - INFO - 
+--- Extracting Movie Data (Basic Info from various endpoints) ---
+2025-12-05 16:50:09,948 - INFO - Found 111 now playing movies.
+2025-12-05 16:50:29,568 - INFO - Found 9996 popular movies.
+2025-12-05 16:50:49,500 - INFO - Found 10000 top rated movies.
+2025-12-05 16:51:11,477 - INFO - Found 41 upcoming movies.
+2025-12-05 16:51:11,478 - INFO - Total unique movies to process: 17052
+2025-12-05 16:51:11,478 - INFO - 
+--- Extracting Movie Data (Details like OTT, Runtime, Certification, Companies) ---
+2025-12-05 17:02:11,888 - INFO - 
+--- Loading Data to Elasticsearch ---
+2025-12-05 17:02:12,069 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.144s]
+2025-12-05 17:02:12,230 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.151s]
+2025-12-05 17:02:12,385 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.146s]
+2025-12-05 17:02:12,529 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.135s]
+2025-12-05 17:02:12,684 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.147s]
+2025-12-05 17:02:12,819 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.126s]
+2025-12-05 17:02:12,950 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.119s]
+2025-12-05 17:02:13,119 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.160s]
+2025-12-05 17:02:13,237 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.109s]
+2025-12-05 17:02:13,349 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.104s]
+2025-12-05 17:02:13,467 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.110s]
+2025-12-05 17:02:13,588 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.112s]
+2025-12-05 17:02:13,696 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.101s]
+2025-12-05 17:02:13,819 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.114s]
+2025-12-05 17:02:13,931 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.104s]
+2025-12-05 17:02:14,046 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.107s]
+2025-12-05 17:02:14,156 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.101s]
+2025-12-05 17:02:14,262 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.098s]
+2025-12-05 17:02:14,404 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.134s]
+2025-12-05 17:02:14,547 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.136s]
+2025-12-05 17:02:14,705 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.149s]
+2025-12-05 17:02:14,894 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.180s]
+2025-12-05 17:02:15,060 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.157s]
+2025-12-05 17:02:15,274 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.204s]
+2025-12-05 17:02:15,446 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.163s]
+2025-12-05 17:02:15,619 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.165s]
+2025-12-05 17:02:15,806 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.178s]
+2025-12-05 17:02:16,003 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.188s]
+2025-12-05 17:02:16,185 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.173s]
+2025-12-05 17:02:16,404 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.211s]
+2025-12-05 17:02:16,579 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.166s]
+2025-12-05 17:02:16,783 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.195s]
+2025-12-05 17:02:16,981 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.189s]
+2025-12-05 17:02:17,179 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.189s]
+2025-12-05 17:02:17,204 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.022s]
+2025-12-05 17:02:17,205 - INFO - Successfully indexed 17052 movies.
+2025-12-05 17:02:17,228 - INFO - 
+--- ETL Process Finished in 749.35 seconds ---

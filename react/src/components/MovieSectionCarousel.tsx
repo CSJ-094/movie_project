@@ -8,7 +8,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 
 interface Movie {
-  id: number;
+  id: string; // number -> string
   title: string;
   poster_path: string;
 }
@@ -16,9 +16,11 @@ interface Movie {
 interface MovieSectionCarouselProps {
   title: string;
   fetchUrl: string;
+  favoriteMovieIds: Set<string>;
+  onToggleFavorite: (movieId: string, e: React.MouseEvent) => void;
 }
 
-const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetchUrl }) => {
+const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetchUrl, favoriteMovieIds, onToggleFavorite }) => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,8 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        setMovies(data.results.slice(0, 10)); // 상위 10개 영화만 표시
+        const stringIdMovies = data.results.map((movie: any) => ({ ...movie, id: String(movie.id) }));
+        setMovies(stringIdMovies.slice(0, 10)); // 상위 10개 영화만 표시
       } catch (err: any) {
         console.error(`Failed to fetch ${title} movies:`, err);
         setError(`'${title}' 영화 정보를 불러오는데 실패했습니다.`);
@@ -60,7 +63,9 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
       {loading ? (
         <div className="flex space-x-4 overflow-hidden">
           {Array.from({ length: 5 }).map((_, index) => (
-            <MovieCardSkeleton key={index} size="md" staggerIndex={index} />
+            <div key={index} className="w-48 h-72 flex-shrink-0"> {/* 스켈레톤 크기 지정 */}
+              <MovieCardSkeleton size="md" staggerIndex={index} />
+            </div>
           ))}
         </div>
       ) : (
@@ -86,13 +91,15 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
           className="movie-section-swiper"
         >
           {movies.map((movie, index) => (
-            <SwiperSlide key={movie.id}>
+            <SwiperSlide key={movie.id} className="h-72"> {/* SwiperSlide에 높이 지정 */}
               <MovieCard
                 id={movie.id}
                 title={movie.title}
                 posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
                 size="md"
                 staggerIndex={index}
+                isFavorite={favoriteMovieIds.has(movie.id)}
+                onToggleFavorite={onToggleFavorite}
               />
             </SwiperSlide>
           ))}
