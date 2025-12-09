@@ -6,7 +6,7 @@
    docker-compose up -d
 
 3) 확인:
-   인터넷 창에 http://localhost:9200 접속 -> JSON 뜨면 성공
+   인터넷 창에   접속 -> JSON 뜨면 성공
 
 ---
 

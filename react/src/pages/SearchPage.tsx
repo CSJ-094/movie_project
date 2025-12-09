@@ -176,28 +176,28 @@ const SearchPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-5">
           {Array.from({ length: 10 }).map((_, index) => (
             <MovieCardSkeleton key={index} />
           ))}
         </div>
       ) : movies.length > 0 ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-5">
             {movies.map(movie => (
-              <div key={movie.movieId} className="w-full aspect-w-2 aspect-h-3"> {/* 비율로 크기 제어 */}
+              <div key={movie.movieId} className="w-full">
                 <MovieCard
                   id={movie.movieId}
                   title={movie.title}
                   posterUrl={movie.posterUrl || 'https://via.placeholder.com/200x300?text=No+Image'}
-                  size="md"
+                  size="sm"
                 />
               </div>
             ))}
           </div>
           <div className="flex justify-center items-center mt-8 space-x-4">
             <button
-              onClick={() => setSearchParams({ q: query || '', page: String(page - 1) })}
+              onClick={() => setSearchParams({ q: query || '', page: `${page - 1}` })} // 수정된 부분
               disabled={page <= 1}
               className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400"
             >
@@ -205,7 +205,7 @@ const SearchPage: React.FC = () => {
             </button>
             <span className="text-lg text-gray-800 dark:text-white">{page} / {totalPages || 1}</span>
             <button
-              onClick={() => setSearchParams({ q: query || '', page: String(page + 1) })}
+              onClick={() => setSearchParams({ q: query || '', page: `${page + 1}` })} // 수정된 부분
               disabled={page >= totalPages}
               className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400"
             >

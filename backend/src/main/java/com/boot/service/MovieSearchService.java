@@ -70,7 +70,7 @@ public class MovieSearchService {
                     .multiMatch(mt -> mt
                             .fields("title", "title.ngram", "companies"/* ,"overview" */)
                             .query(keyword)
-                            .operator(Operator.And)));
+                            .operator(Operator.Or))); // Operator.And -> Operator.Or로 변경
         }
         // (2) nowPlaying 필터
         if (request.getNowPlaying() != null) {
@@ -115,6 +115,12 @@ public class MovieSearchService {
         }
 
         try {
+            // BoolQuery 빌더를 한 번만 빌드하여 재사용합니다.
+            Query builtBoolQuery = bool.build()._toQuery(); // BoolQuery.Builder에서 Query 객체로 변환
+
+            // 디버깅을 위해 생성된 Query를 로깅
+            logger.debug("Elasticsearch Query: {}", builtBoolQuery.toString());
+
             // 2. function_score 쿼리 (지금은 평점 부스팅만 적용)
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
                     .index("movies")
@@ -122,7 +128,7 @@ public class MovieSearchService {
                     .size(size)
                     .query(q -> q
                             .functionScore(fs -> fs
-                                    .query(q2 -> q2.bool(bool.build()))
+                                    .query(builtBoolQuery) // 이미 빌드된 쿼리 사용
                                     .functions(f -> f
                                             .fieldValueFactor(fvf -> fvf
                                                     .field("vote_average")
@@ -152,9 +158,7 @@ public class MovieSearchService {
                     .build();
 
         } catch (Exception e) {
-            System.err.println("=== Elasticsearch 검색 오류 ===");
-            System.err.println("요청: " + request);
-            e.printStackTrace();
+            logger.error("Elasticsearch 검색 중 오류 발생. 요청: {}, 에러: {}", request, e.getMessage(), e); // 상세 로깅
             throw new RuntimeException("영화 검색 중 오류 발생: " + e.getMessage(), e);
         }
     }
