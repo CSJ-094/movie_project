@@ -23,6 +23,9 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger; // Logger import 추가
 import org.slf4j.LoggerFactory; // LoggerFactory import 추가
 
+import com.boot.dto.MovieDoc;
+import com.boot.dto.MovieSearchRequest;
+import com.boot.dto.MovieSearchResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -50,8 +53,7 @@ public class MovieSearchService {
             new GenreOption(10770, "TV 영화"),
             new GenreOption(53, "스릴러"),
             new GenreOption(10752, "전쟁"),
-            new GenreOption(37, "서부")
-    );
+            new GenreOption(37, "서부"));
 
     // 1. 메인 검색 API 로직
     public MovieSearchResponse search(MovieSearchRequest request) {
@@ -66,7 +68,7 @@ public class MovieSearchService {
             // 제목에 keyword가 매칭되는 영화만 검색
             bool.must(m -> m
                     .multiMatch(mt -> mt
-                            .fields("title","title.ngram", "companies"/*,"overview"*/)
+                            .fields("title", "title.ngram", "companies"/* ,"overview" */)
                             .query(keyword)
                             .operator(Operator.And)));
         }
@@ -115,21 +117,21 @@ public class MovieSearchService {
         try {
             // 2. function_score 쿼리 (지금은 평점 부스팅만 적용)
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                            .index("movies")
-                            .from(from)
-                            .size(size)
-                            .query(q -> q
-                                    .functionScore(fs -> fs
-                                            .query(q2 -> q2.bool(bool.build()))
-                                            .functions(f -> f
-                                                    .fieldValueFactor(fvf -> fvf
-                                                            .field("vote_average")
-                                                            .factor(1.2)
-                                                            .modifier(FieldValueFactorModifier.Log1p)
-                                                            .missing(1.0))
-                                                    .weight(1.2))
-                                            .scoreMode(FunctionScoreMode.Sum)
-                                            .boostMode(FunctionBoostMode.Sum))),
+                    .index("movies")
+                    .from(from)
+                    .size(size)
+                    .query(q -> q
+                            .functionScore(fs -> fs
+                                    .query(q2 -> q2.bool(bool.build()))
+                                    .functions(f -> f
+                                            .fieldValueFactor(fvf -> fvf
+                                                    .field("vote_average")
+                                                    .factor(1.2)
+                                                    .modifier(FieldValueFactorModifier.Log1p)
+                                                    .missing(1.0))
+                                            .weight(1.2))
+                                    .scoreMode(FunctionScoreMode.Sum)
+                                    .boostMode(FunctionBoostMode.Sum))),
                     Movie.class);
 
             long totalHits = response.hits().total() != null
@@ -179,13 +181,13 @@ public class MovieSearchService {
         try {
             // 2) ES 검색 요청
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                            .index("movies")
-                            .size(size)
-                            .query(q -> q
-                                    .match(m -> m
-                                            .field("title.ngram")
-                                            .query(keyword)
-                                            .operator(Operator.And))),
+                    .index("movies")
+                    .size(size)
+                    .query(q -> q
+                            .match(m -> m
+                                    .field("title.ngram")
+                                    .query(keyword)
+                                    .operator(Operator.And))),
                     Movie.class);
 
             // 3) 결과를 AutocompleteResponse.Item 리스트로 변환
@@ -208,8 +210,6 @@ public class MovieSearchService {
         }
     }
 
-
-
     public FilterOptionsResponse getFilterOptions() {
 
         Double minRating = 0.0;
@@ -217,11 +217,10 @@ public class MovieSearchService {
 
         try {
             SearchResponse<Void> response = elasticsearchClient.search(s -> s
-                            .index("movies")
-                            .size(0)
-                            .aggregations("rating_stats", a -> a
-                                    .stats(st -> st.field("vote_average"))
-                            ),
+                    .index("movies")
+                    .size(0)
+                    .aggregations("rating_stats", a -> a
+                            .stats(st -> st.field("vote_average"))),
                     Void.class);
 
             StatsAggregate stats = response.aggregations()
@@ -245,20 +244,18 @@ public class MovieSearchService {
         }
 
         return FilterOptionsResponse.builder()
-                .genres(GENRE_OPTIONS)   // 🔹 여기서 매핑 리스트 내려줌
+                .genres(GENRE_OPTIONS) // 🔹 여기서 매핑 리스트 내려줌
                 .minRating(minRating)
                 .maxRating(maxRating)
                 .build();
     }
 
-
     public Movie getMovieById(String id) {
         try {
             GetResponse<Movie> response = elasticsearchClient.get(g -> g
-                            .index("movies")
-                            .id(id),
-                    Movie.class
-            );
+                    .index("movies")
+                    .id(id),
+                    Movie.class);
 
             if (response.found()) {
                 return response.source();
@@ -272,6 +269,28 @@ public class MovieSearchService {
         }
     }
 
+    // 다수 영화 ID로 조회 (Recap 기능용)
+    public List<Movie> getMoviesByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        try {
+            SearchResponse<Movie> response = elasticsearchClient.search(s -> s
+                    .index("movies")
+                    .size(ids.size()) // 요청한 ID 개수만큼 조회
+                    .query(q -> q
+                            .ids(i -> i
+                                    .values(ids))),
+                    Movie.class);
+
+            return response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .toList();
+        } catch (Exception e) {
+            logger.error("Elasticsearch에서 다수 영화 조회 중 오류 발생: {}", e.getMessage());
+            return List.of();
+        }
     // 퀵매치용 : 인기 + 평점 순으로 상위 N개의 영화 가져오기
     public List<MovieDoc> findPopularMovies(int size) {
         MovieSearchRequest req = new MovieSearchRequest();

@@ -16,6 +16,7 @@ import RegisterPage from './pages/RegisterPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import MyPage from './pages/MyPage.tsx';
+import RecapPage from './pages/RecapPage.tsx'; // RecapPage 임포트 추가
 import AdminRoute from './components/AdminRoute.tsx';
 import AdminPage from './pages/AdminPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
@@ -98,6 +99,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           { path: "mypage", element: <MyPage /> },
+          { path: "recap", element: <RecapPage /> }, // RecapPage 라우트 추가
           // { path: "profile", element: <ProfilePage /> }, // ProfilePage 라우팅 제거
         ],
       },
