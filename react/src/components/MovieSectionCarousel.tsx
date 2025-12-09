@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation } from 'swiper/modules';
+import { Navigation, FreeMode } from 'swiper/modules';
 import MovieCard from './MovieCard';
 import MovieCardSkeleton from './MovieCardSkeleton';
-import axios from 'axios'; // axios 임포트
+import axios from 'axios';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
+import 'swiper/css/free-mode';
 
 interface MovieSummary {
   id: string;
@@ -17,15 +18,15 @@ interface MovieSummary {
 
 interface MovieSectionCarouselProps {
   title: string;
-  movies?: MovieSummary[]; // movies prop을 선택적으로 변경
-  fetchUrl?: string; // fetchUrl prop을 다시 추가
+  movies?: MovieSummary[];
+  fetchUrl?: string;
   loading?: boolean;
   onToggleFavorite?: (movieId: string) => void;
   onToggleWatched?: (movieId: string) => void;
   showWatchlistControls?: boolean;
   ratedMovies?: { [movieId: string]: number };
-  favoriteMovieIds?: Set<string>; // favoriteMovieIds 추가
-  watchlistMovieIds?: Set<string>; // watchlistMovieIds 추가
+  favoriteMovieIds?: Set<string>;
+  watchlistMovieIds?: Set<string>;
 }
 
 const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
@@ -43,42 +44,67 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   const [movies, setMovies] = useState<MovieSummary[]>(initialMovies || []);
   const [loading, setLoading] = useState(initialLoading || !!fetchUrl);
   const [error, setError] = useState<string | null>(null);
+  
+  // 무한 스크롤을 위한 상태 추가
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMovies = useCallback(async (page: number) => {
+    if (!fetchUrl) return;
+
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    setError(null);
+
+    try {
+      const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
+      const response = await axios.get(fetchUrl, {
+        params: {
+          api_key: apiKey,
+          language: 'ko-KR',
+          page: page,
+        },
+      });
+      
+      const newMovies = response.data.results.map((movie: any) => ({
+        ...movie,
+        id: String(movie.id),
+      }));
+
+      if (newMovies.length === 0) {
+        setHasMore(false);
+      } else {
+        setMovies(prev => page === 1 ? newMovies : [...prev, ...newMovies]);
+        setCurrentPage(page);
+      }
+    } catch (err) {
+      console.error(`Failed to fetch ${title} movies:`, err);
+      setError(`'${title}' 영화 정보를 불러오는데 실패했습니다.`);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [fetchUrl, title]);
 
   useEffect(() => {
-    // fetchUrl이 제공되면 영화 데이터를 가져옵니다.
     if (fetchUrl) {
-      const fetchMovies = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          // TMDB API 키는 환경 변수에서 가져오는 것이 가장 좋습니다.
-          const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
-          const response = await axios.get(fetchUrl, {
-            params: {
-              api_key: apiKey,
-              language: 'ko-KR',
-              page: 1,
-            },
-          });
-          const stringIdMovies = response.data.results.map((movie: any) => ({
-            ...movie,
-            id: String(movie.id),
-          }));
-          setMovies(stringIdMovies.slice(0, 10));
-        } catch (err) {
-          console.error(`Failed to fetch ${title} movies:`, err);
-          setError(`'${title}' 영화 정보를 불러오는데 실패했습니다.`);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchMovies();
+      loadMovies(1);
     } else if (initialMovies) {
-      // movies prop이 변경되면 상태를 업데이트합니다.
       setMovies(initialMovies);
       setLoading(initialLoading);
+      setHasMore(false); // 직접 받은 데이터는 더 불러올 수 없음
     }
-  }, [fetchUrl, title, initialMovies, initialLoading]);
+  }, [fetchUrl, title, initialMovies, initialLoading, loadMovies]);
+
+  const handleReachEnd = () => {
+    if (hasMore && !loadingMore && fetchUrl) {
+      loadMovies(currentPage + 1);
+    }
+  };
 
   if (loading) {
     return (
@@ -114,12 +140,15 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
 
   return (
     <div className="mb-12">
-      <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">{title} ({movies.length})</h2>
+      <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">{title}</h2>
       <Swiper
-        modules={[Navigation]}
+        modules={[Navigation, FreeMode]}
         spaceBetween={20}
         slidesPerView={2}
         navigation
+        freeMode={true}
+        grabCursor={true}
+        onReachEnd={handleReachEnd} // 끝에 도달했을 때 이벤트 핸들러
         breakpoints={{
           640: { slidesPerView: 3, spaceBetween: 20 },
           768: { slidesPerView: 4, spaceBetween: 20 },
@@ -127,14 +156,13 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
         }}
         className="movie-section-swiper"
       >
-        {movies.map((movie, index) => (
+        {movies.map((movie) => (
           <SwiperSlide key={movie.id} className="h-auto">
             <MovieCard
               id={movie.id}
               title={movie.title}
               posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
               size="md"
-              staggerIndex={index}
               isFavorite={favoriteMovieIds.has(movie.id)}
               onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(movie.id) : undefined}
               isWatched={movie.watched ?? watchlistMovieIds.has(movie.id)}
@@ -144,6 +172,17 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
             />
           </SwiperSlide>
         ))}
+        {/* 더 불러올 데이터가 있을 때 로딩 스피너를 마지막 슬라이드로 추가 */}
+        {hasMore && fetchUrl && (
+          <SwiperSlide className="h-auto flex items-center justify-center">
+            <div className="w-48 h-72 flex items-center justify-center">
+                <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+          </SwiperSlide>
+        )}
       </Swiper>
     </div>
   );
