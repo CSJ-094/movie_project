@@ -351,8 +351,36 @@ const MyPage: React.FC = () => {
                     )}
                 </div>
 
+                {/* 계정 관리 */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-10">
-                    {/* ... 계정 관리 폼 ... */}
+                    <h2 className="text-2xl font-semibold mb-4">계정 관리</h2>
+                    <p className="text-lg mb-6"><strong>이메일:</strong> {userEmail}</p>
+
+                    <div className="border-t pt-6 border-gray-200 dark:border-gray-700">
+                        <h2 className="text-2xl font-semibold mb-4">비밀번호 변경</h2>
+                        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+                        {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+                        <form onSubmit={handleChangePassword} className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="currentPassword">현재 비밀번호</label>
+                                <input type="password" id="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="newPassword">새 비밀번호</label>
+                                <input type="password" id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="confirmPassword">새 비밀번호 확인</label>
+                                <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500" />
+                            </div>
+                            <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">비밀번호 변경</button>
+                        </form>
+                    </div>
+
+                    <div className="mt-8 border-t pt-6 border-red-300 dark:border-red-700">
+                        <h2 className="text-2xl font-semibold mb-4 text-red-500">계정 삭제</h2>
+                        <button onClick={handleDeleteAccount} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">회원 탈퇴</button>
+                    </div>
                 </div>
             </div>
         </div>
