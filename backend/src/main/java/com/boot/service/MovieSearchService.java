@@ -3,6 +3,7 @@ package com.boot.service;
 import java.time.LocalDate;
 import java.util.*;
 
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.StatsAggregate;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.GetResponse;
@@ -25,7 +26,6 @@ import org.slf4j.LoggerFactory; // LoggerFactory import 추가
 import com.boot.dto.MovieDoc;
 import com.boot.dto.MovieSearchRequest;
 import com.boot.dto.MovieSearchResponse;
-
 
 @Service
 @RequiredArgsConstructor
@@ -53,8 +53,7 @@ public class MovieSearchService {
             new GenreOption(10770, "TV 영화"),
             new GenreOption(53, "스릴러"),
             new GenreOption(10752, "전쟁"),
-            new GenreOption(37, "서부")
-    );
+            new GenreOption(37, "서부"));
 
     public List<MovieDoc> getWideCandidatePool() {
 
@@ -106,9 +105,9 @@ public class MovieSearchService {
             // 제목/줄거리/회사에 keyword가 매칭되는 영화만 검색
             bool.must(m -> m
                     .multiMatch(mt -> mt
-                            .fields("title", "title.ngram", "overview", "companies")
+                            .fields("title", "title.ngram", "companies"/* ,"overview" */)
                             .query(keyword)
-                            .operator(Operator.And)));
+                            .operator(Operator.Or))); // Operator.And -> Operator.Or로 변경
         }
 
         // (2) nowPlaying 필터
@@ -154,23 +153,29 @@ public class MovieSearchService {
         }
 
         try {
+            // BoolQuery 빌더를 한 번만 빌드하여 재사용합니다.
+            Query builtBoolQuery = bool.build()._toQuery(); // BoolQuery.Builder에서 Query 객체로 변환
+
+            // 디버깅을 위해 생성된 Query를 로깅
+            logger.debug("Elasticsearch Query: {}", builtBoolQuery.toString());
+
             // 2. function_score 쿼리 (지금은 평점 부스팅만 적용)
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                            .index("movies")
-                            .from(from)
-                            .size(size)
-                            .query(q -> q
-                                    .functionScore(fs -> fs
-                                            .query(q2 -> q2.bool(bool.build()))
-                                            .functions(f -> f
-                                                    .fieldValueFactor(fvf -> fvf
-                                                            .field("vote_average")
-                                                            .factor(1.2)
-                                                            .modifier(FieldValueFactorModifier.Log1p)
-                                                            .missing(1.0))
-                                                    .weight(1.2))
-                                            .scoreMode(FunctionScoreMode.Sum)
-                                            .boostMode(FunctionBoostMode.Sum))),
+                    .index("movies")
+                    .from(from)
+                    .size(size)
+                    .query(q -> q
+                            .functionScore(fs -> fs
+                                    .query(builtBoolQuery) // 이미 빌드된 쿼리 사용
+                                    .functions(f -> f
+                                            .fieldValueFactor(fvf -> fvf
+                                                    .field("vote_average")
+                                                    .factor(1.2)
+                                                    .modifier(FieldValueFactorModifier.Log1p)
+                                                    .missing(1.0))
+                                            .weight(1.2))
+                                    .scoreMode(FunctionScoreMode.Sum)
+                                    .boostMode(FunctionBoostMode.Sum))),
                     Movie.class);
 
             long totalHits = response.hits().total() != null
@@ -191,7 +196,8 @@ public class MovieSearchService {
                     .build();
 
         } catch (Exception e) {
-            throw new RuntimeException("영화 검색 중 오류 발생", e);
+            logger.error("Elasticsearch 검색 중 오류 발생. 요청: {}, 에러: {}", request, e.getMessage(), e); // 상세 로깅
+            throw new RuntimeException("영화 검색 중 오류 발생: " + e.getMessage(), e);
         }
     }
 
@@ -217,13 +223,13 @@ public class MovieSearchService {
         try {
             // 2) ES 검색 요청
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                            .index("movies")
-                            .size(size)
-                            .query(q -> q
-                                    .match(m -> m
-                                            .field("title.ngram")
-                                            .query(keyword)
-                                            .operator(Operator.And))),
+                    .index("movies")
+                    .size(size)
+                    .query(q -> q
+                            .match(m -> m
+                                    .field("title.ngram")
+                                    .query(keyword)
+                                    .operator(Operator.And))),
                     Movie.class);
 
             // 3) 결과를 AutocompleteResponse.Item 리스트로 변환
@@ -246,8 +252,6 @@ public class MovieSearchService {
         }
     }
 
-
-
     public FilterOptionsResponse getFilterOptions() {
 
         Double minRating = 0.0;
@@ -255,11 +259,10 @@ public class MovieSearchService {
 
         try {
             SearchResponse<Void> response = elasticsearchClient.search(s -> s
-                            .index("movies")
-                            .size(0)
-                            .aggregations("rating_stats", a -> a
-                                    .stats(st -> st.field("vote_average"))
-                            ),
+                    .index("movies")
+                    .size(0)
+                    .aggregations("rating_stats", a -> a
+                            .stats(st -> st.field("vote_average"))),
                     Void.class);
 
             StatsAggregate stats = response.aggregations()
@@ -283,20 +286,18 @@ public class MovieSearchService {
         }
 
         return FilterOptionsResponse.builder()
-                .genres(GENRE_OPTIONS)   // 🔹 여기서 매핑 리스트 내려줌
+                .genres(GENRE_OPTIONS) // 🔹 여기서 매핑 리스트 내려줌
                 .minRating(minRating)
                 .maxRating(maxRating)
                 .build();
     }
 
-
     public Movie getMovieById(String id) {
         try {
             GetResponse<Movie> response = elasticsearchClient.get(g -> g
-                            .index("movies")
-                            .id(id),
-                    Movie.class
-            );
+                    .index("movies")
+                    .id(id),
+                    Movie.class);
 
             if (response.found()) {
                 return response.source();
@@ -310,6 +311,30 @@ public class MovieSearchService {
         }
     }
 
+    // 다수 영화 ID로 조회 (Recap 기능용)
+    public List<Movie> getMoviesByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        try {
+            SearchResponse<Movie> response = elasticsearchClient.search(s -> s
+                    .index("movies")
+                    .size(ids.size()) // 요청한 ID 개수만큼 조회
+                    .query(q -> q
+                            .ids(i -> i
+                                    .values(ids))),
+                    Movie.class);
+
+            return response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .toList();
+        } catch (Exception e) {
+            logger.error("Elasticsearch에서 다수 영화 조회 중 오류 발생: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
     // 퀵매치용 : 인기 + 평점 순으로 상위 N개의 영화 가져오기
     public List<MovieDoc> findPopularMovies(int size) {
         MovieSearchRequest req = new MovieSearchRequest();
@@ -319,6 +344,87 @@ public class MovieSearchService {
         MovieSearchResponse resp = search(req);
 
         return resp.getMovies();
+    }
+
+    // MovieDetailPage 추천영화 섹션
+    public List<MovieDoc> recommend(String movieId) {
+        List<Movie> finalResults = new ArrayList<>();
+        int targetSize = 10; // 갯수
+
+        // MLT(More Like This) 쿼리 사용 (유사도 기반)
+        // 대표 키워드set을 가지고 리턴
+        try {
+            SearchResponse<Movie> mltResponse = elasticsearchClient.search(s -> s
+                            .index("movies") //movies 인덱스에서 검색하여 targetSize만큼 가져오겠다.
+                            .size(targetSize)
+                            .query(q -> q
+                                    .moreLikeThis(mlt -> mlt //MLT 필드 시작
+                                            .fields("overview", "title", "actors", "director", "companies") //유사도 분석 필드
+                                            .like(l -> l.document(d -> d.index("movies").id(movieId))) // 기준이 되는 항목 -> 현재 영화 id
+                                            .minTermFreq(1) // 기준 항목에서 [최소 1번] 이상 등장한 단어 사용
+                                            .minDocFreq(1) // DB에서 최소 1번 이상 등장해야 사용
+                                    )
+                            ),
+                    Movie.class
+            );
+
+            finalResults.addAll(mltResponse.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .toList()); //추천 정보 저장
+
+        } catch (Exception e) {
+            logger.warn("MLT기반 추천중 오류 (ID: {}): {}", movieId, e.getMessage());
+        }
+
+        if (finalResults.size() < targetSize) { //추천 정보 갯수가 너무 적으면 ->
+            try {
+                // 현재 영화의 장르를 조회
+                Movie currentMovie = getMovieById(movieId);
+
+                if (currentMovie != null && currentMovie.getGenreIds() != null && !currentMovie.getGenreIds().isEmpty()) {
+                    List<String> excludeIds = new ArrayList<>(); //리스트 생성
+                    excludeIds.add(movieId); //현재 보고있는 영화와
+                    finalResults.forEach(m -> excludeIds.add(m.getId())); //위에서 저장한 추천 정보들 excludeIds에 저장
+
+                    int more = targetSize - finalResults.size(); //추가해야할 size 계산
+
+                    SearchResponse<Movie> genreResponse = elasticsearchClient.search(s -> s
+                                    .index("movies")
+                                    .size(more)
+                                    .query(q -> q
+                                            .bool(b -> b
+                                                    //같은 장르 기반 추천
+                                                    .filter(f -> f
+                                                            .terms(t -> t
+                                                                    .field("genre_ids")
+                                                                    .terms(v -> v.value(currentMovie.getGenreIds().stream()
+                                                                            .map(FieldValue::of)
+                                                                            .toList()))
+                                                            )
+                                                    )
+                                                    .mustNot(mn -> mn
+                                                            .ids(i -> i.values(excludeIds)) //excludeIds에 있는 값은 추가 x
+                                                    )
+                                            )
+                                    )
+                                    // 평점 높은 순으로 채우기
+                                    .sort(sort -> sort.field(f -> f.field("vote_average").order(SortOrder.Desc)))
+                            , Movie.class);
+
+                    finalResults.addAll(genreResponse.hits().hits().stream()
+                            .map(Hit::source)
+                            .filter(Objects::nonNull)
+                            .toList()); //추천 항목 리스트 추가
+                }
+            } catch (Exception e) {
+                logger.error("장르기반 추천 중 오류: {}", e.getMessage());
+            }
+        }
+
+        return finalResults.stream()
+                .map(this::toMovieDoc)
+                .toList();
     }
 
     // 3. 공통 변환 메서드

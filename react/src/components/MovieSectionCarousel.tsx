@@ -8,7 +8,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 
 interface Movie {
-  id: string; // number -> string
+  id: string;
   title: string;
   poster_path: string;
 }
@@ -18,9 +18,18 @@ interface MovieSectionCarouselProps {
   fetchUrl: string;
   favoriteMovieIds: Set<string>;
   onToggleFavorite: (movieId: string, e: React.MouseEvent) => void;
+  watchlistMovieIds: Set<string>;
+  onToggleWatchlist: (movieId: string) => void;
 }
 
-const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetchUrl, favoriteMovieIds, onToggleFavorite }) => {
+const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ 
+  title, 
+  fetchUrl, 
+  favoriteMovieIds, 
+  onToggleFavorite,
+  watchlistMovieIds,
+  onToggleWatchlist
+}) => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +72,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
       {loading ? (
         <div className="flex space-x-4 overflow-hidden">
           {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="w-48 h-72 flex-shrink-0"> {/* 스켈레톤 크기 지정 */}
+            <div key={index} className="w-48 h-72 flex-shrink-0">
               <MovieCardSkeleton size="md" staggerIndex={index} />
             </div>
           ))}
@@ -91,7 +100,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
           className="movie-section-swiper"
         >
           {movies.map((movie, index) => (
-            <SwiperSlide key={movie.id} className="h-72"> {/* SwiperSlide에 높이 지정 */}
+            <SwiperSlide key={movie.id} className="h-72">
               <MovieCard
                 id={movie.id}
                 title={movie.title}
@@ -100,6 +109,9 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({ title, fetc
                 staggerIndex={index}
                 isFavorite={favoriteMovieIds.has(movie.id)}
                 onToggleFavorite={onToggleFavorite}
+                isWatched={watchlistMovieIds.has(movie.id)}
+                // showWatchlistControls={true} // 이 부분을 제거합니다.
+                onToggleWatched={onToggleWatchlist}
               />
             </SwiperSlide>
           ))}

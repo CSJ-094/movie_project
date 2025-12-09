@@ -81,3 +81,7 @@ openai:
 jwt:
   secret-key: WonderfulSecretKeyForJWTSigningAndParsingWithHMACSHA256
   expiration-time: 3600000 # 토큰 만료 시간 (1시간 = 3600000ms)
+toss:
+  payments:
+    secret:
+      key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R

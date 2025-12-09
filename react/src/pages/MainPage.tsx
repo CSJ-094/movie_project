@@ -8,7 +8,7 @@ import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 
 interface Movie {
-  id: string; // number -> string
+  id: string;
   title: string;
   poster_path: string;
 }
@@ -24,10 +24,10 @@ interface Genre {
   name: string;
 }
 
-interface FilterOptionsResponse {
-  genres: Genre[];
-  minRating: number;
-  maxRating: number;
+// MyPage의 UserProfile과 유사한 인터페이스
+interface UserProfile {
+    favoriteMovieIds: string[];
+    watchlistMovies: { movieId: string; watched: boolean }[];
 }
 
 const MainPage: React.FC = () => {
@@ -45,6 +45,7 @@ const MainPage: React.FC = () => {
 
   const { isLoggedIn } = useAuth();
   const [favoriteMovieIds, setFavoriteMovieIds] = useState<Set<string>>(new Set());
+  const [watchlistMovieIds, setWatchlistMovieIds] = useState<Set<string>>(new Set());
 
   const navigate = useNavigate();
   const handleQuickMatchClick = () => {
@@ -66,22 +67,24 @@ const MainPage: React.FC = () => {
     [loading, loadingMore, currentPage, totalPages]
   );
 
-  const fetchFavorites = useCallback(async () => {
+  const fetchUserData = useCallback(async () => {
     if (isLoggedIn) {
       try {
-        const response = await axiosInstance.get<string[]>('/favorites');
-        setFavoriteMovieIds(new Set(response.data));
+        const response = await axiosInstance.get<UserProfile>('/user/profile');
+        setFavoriteMovieIds(new Set(response.data.favoriteMovieIds || []));
+        setWatchlistMovieIds(new Set(response.data.watchlistMovies?.map(item => item.movieId) || []));
       } catch (err) {
-        console.error('찜 목록을 불러오는데 실패했습니다.', err);
+        console.error('사용자 데이터를 불러오는데 실패했습니다.', err);
       }
     } else {
       setFavoriteMovieIds(new Set());
+      setWatchlistMovieIds(new Set());
     }
   }, [isLoggedIn]);
 
   useEffect(() => {
-    fetchFavorites();
-  }, [fetchFavorites]);
+    fetchUserData();
+  }, [fetchUserData]);
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -148,7 +151,8 @@ const MainPage: React.FC = () => {
     setFavoriteMovieIds(newFavoriteIds);
 
     try {
-      await axiosInstance.post(`/favorites/${movieId}`);
+      // API 엔드포인트를 백엔드와 통일
+      await axiosInstance.post(`/favorites/toggle/${movieId}`);
     } catch (err) {
       console.error('찜 상태 변경에 실패했습니다.', err);
       setFavoriteMovieIds(originalFavorites);
@@ -156,32 +160,58 @@ const MainPage: React.FC = () => {
     }
   };
 
+  const handleToggleWatchlist = async (movieId: string) => {
+    if (!isLoggedIn) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    
+    const originalWatchlist = new Set(watchlistMovieIds);
+    const newWatchlistIds = new Set(watchlistMovieIds);
+    if (newWatchlistIds.has(movieId)) {
+        newWatchlistIds.delete(movieId);
+    } else {
+        newWatchlistIds.add(movieId);
+    }
+    setWatchlistMovieIds(newWatchlistIds);
+
+    try {
+        await axiosInstance.post(`/watchlist/${movieId}`);
+    } catch (err) {
+        console.error('워치리스트 상태 변경에 실패했습니다.', err);
+        setWatchlistMovieIds(originalWatchlist);
+        alert('워치리스트 상태 변경에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   const handleGenreChange = (genreId: number) => {
+    setCurrentPage(1);
+    setMovies([]);
     setSelectedGenres(prev =>
       prev.includes(genreId) ? prev.filter(id => id !== genreId) : [...prev, genreId]
     );
-    setCurrentPage(1);
-    setMovies([]);
   };
 
   const handleYearChange = (year: string) => {
-    setSelectedYear(year);
     setCurrentPage(1);
     setMovies([]);
+    setSelectedYear(year);
   };
 
   const handleRatingChange = (rating: number) => {
-    setMinRating(rating);
     setCurrentPage(1);
     setMovies([]);
+    setMinRating(rating);
   };
 
   const handleResetFilters = () => {
     setSelectedGenres([]);
     setSelectedYear('');
     setMinRating(0);
-    setCurrentPage(1);
-    setMovies([]);
+    if(currentPage !== 1) {
+        setCurrentPage(1);
+        setMovies([]);
+    }
   };
 
   if (error) {
@@ -197,32 +227,35 @@ const MainPage: React.FC = () => {
       <MovieCarousel />
 
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 섹션 캐러셀들 */}
         <MovieSectionCarousel
           title="인기 영화"
           fetchUrl="https://api.themoviedb.org/3/movie/popular"
           onToggleFavorite={handleToggleFavorite}
           favoriteMovieIds={favoriteMovieIds}
+          onToggleWatchlist={handleToggleWatchlist}
+          watchlistMovieIds={watchlistMovieIds}
         />
         <MovieSectionCarousel
           title="높은 평점 영화"
           fetchUrl="https://api.themoviedb.org/3/movie/top_rated"
           onToggleFavorite={handleToggleFavorite}
           favoriteMovieIds={favoriteMovieIds}
+          onToggleWatchlist={handleToggleWatchlist}
+          watchlistMovieIds={watchlistMovieIds}
         />
         <MovieSectionCarousel
           title="개봉 예정 영화"
           fetchUrl="https://api.themoviedb.org/3/movie/upcoming"
           onToggleFavorite={handleToggleFavorite}
           favoriteMovieIds={favoriteMovieIds}
+          onToggleWatchlist={handleToggleWatchlist}
+          watchlistMovieIds={watchlistMovieIds}
         />
 
         <div className="flex flex-col md:flex-row gap-8 mt-12">
-          {/* 필터 사이드바 */}
-          <aside className="w-full md:w-64 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-shrink-0">
+          <aside className="w-full md:w-64 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex-shrink-0 h-fit">
             <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">필터</h2>
 
-            {/* 네가 추가한 30초 퀵매칭 버튼 */}
             <button
               onClick={handleQuickMatchClick}
               className="w-full p-3 mb-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
@@ -296,7 +329,6 @@ const MainPage: React.FC = () => {
             </div>
           </aside>
 
-          {/* 메인 영화 리스트 */}
           <main className="flex-1 min-w-0">
             <h1 className="text-4xl font-extrabold text-center mb-8 text-gray-800 dark:text-white">
               영화 목록
@@ -323,6 +355,9 @@ const MainPage: React.FC = () => {
                         }
                         isFavorite={favoriteMovieIds.has(movie.id)}
                         onToggleFavorite={handleToggleFavorite}
+                        isWatched={watchlistMovieIds.has(movie.id)}
+                        // showWatchlistControls={true} // 이 부분을 제거합니다.
+                        onToggleWatched={handleToggleWatchlist}
                         staggerIndex={index}
                       />
                     ))}
