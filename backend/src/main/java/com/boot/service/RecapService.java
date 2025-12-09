@@ -41,8 +41,8 @@ public class RecapService {
         logger.debug("사용자 활동 데이터(워치리스트, 리뷰, 평점, 찜)를 DB에서 조회합니다.");
         List<Watchlist> watchlists = watchlistRepository.findByUser(user);
         List<Review> reviews = reviewRepository.findByUser(user);
-        List<Rating> ratings = ratingRepository.findByUser(user);
-        List<Favorite> favorites = favoriteRepository.findByUser(user);
+        List<Rating> ratings = ratingRepository.findByUserId(user.getId());
+        List<Favorite> favorites = favoriteRepository.findByUserId(user.getId());
         logger.debug("DB 조회 완료: 워치리스트-{}개, 리뷰-{}개, 평점-{}개, 찜-{}개", watchlists.size(), reviews.size(), ratings.size(), favorites.size());
 
         // 2. Identify "Watched" Movies
