@@ -345,9 +345,9 @@ const MyPage: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
                         {favoriteMoviesDetails.map((movie, index) => (
                             <MovieCard
-                                key={movie.id}
-                                id={parseInt(movie.id)}
+                                key={movie.id} // key는 고유해야 합니다.
                                 title={movie.title}
+                                id={movie.id} // id prop은 한 번만 전달합니다.
                                 posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
                                 isFavorite={true}
                                 onToggleFavorite={() => { }}
@@ -454,6 +454,77 @@ const MyPage: React.FC = () => {
                     )}
                 </div>
 
+                {/* 예매 내역 */}
+                <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings.length})</h2>
+                    {bookings.length === 0 ? (
+                        <p className="text-gray-600 dark:text-gray-400">예매 내역이 없습니다.</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {bookings.map((booking) => (
+                                <div key={booking.bookingId} className="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600">
+                                    <div className="flex gap-4">
+                                        {/* 포스터 이미지 */}
+                                        <div className="flex-shrink-0">
+                                            <img
+                                                src={booking.posterPath ? `https://image.tmdb.org/t/p/w200${booking.posterPath}` : 'https://via.placeholder.com/100x150?text=No+Image'}
+                                                alt={booking.movieTitle}
+                                                className="w-20 h-28 object-cover rounded-md"
+                                            />
+                                        </div>
+                                        
+                                        {/* 예매 정보 */}
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                                                        {booking.movieTitle}
+                                                    </h3>
+                                                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                                                        booking.bookingStatus === 'CONFIRMED' 
+                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    }`}>
+                                                        {booking.bookingStatus === 'CONFIRMED' ? '예매완료' : '취소됨'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                                                <p>
+                                                    <span className="font-semibold">극장:</span> {booking.theaterName}
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold">상영관:</span> {booking.screenName} ({booking.screenType})
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold">상영시간:</span>{' '}
+                                                    {new Date(booking.startTime).toLocaleString('ko-KR', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold">좌석:</span> {booking.seats.join(', ')} ({booking.seatCount}석)
+                                                </p>
+                                                <p className="text-lg font-bold text-red-600 dark:text-red-400 mt-2">
+                                                    {booking.totalPrice.toLocaleString()}원
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    예매일시: {new Date(booking.createdAt).toLocaleString('ko-KR')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 {/* Watchlist 영화 */}
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
                     <h2 className="text-2xl font-semibold mb-4">보고싶어요 ({watchlistMoviesDetails.length})</h2>
@@ -462,24 +533,23 @@ const MyPage: React.FC = () => {
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
                             {watchlistMoviesDetails.map((movie, index) => (
-                                <MovieCard
-                                    key={movie.id}
-                                    id={parseInt(movie.id)}
-                                    id={movie.id}
-                                    title={movie.title}
-                                    posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
-                                    isWatched={movie.watched || false}
-                                    showWatchlistControls={true}
-                                    onToggleWatched={() => handleToggleWatched(parseInt(movie.id))}
-                                    onToggleWatched={() => handleToggleWatched(movie.id)}
-                                    size="sm"
-                                    staggerIndex={index}
-                                />
-                                <div>
-                                    <h3 className="text-xl font-semibold">{movie.title}</h3>
-                                    <StarRating rating={profile?.ratedMovies[movie.id] || 0} readOnly={true} size="md" />
+                                // 각 영화 카드를 div로 감싸서 제목과 별점을 함께 표시합니다.
+                                <div key={movie.id}>
+                                    <MovieCard
+                                        id={movie.id}
+                                        title={movie.title}
+                                        posterUrl={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image'}
+                                        isWatched={movie.watched || false}
+                                        showWatchlistControls={true}
+                                        onToggleWatched={() => handleToggleWatched(movie.id)}
+                                        size="sm"
+                                        staggerIndex={index}
+                                    />
+                                    <div className="mt-2">
+                                        <h3 className="text-sm font-semibold truncate">{movie.title}</h3>
+                                        <StarRating rating={profile?.ratedMovies[movie.id] || 0} readOnly={true} size="sm" />
+                                    </div>
                                 </div>
-                            </div>
                         ))}
                     </div>
                 )}
@@ -492,7 +562,7 @@ const MyPage: React.FC = () => {
                         <p className="text-gray-600 dark:text-gray-400">작성한 리뷰가 없습니다.</p>
                     ) : (
                         <div className="space-y-6">
-                            {profile?.reviews.map(review => (
+                            {profile?.reviews.map(review => ( // 각 리뷰를 div로 감싸서 JSX 문법 오류를 해결합니다.
                                 <div key={review.id} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-bold text-lg">
@@ -510,11 +580,6 @@ const MyPage: React.FC = () => {
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
                                         작성일: {new Date(review.createdAt).toLocaleDateString()}
                                     </span>
-                                </div>
-                                <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2">{review.comment}</p>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    작성일: {new Date(review.createdAt).toLocaleDateString()}
-                                </span>
                             </div>
                         ))}
                     </div>

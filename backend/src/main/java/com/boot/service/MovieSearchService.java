@@ -291,6 +291,7 @@ public class MovieSearchService {
             logger.error("Elasticsearch에서 다수 영화 조회 중 오류 발생: {}", e.getMessage());
             return List.of();
         }
+    }
     // 퀵매치용 : 인기 + 평점 순으로 상위 N개의 영화 가져오기
     public List<MovieDoc> findPopularMovies(int size) {
         MovieSearchRequest req = new MovieSearchRequest();
