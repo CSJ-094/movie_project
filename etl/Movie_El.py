@@ -372,7 +372,9 @@ def fetch_and_index_movies_process():
 
     # 3. 각 영화의 상세 정보 (OTT 제공자, 런타임, 등급, 제작사) 가져오기 (병렬 처리)
     logger.info("\n--- Extracting Movie Data (Details like OTT, Runtime, Certification, Companies) ---")
+    filter_movies={}
     movie_ids_to_fetch_details = list(all_movies.keys())
+
 
     # 세션 인자 없이 get_movie_details 호출
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -380,23 +382,22 @@ def fetch_and_index_movies_process():
 
         for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching Details"):
             result = future.result()
-            if result and result['movie_id'] in all_movies:
+            if result :
                 mid = result['movie_id']
                 # 가져온 상세 정보를 메인 딕셔너리에 병합
-                all_movies[mid]['runtime'] = result['runtime']
-                all_movies[mid]['certification'] = result['certification']
-                all_movies[mid]['ott_providers'] = result['ott_providers']
-                all_movies[mid]['ott_link'] = result['ott_link']
-                all_movies[mid]['companies'] = result['companies']
-                all_movies[mid]['country_check'] = result['country_check']
+                if mid in all_movies:
+                    movie_data = all_movies[mid]
+                    movie_data.update(result)
+                    filter_movies[mid] = movie_data
+
 
     # 4. Elasticsearch에 데이터 적재 (벌크 API 및 진행 상황 표시)
     logger.info("\n--- Loading Data to Elasticsearch ---")
-    if not all_movies:
+    if not filter_movies:
         logger.warning("No movies to index. Skipping bulk indexing.")
         return
 
-    actions = generate_actions(all_movies, now_playing_ids)
+    actions = generate_actions(filter_movies, now_playing_ids)
 
     # DeprecationWarning 방지 또는 무시: DeprecationWarning을 무시하거나 Elasticsearch.options() 사용 권장
     success_count, errors = helpers.bulk(es, actions, chunk_size=BULK_CHUNK_SIZE, request_timeout=30, raise_on_error=False, raise_on_exception=False)
