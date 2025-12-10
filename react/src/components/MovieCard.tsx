@@ -31,7 +31,6 @@ const MovieCard: React.FC<MovieCardProps> = ({
 }) => {
     const [trailerKey, setTrailerKey] = useState<string | null>(null);
     const [isHovered, setIsHovered] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const sizeClass = useMemo(() => {
@@ -93,7 +92,6 @@ const MovieCard: React.FC<MovieCardProps> = ({
         }
         setIsHovered(false);
         setTrailerKey(null);
-        setIsMuted(true); // 음소거 상태 초기화
     };
 
     const cardClasses = `
@@ -116,32 +114,15 @@ const MovieCard: React.FC<MovieCardProps> = ({
                             <iframe
                                 width="100%"
                                 height="100%"
-                                src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${trailerKey}`}
+                                src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=0&controls=0&loop=1&playlist=${trailerKey}`}
                                 title="YouTube video player"
                                 frameBorder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
                                 className="w-full h-full object-cover"
                             ></iframe>
-                            <button
-                                onClick={(e) => {
-                                    stopPropagation(e);
-                                    setIsMuted(!isMuted);
-                                }}
-                                className="absolute bottom-2 right-2 p-1.5 bg-black bg-opacity-60 rounded-full text-white hover:bg-opacity-80 transition-colors z-30 transform hover:scale-110"
-                                aria-label={isMuted ? '음소거 해제' : '음소거'}
-                            >
-                                {isMuted ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M7 4a1 1 0 000 2v4a1 1 0 102 0V6h1v4a1 1 0 102 0V6h1v4a1 1 0 102 0V6a1 1 0 10-2 0v0H9V6a1 1 0 10-2 0v0H6V4a1 1 0 00-1-1z" />
-                                        <path fillRule="evenodd" d="M.458 8.042A.5.5 0 011 8.5v3a.5.5 0 01-.542.458l-2.084-.347a.5.5 0 01-.458-.542V8.39a.5.5 0 01.542-.458l2.084-.348zM16 8.5a.5.5 0 00.542-.458l2.084-.348a.5.5 0 00.458-.542V3.847a.5.5 0 00-.542-.458l-2.084.348a.5.5 0 00-.458.542v4.305z" clipRule="evenodd" />
-                                    </svg>
-                                )}
-                            </button>
+                            {/* Clickable overlay for navigation */}
+                            <div className="absolute inset-0 z-10 cursor-pointer"></div>
                         </>
                     ) : (
                         <img
