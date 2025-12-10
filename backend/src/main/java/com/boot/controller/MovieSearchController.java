@@ -3,7 +3,11 @@ package com.boot.controller;
 import java.util.List;
 
 import com.boot.dto.*;
+import com.boot.entity.User;
+import com.boot.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,11 +30,21 @@ import lombok.extern.slf4j.Slf4j;
 public class MovieSearchController {
 
     private final MovieSearchService movieSearchService;
+    private final UserService userService;
 
     @Operation(summary = "영화 검색 API", description = "검색어 + 필터(장르, 최신작, 평점, 기간) + 랭킹/부스팅 적용 검색 API")
     @GetMapping("/search")
-    public MovieSearchResponse search(MovieSearchRequest request) {
+    public MovieSearchResponse search(MovieSearchRequest request, @AuthenticationPrincipal UserDetails userDetails) {
         log.info("Search request: {}", request);
+        boolean isAdult = false;
+
+        if(userDetails !=null){
+            User user = userService.findByEmail(userDetails.getUsername()).orElse(null);
+            if( user!=null && user.getAge() >= 19){
+                isAdult = true;
+            }
+        }
+        request.setAdult(isAdult);
         return movieSearchService.search(request);
     }
 

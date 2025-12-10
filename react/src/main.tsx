@@ -26,6 +26,7 @@ import ActorDetailPage from './pages/ActorDetailPage.tsx'; // ActorDetailPage �
 // import ProfilePage from './pages/ProfilePage.tsx'; // ProfilePage 임포트 제거
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import QuickMatchPage from './pages/QuickMatchPage.tsx';
+import ErrorPage from './pages/ErrorPage.tsx';
 
 
 // 라우터(길잡이) 설정을 만듭니다.
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <ErrorPage />, // 최상위 경로에 errorElement를 설정하여 모든 하위 경로의 에러를 처리합니다.
     // App 컴포넌트의 <Outlet>에 렌더링될 자식 경로들을 설정합니다.
     children: [
       {

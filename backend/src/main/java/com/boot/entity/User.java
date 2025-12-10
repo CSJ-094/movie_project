@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.Period;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -38,8 +41,18 @@ public class User {
     @Column(name = "provider_id")
     private String providerId;
 
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    public int getAge(){
+        if (this.birthDate == null){
+            return 0;
+        }
+        return Period.between(this.birthDate, LocalDate.now()).getYears();
+    }
+
     @Builder
-    public User(String email, String password, String name, String role, String provider, String providerId) {
+    public User(String email, String password, String name, String role, String provider, String providerId, LocalDate birthDate) {
         this.email = email;
         this.password = password;
         this.name = name;
@@ -47,6 +60,7 @@ public class User {
         this.provider = provider;
         this.providerId = providerId;
         this.enabled = false;
+        this.birthDate = birthDate;
     }
 
     // 사용자 정보 수정 (필요 시)

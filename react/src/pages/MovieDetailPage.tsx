@@ -220,29 +220,17 @@ const MovieDetailPage: React.FC = () => {
 
   // Recommended movies fetching
   useEffect(() => {
-    if (!movieId) return; // movie 객체 전체가 로딩되기 전이라도 ID만 있으면 요청 가능
-
+    if (!movie || movie.genres.length === 0) return;
     const fetchRecommendations = async () => {
+      const genreIds = movie.genres.map(g => g.id).join(',');
       try {
-        // 백엔드 API 호출
-        const response = await axiosInstance.get(`/movies/${movieId}/recommendations`);
-
-        // 백엔드에서 주는 데이터는 MovieDoc 형태이므로 필요한 필드만 매핑
-        const recommendations = response.data.map((item: any) => ({
-          id: Number(item.movieId), // 백엔드는 String ID일 수 있으므로 변환
-          title: item.title,
-          poster_path: item.posterUrl ? item.posterUrl.replace('https://image.tmdb.org/t/p/w500', '') : null
-        }));
-
-        setRecommendedMovies(recommendations);
-      } catch (error) {
-        console.error("Failed to fetch recommendations from Backend:", error);
-        setRecommendedMovies([]);
-      }
+        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR&with_genres=${genreIds}&sort_by=popularity.desc`);
+        const data = await response.json();
+        setRecommendedMovies(data.results.filter((rec: RecommendedMovie) => rec.id !== movie.id).slice(0, 10));
+      } catch (error) { console.error("Failed to fetch recommendations:", error); }
     };
-
     fetchRecommendations();
-  }, [movieId]);
+  }, [movie]);
 
   // Overview clamping
   useEffect(() => {
@@ -355,21 +343,20 @@ useEffect(() => {
 useEffect(() => {
   if (!movieId) return;
 
+  setAiError(null);
+  setAiSummary(null);
+
   const fetchAiSummary = async () => {
+    setAiLoading(true);
+
     try {
-      setAiLoading(true);
-      setAiError(null);
-
-      // 백엔드: GET /api/movies/{movieId}/review-summary
       const resp = await axiosInstance.get<AiReviewSummary>(
-        `/movies/${movieId}/review-summary`,
+        `/movies/${movieId}/review-summary`
       );
-
       setAiSummary(resp.data);
     } catch (error) {
       console.error('Failed to fetch AI summary:', error);
       setAiError('AI 기반 리뷰 요약을 불러오는 데 실패했습니다.');
-      setAiSummary(null);
     } finally {
       setAiLoading(false);
     }
@@ -377,8 +364,6 @@ useEffect(() => {
 
   fetchAiSummary();
 }, [movieId]);
-
-
 
   const toggleFavorite = async () => {
     if (!isLoggedIn) {
@@ -450,16 +435,7 @@ useEffect(() => {
 
   const handleBooking = () => {
     if (isLoggedIn) {
-      // 영화 정보를 state로 전달
-      navigate('/booking', { 
-        state: { 
-          movieId: movie?.id,
-          title: movie?.title,
-          posterUrl: movie?.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
-          voteAverage: movie?.vote_average,
-          releaseDate: movie?.release_date
-        } 
-      });
+      alert('예매 페이지로 이동합니다. (구현 필요)');
     } else {
       alert('로그인이 필요한 서비스입니다.');
       navigate('/login');
@@ -871,7 +847,7 @@ const visibleReviews = showAllReviews
             </div>
           )}
 
-          {aiError && !aiLoading && (
+          {aiError && !aiLoading && !aiSummary && (
             <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg">
               <p className="text-red-700 dark:text-red-200">{aiError}</p>
             </div>
@@ -908,7 +884,6 @@ const visibleReviews = showAllReviews
         </div>
 
         {/* 리뷰 섹션 */}
-        {/* 리뷰 섹션 */}
         <div className="mt-12">
           <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">리뷰</h2>
 
@@ -918,10 +893,7 @@ const visibleReviews = showAllReviews
                 {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
               </h3>
               <div className="flex items-center mb-4">
-                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">
-                  평점:
-                </span>
-                <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" />
+                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
               </div>
 
               <textarea
@@ -970,63 +942,40 @@ const visibleReviews = showAllReviews
             ) : (
               <div className="space-y-6">
                 {visibleReviews.map((review) => {
-                  const isTmdb = review.type === 'TMDB';
+                  const isTmdb = review.source.startsWith('TMDB');
+                  const dateLabel = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : '';
 
-                  const dateLabel =
-                    review.createdAt && !Number.isNaN(Date.parse(review.createdAt))
-                      ? new Date(review.createdAt).toLocaleDateString()
-                      : '';
-
-                  // 앱: /5, TMDB: /10 → 별 5개 기준으로 환산
-                  const rawRating = review.rating ?? 0;
-                  const starCount =
-                    review.rating == null
-                      ? 0
-                      : isTmdb
-                      ? Math.max(0, Math.min(5, Math.round(rawRating / 2)))
-                      : Math.max(0, Math.min(5, rawRating));
-
-                  const ratingLabel =
-                    review.rating != null
-                      ? isTmdb
-                        ? `(${review.rating}/10)`
-                        : `(${review.rating}/5)`
-                      : '';
+                  // 10점 만점 평점을 5개 별로 표현 (반쪽 별 포함)
+                  const displayRating = (review.rating ?? 0) / 2;
 
                   return (
-                    <div
-                      key={review.key}
-                      className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
+                    <div key={review.key} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
-                          <span className="font-bold text-lg text-gray-900 dark:text-white">
-                            {review.userName}
-                          </span>
+                          <span className="font-bold text-lg text-gray-900 dark:text-white">{review.userName}</span>
                           {isTmdb && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">
-                              TMDB 리뷰
-                            </span>
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">TMDB 리뷰</span>
                           )}
                           {review.rating != null && (
-                            <span className="ml-3 text-yellow-500 flex items-center">
-                              {'⭐'.repeat(starCount)}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">
-                                {ratingLabel}
+                            <div className="ml-3 flex items-center">
+                              <StarRating
+                                rating={review.rating}
+                                maxRating={10}
+                                readOnly={true}
+                                size="sm"
+                              />
+                              <span className="ml-2 text-gray-700 dark:text-gray-300 text-sm">
+                                ({review.rating.toFixed(1)})
                               </span>
-                            </span>
+                            </div>
                           )}
                         </div>
                         {dateLabel && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {dateLabel}
-                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</span>
                         )}
                       </div>
 
-                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">
-                        {review.comment}
-                      </p>
+                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">{review.comment}</p>
 
                       {isTmdb && review.originalContent && (
                         <details className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -1083,6 +1032,5 @@ const visibleReviews = showAllReviews
     </div>
   );
 };
-
 
 export default MovieDetailPage;

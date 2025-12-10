@@ -3,6 +3,8 @@ package com.boot.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.XSlf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -13,6 +15,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReviewTranslationService {
 
     private final ObjectMapper objectMapper;
@@ -51,9 +54,13 @@ public class ReviewTranslationService {
                     .retrieve()
                     .body(JsonNode.class);
 
-            return response.get("choices").get(0).get("message").get("content").asText();
+            String result = response.get("choices").get(0).get("message").get("content").asText();
+            log.info("번역 성공, 길이={} chars", result.length());
+            return result;
+
         } catch (Exception e) {
-            return null; // 실패하면 그냥 번역 없이 원문만 보여주자
+            log.error("번역 호출 실패: {}", e.getMessage(), e);
+            return null;
         }
     }
 }

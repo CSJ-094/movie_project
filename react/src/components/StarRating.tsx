@@ -1,41 +1,64 @@
 import React, { useState } from 'react';
 
 interface StarRatingProps {
-  rating: number; // 현재 별점 (0~5)
+  rating: number; // 현재 별점 (e.g., 7.5)
   onRatingChange?: (newRating: number) => void; // 별점 변경 시 호출될 함수
   readOnly?: boolean; // 읽기 전용 여부
   size?: 'sm' | 'md' | 'lg'; // 별 크기
+  maxRating?: number; // 최대 별점 (e.g., 10)
 }
 
-const StarRating: React.FC<StarRatingProps> = ({ rating, onRatingChange, readOnly = false, size = 'md' }) => {
+const StarRating: React.FC<StarRatingProps> = ({ rating, onRatingChange, readOnly = false, size = 'md', maxRating = 5 }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
   const starSize = {
     sm: 'h-4 w-4',
-    md: 'h-6 w-6',
+    md: 'h-7 w-7', // 사이즈를 약간 키워 가독성 확보
     lg: 'h-8 w-8',
   }[size];
 
+  // 10점 만점 시스템을 5개의 별로 표현
+  const displayRating = (hoverRating || rating) / (maxRating / 5);
+
   return (
     <div className="flex items-center">
-      {[1, 2, 3, 4, 5].map((star) => {
-        const displayRating = hoverRating || rating;
-        const isFilled = star <= displayRating;
-        const isHalf = !isFilled && (star - 0.5) <= displayRating;
+      {Array.from({ length: 5 }, (_, index) => {
+        const starIndex = index + 1;
 
         return (
           <div
-            key={star}
+            key={starIndex}
             className={`cursor-${readOnly ? 'default' : 'pointer'} text-yellow-400 ${starSize}`}
-            onMouseEnter={() => !readOnly && setHoverRating(star)}
+            onMouseEnter={() => !readOnly && setHoverRating(starIndex * (maxRating / 5))}
             onMouseLeave={() => !readOnly && setHoverRating(0)}
-            onClick={() => !readOnly && onRatingChange && onRatingChange(star)}
+            onClick={() => !readOnly && onRatingChange && onRatingChange(starIndex * (maxRating / 5))}
           >
-            <svg fill={isFilled ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-              {isHalf && (
-                <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2V17.27z" />
-              )}
+            <svg fill="currentColor" viewBox="0 0 24 24" className="relative">
+              {/* 배경이 되는 빈 별 (회색) */}
+              <path
+                className="text-gray-300 dark:text-gray-600"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+              />
+              {/* 채워지는 별 (노란색) */}
+              <defs>
+                <clipPath id={`clip-${starIndex}`}>
+                  <rect
+                    x="0"
+                    y="0"
+                    width={
+                      starIndex <= displayRating ? '100%' :
+                      starIndex - 0.5 <= displayRating ? '50%' : '0%'
+                    }
+                    height="100%"
+                  />
+                </clipPath>
+              </defs>
+              <path
+                clipPath={`url(#clip-${starIndex})`}
+                d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+              />
             </svg>
           </div>
         );

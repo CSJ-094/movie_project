@@ -157,6 +157,21 @@ public class MovieSearchService {
                         return builder;
                     }));
         }
+        //성인여부
+        if(!request.isAdult()){
+            bool.mustNot(mn -> mn
+                    .terms(t->t
+                            .field("certification")
+                            .terms(v -> v.value(List.of(
+                                    FieldValue.of("18"),
+                                    FieldValue.of("19+"),
+                                    FieldValue.of("19"),
+                                    FieldValue.of("청소년관람불가")
+                            )))
+                    )
+            );
+        }
+
 
         try {
             // BoolQuery 빌더를 한 번만 빌드하여 재사용합니다.
