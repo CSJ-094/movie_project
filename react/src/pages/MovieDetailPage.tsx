@@ -220,29 +220,17 @@ const MovieDetailPage: React.FC = () => {
 
   // Recommended movies fetching
   useEffect(() => {
-    if (!movieId) return; // movie 객체 전체가 로딩되기 전이라도 ID만 있으면 요청 가능
-
+    if (!movie || movie.genres.length === 0) return;
     const fetchRecommendations = async () => {
+      const genreIds = movie.genres.map(g => g.id).join(',');
       try {
-        // 백엔드 API 호출
-        const response = await axiosInstance.get(`/movies/${movieId}/recommendations`);
-
-        // 백엔드에서 주는 데이터는 MovieDoc 형태이므로 필요한 필드만 매핑
-        const recommendations = response.data.map((item: any) => ({
-          id: Number(item.movieId), // 백엔드는 String ID일 수 있으므로 변환
-          title: item.title,
-          poster_path: item.posterUrl ? item.posterUrl.replace('https://image.tmdb.org/t/p/w500', '') : null
-        }));
-
-        setRecommendedMovies(recommendations);
-      } catch (error) {
-        console.error("Failed to fetch recommendations from Backend:", error);
-        setRecommendedMovies([]);
-      }
+        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR&with_genres=${genreIds}&sort_by=popularity.desc`);
+        const data = await response.json();
+        setRecommendedMovies(data.results.filter((rec: RecommendedMovie) => rec.id !== movie.id).slice(0, 10));
+      } catch (error) { console.error("Failed to fetch recommendations:", error); }
     };
-
     fetchRecommendations();
-  }, [movieId]);
+  }, [movie]);
 
   // Overview clamping
   useEffect(() => {
@@ -355,21 +343,20 @@ useEffect(() => {
 useEffect(() => {
   if (!movieId) return;
 
+  setAiError(null);
+  setAiSummary(null);
+
   const fetchAiSummary = async () => {
+    setAiLoading(true);
+
     try {
-      setAiLoading(true);
-      setAiError(null);
-
-      // 백엔드: GET /api/movies/{movieId}/review-summary
       const resp = await axiosInstance.get<AiReviewSummary>(
-        `/movies/${movieId}/review-summary`,
+        `/movies/${movieId}/review-summary`
       );
-
       setAiSummary(resp.data);
     } catch (error) {
       console.error('Failed to fetch AI summary:', error);
       setAiError('AI 기반 리뷰 요약을 불러오는 데 실패했습니다.');
-      setAiSummary(null);
     } finally {
       setAiLoading(false);
     }
@@ -377,8 +364,6 @@ useEffect(() => {
 
   fetchAiSummary();
 }, [movieId]);
-
-
 
   const toggleFavorite = async () => {
     if (!isLoggedIn) {
@@ -450,16 +435,7 @@ useEffect(() => {
 
   const handleBooking = () => {
     if (isLoggedIn) {
-      // 영화 정보를 state로 전달
-      navigate('/booking', { 
-        state: { 
-          movieId: movie?.id,
-          title: movie?.title,
-          posterUrl: movie?.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
-          voteAverage: movie?.vote_average,
-          releaseDate: movie?.release_date
-        } 
-      });
+      alert('예매 페이지로 이동합니다. (구현 필요)');
     } else {
       alert('로그인이 필요한 서비스입니다.');
       navigate('/login');
@@ -871,7 +847,7 @@ const visibleReviews = showAllReviews
             </div>
           )}
 
-          {aiError && !aiLoading && (
+          {aiError && !aiLoading && !aiSummary && (
             <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg">
               <p className="text-red-700 dark:text-red-200">{aiError}</p>
             </div>
@@ -1083,6 +1059,5 @@ const visibleReviews = showAllReviews
     </div>
   );
 };
-
 
 export default MovieDetailPage;
