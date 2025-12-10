@@ -7,6 +7,7 @@ import MovieCard from '../components/MovieCard';
 import StarRating from '../components/StarRating';
 import MovieCardSkeleton from '../components/MovieCardSkeleton';
 import MovieSectionCarousel from '../components/MovieSectionCarousel'; // MovieSectionCarousel 임포트 추가
+import TicketModal from '../components/TicketModal';
 import type { AxiosResponse } from 'axios'; // 👈 여기를 'import type'으로 수정!
 
 // ... 나머지 인터페이스 정의 및 컴포넌트 로직 ...
@@ -82,7 +83,7 @@ interface Booking {
 
 // 분리된 컴포넌트들을 임시로 이 파일에 정의했다고 가정합니다.
 // 실제 프로젝트에서는 위에서 제안한 대로 별도 파일로 분리해야 합니다.
-const BookingItem: React.FC<{ booking: Booking; onCancel?: () => void }> = ({ booking, onCancel }) => {
+const BookingItem: React.FC<{ booking: Booking; onCancel?: () => void; onDetail?: (booking: Booking) => void }> = ({ booking, onCancel, onDetail }) => {
     const [loading, setLoading] = React.useState(false);
     const posterUrl = booking.posterPath ? `${IMAGE_BASE_URL}${booking.posterPath}` : NO_IMAGE_URL.replace('200x300', '100x150');
 
@@ -126,16 +127,23 @@ const BookingItem: React.FC<{ booking: Booking; onCancel?: () => void }> = ({ bo
                     <li><strong className='font-bold'>좌석:</strong> {booking.seats.join(', ')} ({booking.seatCount}석)</li>
                     <li><strong className='font-bold'>총 금액:</strong> {booking.totalPrice.toLocaleString()}원</li>
                 </ul>
-                {/* 예매 취소 버튼 */}
-                {booking.bookingStatus === 'CONFIRMED' && (
+                <div className="flex gap-2 mt-3">
+                  {booking.bookingStatus === 'CONFIRMED' && (
                     <button
-                        className="mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-4 rounded transition-colors disabled:opacity-60"
+                        className="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-4 rounded transition-colors disabled:opacity-60"
                         onClick={handleCancel}
                         disabled={loading}
                     >
                         {loading ? '취소 중...' : '예매 취소'}
                     </button>
-                )}
+                  )}
+                  <button
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-4 rounded transition-colors"
+                    onClick={() => onDetail && onDetail(booking)}
+                  >
+                    상세보기
+                  </button>
+                </div>
             </div>
         </div>
     );
@@ -259,6 +267,7 @@ const MyPage: React.FC = () => {
     const [watchlistMoviesDetails, setWatchlistMoviesDetails] = useState<MovieSummary[]>([]);
     const [ratedMoviesDetails, setRatedMoviesDetails] = useState<MovieSummary[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
     // 모든 관심 영화 ID 목록을 합쳐서 TMDB 호출을 최적화합니다.
     const allRelevantMovieIds = useMemo(() => {
@@ -498,13 +507,24 @@ const MyPage: React.FC = () => {
                     {(bookings.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">예매 내역이 없습니다.</p>
                     ) : (
-                        <div className="space-y-4">
-                            {bookings
-                                .filter(booking => booking.bookingStatus !== 'CANCELLED')
-                                .map(booking => (
-                                    <BookingItem key={booking.bookingId} booking={booking} onCancel={fetchBookings} />
-                                ))}
-                        </div>
+                        <>
+                            <div className="space-y-4">
+                                {bookings
+                                    .filter(booking => booking.bookingStatus !== 'CANCELLED')
+                                    .map(booking => (
+                                        <BookingItem
+                                            key={booking.bookingId}
+                                            booking={booking}
+                                            onCancel={fetchBookings}
+                                            onDetail={setSelectedBooking}
+                                        />
+                                    ))}
+                            </div>
+                            {/* 티켓 상세 모달은 리스트(map) 바깥에서 단 한 번만! */}
+                            {selectedBooking && (
+                                <TicketModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
+                            )}
+                        </>
                     )}
                 </div>
 
