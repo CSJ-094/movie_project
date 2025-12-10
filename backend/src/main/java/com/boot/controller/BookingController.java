@@ -41,7 +41,7 @@ public class BookingController {
 
     @Operation(summary = "사용자별 예매 내역 조회", description = "특정 사용자의 모든 예매 내역을 조회합니다.")
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<BookingResponseDto>> getUserBookings(@PathVariable Long userId) {
+    public ResponseEntity<List<BookingResponseDto>> getUserBookings(@PathVariable("userId") Long userId) {
         List<BookingResponseDto> bookings = bookingService.getUserBookings(userId);
         return ResponseEntity.ok(bookings);
     }

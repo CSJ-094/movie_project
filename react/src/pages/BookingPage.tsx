@@ -227,7 +227,7 @@ export default function BookingPage() {
         const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
         const response = await axios.get('http://localhost:8484/api/showtimes', {
           params: {
-            movieId: `tmdb_${selectedMovie.movieId}`,
+            movieId: selectedMovie.movieId, // tmdb_ 접두사 제거
             theaterId: selectedTheater.id,
             date: formattedDate
           },
