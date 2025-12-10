@@ -134,8 +134,8 @@ public class QuickMatchService {
                 .map(QuickMatchFeedback::getMovieId)
                 .toList();
 
-        // 넓은 후보 풀: 인기 상위 1500개 정도
-        List<MovieDoc> pool = movieSearchService.findPopularMovies(1500);
+        // 넓은 후보 풀: 평가수/인기도 기반으로 걸러진 유명 영화들
+        List<MovieDoc> pool = movieSearchService.getWideCandidatePool();
 
         // 이미 평가한 영화는 제외
         pool = pool.stream()
