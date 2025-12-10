@@ -884,7 +884,6 @@ const visibleReviews = showAllReviews
         </div>
 
         {/* 리뷰 섹션 */}
-        {/* 리뷰 섹션 */}
         <div className="mt-12">
           <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">리뷰</h2>
 
@@ -894,10 +893,7 @@ const visibleReviews = showAllReviews
                 {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
               </h3>
               <div className="flex items-center mb-4">
-                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">
-                  평점:
-                </span>
-                <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" />
+                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
               </div>
 
               <textarea
@@ -946,63 +942,40 @@ const visibleReviews = showAllReviews
             ) : (
               <div className="space-y-6">
                 {visibleReviews.map((review) => {
-                  const isTmdb = review.type === 'TMDB';
+                  const isTmdb = review.source.startsWith('TMDB');
+                  const dateLabel = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : '';
 
-                  const dateLabel =
-                    review.createdAt && !Number.isNaN(Date.parse(review.createdAt))
-                      ? new Date(review.createdAt).toLocaleDateString()
-                      : '';
-
-                  // 앱: /5, TMDB: /10 → 별 5개 기준으로 환산
-                  const rawRating = review.rating ?? 0;
-                  const starCount =
-                    review.rating == null
-                      ? 0
-                      : isTmdb
-                      ? Math.max(0, Math.min(5, Math.round(rawRating / 2)))
-                      : Math.max(0, Math.min(5, rawRating));
-
-                  const ratingLabel =
-                    review.rating != null
-                      ? isTmdb
-                        ? `(${review.rating}/10)`
-                        : `(${review.rating}/5)`
-                      : '';
+                  // 10점 만점 평점을 5개 별로 표현 (반쪽 별 포함)
+                  const displayRating = (review.rating ?? 0) / 2;
 
                   return (
-                    <div
-                      key={review.key}
-                      className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
+                    <div key={review.key} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
-                          <span className="font-bold text-lg text-gray-900 dark:text-white">
-                            {review.userName}
-                          </span>
+                          <span className="font-bold text-lg text-gray-900 dark:text-white">{review.userName}</span>
                           {isTmdb && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">
-                              TMDB 리뷰
-                            </span>
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">TMDB 리뷰</span>
                           )}
                           {review.rating != null && (
-                            <span className="ml-3 text-yellow-500 flex items-center">
-                              {'⭐'.repeat(starCount)}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">
-                                {ratingLabel}
+                            <div className="ml-3 flex items-center">
+                              <StarRating
+                                rating={review.rating}
+                                maxRating={10}
+                                readOnly={true}
+                                size="sm"
+                              />
+                              <span className="ml-2 text-gray-700 dark:text-gray-300 text-sm">
+                                ({review.rating.toFixed(1)})
                               </span>
-                            </span>
+                            </div>
                           )}
                         </div>
                         {dateLabel && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {dateLabel}
-                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</span>
                         )}
                       </div>
 
-                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">
-                        {review.comment}
-                      </p>
+                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">{review.comment}</p>
 
                       {isTmdb && review.originalContent && (
                         <details className="mt-2 text-sm text-gray-500 dark:text-gray-400">

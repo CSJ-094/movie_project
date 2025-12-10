@@ -139,10 +139,17 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews, movieDetails }) => {
                             <div key={review.id} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="font-bold text-lg text-gray-900 dark:text-white">{movieTitle}</h3>
-                                    <span className="ml-3 text-yellow-500 flex items-center">
-                                        {'⭐'.repeat(review.rating)}
-                                        <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/5)</span>
-                                    </span>
+                                    <div className="ml-3 flex items-center">
+                                        <StarRating
+                                            rating={review.rating}
+                                            maxRating={10}
+                                            readOnly={true}
+                                            size="sm"
+                                        />
+                                        <span className="ml-2 text-gray-700 dark:text-gray-300 text-sm">
+                                            ({review.rating.toFixed(1)})
+                                        </span>
+                                    </div>
                                 </div>
                                 <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2">{review.comment}</p>
                                 <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -209,8 +216,6 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({
     </div>
 );
 
-
-// --- MyPage Main Component ---
 
 const MyPage: React.FC = () => {
     const { userEmail, isLoggedIn } = useAuth();
