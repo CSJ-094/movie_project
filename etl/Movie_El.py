@@ -335,7 +335,11 @@ def generate_actions(all_movies, now_playing_ids):
             "ott_providers": movie.get('ott_providers', []),
             "ott_link": movie.get('ott_link'),
             "companies": movie.get('companies', []),
-            "country_check": movie.get('country_check')
+            "country_check": movie.get('country_check'),
+            "vote_count": movie.get("vote_count", 0),
+            "popularity": movie.get("popularity", 0.0),
+            "adult": movie.get("adult", False),
+            "original_language": movie.get("original_language", "")
         }
         yield {
             "_index": INDEX_NAME,
