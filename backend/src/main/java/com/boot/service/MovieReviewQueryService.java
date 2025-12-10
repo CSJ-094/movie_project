@@ -4,7 +4,9 @@ import com.boot.dto.MovieReviewDto;
 import com.boot.dto.ReviewListResponse;
 import com.boot.dto.ReviewSummaryDto;
 import com.boot.dto.ReviewWithSummaryResponse;
+import com.boot.entity.MovieReviewSummary;
 import com.boot.entity.Review;
+import com.boot.repository.MovieReviewSummaryRepository;
 import com.boot.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ public class MovieReviewQueryService {
     private final ReviewRepository reviewRepository;          // 기존 JPA Repo 사용
     private final ExternalReviewService externalReviewService;
     private final ReviewAiSummaryService reviewAiSummaryService;
+    private final MovieReviewSummaryRepository movieReviewSummaryRepository;
 
     // 리뷰만 반환 (대표 N개)
     public ReviewListResponse getReviewList(String movieId, int limit) {
@@ -57,6 +60,24 @@ public class MovieReviewQueryService {
     // 리뷰 요약만 반환
     public ReviewSummaryDto getSummaryOnly(String movieId) {
 
+        // 0) 기존 요약 있으면 바로 리턴
+        return movieReviewSummaryRepository.findByMovieId(movieId)
+                .map(this::toDto)
+                .orElseGet(() -> createSummary(movieId));
+    }
+
+    private ReviewSummaryDto toDto(MovieReviewSummary entity) {
+        return ReviewSummaryDto.builder()
+                .goodPoints(entity.getGoodPoints())
+                .badPoints(entity.getBadPoints())
+                .overall(entity.getOverall())
+                .positiveRatio(entity.getPositiveRatio())
+                .negativeRatio(entity.getNegativeRatio())
+                .neutralRatio(entity.getNeutralRatio())
+                .build();
+    }
+
+    private ReviewSummaryDto createSummary(String movieId) {
         // 1) 내부 리뷰
         List<Review> internalReviews = reviewRepository.findByMovieId(movieId);
         List<MovieReviewDto> internalDtos = internalReviews.stream()
@@ -94,8 +115,24 @@ public class MovieReviewQueryService {
                     .build();
         }
 
-        // 기존 summarize 재사용
-        return reviewAiSummaryService.summarize(limited);
+        // 5) AI 요약 생성
+        ReviewSummaryDto summaryDto = reviewAiSummaryService.summarize(limited);
+
+        // 6) DB 저장
+        MovieReviewSummary entity = MovieReviewSummary.builder()
+                .movieId(movieId)
+                .goodPoints(summaryDto.getGoodPoints())
+                .badPoints(summaryDto.getBadPoints())
+                .overall(summaryDto.getOverall())
+                .positiveRatio(summaryDto.getPositiveRatio())
+                .negativeRatio(summaryDto.getNegativeRatio())
+                .neutralRatio(summaryDto.getNeutralRatio())
+                .lastUpdated(java.time.LocalDateTime.now())
+                .build();
+
+        movieReviewSummaryRepository.save(entity);
+
+        return summaryDto;
     }
 
 

@@ -6,6 +6,7 @@ const RegisterPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState(''); // 이름 상태 추가
+    const [birthDate, setBirthDate] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ const RegisterPage: React.FC = () => {
 
         try {
             // axiosInstance의 baseURL에 /api가 포함되었으므로, 여기서는 /user/signup만 사용합니다.
-            const response = await axiosInstance.post('/user/signup', { email, password, name });
+            const response = await axiosInstance.post('/user/signup', { email, password, name, birthDate });
             setSuccess(response.data);
 
         } catch (err: any) {
@@ -65,12 +66,24 @@ const RegisterPage: React.FC = () => {
                                 required
                             />
                         </div>
-                        <div className="mb-6">
+                        <div className="mb-4">
                             <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="password">
                                 비밀번호
                             </label>
                             <input
                                 type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500"
+                                required
+                            />
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="name">
+                                생년월일
+                            </label>
+                            <input
+                                type="date" id="birthDate" value={birthDate} onChange=
+                                {(e) => setBirthDate(e.target.value)}
+                                max={new Date().toISOString().split("T")[0]}
                                 className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500"
                                 required
                             />
