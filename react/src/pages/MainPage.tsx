@@ -140,6 +140,7 @@ const MainPage: React.FC = () => {
 
                 {isLoggedIn && (
                     <MovieSectionCarousel
+                        key="favorites"
                         title="내가 찜한 영화"
                         movies={favoriteMoviesDetails}
                         loading={loadingFavorites}
@@ -150,6 +151,7 @@ const MainPage: React.FC = () => {
                 )}
 
                 <MovieSectionCarousel
+                    key="popular"
                     title="인기 영화"
                     fetchUrl={`${TMDB_BASE_URL}/movie/popular`}
                     onToggleFavorite={handleToggleFavorite}
@@ -157,6 +159,7 @@ const MainPage: React.FC = () => {
                     showWatchlistControls={false}
                 />
                 <MovieSectionCarousel
+                    key="now_playing"
                     title="지금 상영중인 영화"
                     fetchUrl={`${TMDB_BASE_URL}/movie/now_playing`}
                     onToggleFavorite={handleToggleFavorite}
@@ -164,6 +167,7 @@ const MainPage: React.FC = () => {
                     showWatchlistControls={false}
                 />
                 <MovieSectionCarousel
+                    key="top_rated"
                     title="높은 평점 영화"
                     fetchUrl={`${TMDB_BASE_URL}/movie/top_rated`}
                     onToggleFavorite={handleToggleFavorite}
@@ -171,6 +175,7 @@ const MainPage: React.FC = () => {
                     showWatchlistControls={false}
                 />
                 <MovieSectionCarousel
+                    key="upcoming"
                     title="개봉 예정 영화"
                     fetchUrl={`${TMDB_BASE_URL}/movie/upcoming`}
                     onToggleFavorite={handleToggleFavorite}
