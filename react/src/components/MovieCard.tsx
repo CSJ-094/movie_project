@@ -1,170 +1,188 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import TrailerModal from './TrailerModal';
 import axios from 'axios';
 
 interface MovieCardProps {
-  id: string;
-  title: string;
-  posterUrl: string;
-  isFavorite?: boolean;
-  onToggleFavorite?: (movieId: string, e: React.MouseEvent) => void;
-  size?: 'sm' | 'md' | 'lg';
-  showTitle?: boolean;
-  isWatched?: boolean;
-  showWatchlistControls?: boolean;
-  onToggleWatched?: (movieId: string) => void;
-  staggerIndex?: number;
+    id: string;
+    title: string;
+    posterUrl: string;
+    isFavorite?: boolean;
+    onToggleFavorite?: (movieId: string, e: React.MouseEvent) => void;
+    size?: 'sm' | 'md' | 'lg';
+    showTitle?: boolean;
+    isWatched?: boolean;
+    showWatchlistControls?: boolean;
+    onToggleWatched?: (movieId: string) => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ 
-  id, 
-  title, 
-  posterUrl, 
-  isFavorite, 
-  onToggleFavorite, 
-  size = 'lg', 
-  showTitle = true, 
-  isWatched = false,
-  showWatchlistControls = false,
-  onToggleWatched,
-  staggerIndex = 0
+const TMDB_API_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
+
+const MovieCard: React.FC<MovieCardProps> = ({
+    id,
+    title,
+    posterUrl,
+    isFavorite,
+    onToggleFavorite,
+    size = 'lg',
+    showTitle = true,
+    isWatched = false,
+    showWatchlistControls = false,
+    onToggleWatched,
 }) => {
-  const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
-  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+    const [trailerKey, setTrailerKey] = useState<string | null>(null);
+    const [isHovered, setIsHovered] = useState(false);
+    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onToggleFavorite) {
-      onToggleFavorite(id, e);
-    }
-  };
+    const sizeClass = useMemo(() => {
+        switch (size) {
+            case 'sm': return 'h-64';
+            case 'md': return 'h-72';
+            case 'lg':
+            default: return 'h-96';
+        }
+    }, [size]);
 
-  const handleWatchlistClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onToggleWatched) {
-      onToggleWatched(id);
-    }
-  };
+    const stopPropagation = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
 
-  const openTrailerModal = () => setIsTrailerModalOpen(true);
-  const closeTrailerModal = () => setIsTrailerModalOpen(false);
+    const handleFavoriteClick = (e: React.MouseEvent) => {
+        stopPropagation(e);
+        if (onToggleFavorite) {
+            onToggleFavorite(id, e);
+        }
+    };
 
-  const fetchTrailer = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    const handleWatchlistClick = (e: React.MouseEvent) => {
+        stopPropagation(e);
+        if (onToggleWatched) {
+            onToggleWatched(id);
+        }
+    };
 
-    const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
-    try {
-      const response = await axios.get(`https://api.themoviedb.org/3/movie/${id}/videos?api_key=${apiKey}`);
-      const videos = response.data.results;
-      const officialTrailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube');
-      
-      if (officialTrailer) {
-        setTrailerKey(officialTrailer.key);
-        openTrailerModal();
-      } else if (videos.length > 0) {
-        setTrailerKey(videos[0].key);
-        openTrailerModal();
-      } else {
-        alert('트레일러를 찾을 수 없습니다.');
-      }
-    } catch (error) {
-      console.error("Failed to fetch trailer:", error);
-      alert('트레일러를 불러오는 데 실패했습니다.');
-    }
-  };
+    const fetchTrailer = async () => {
+        try {
+            const response = await axios.get(
+                `https://api.themoviedb.org/3/movie/${id}/videos?api_key=${TMDB_API_KEY}`
+            );
+            const videos = response.data.results;
+            const officialTrailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube');
 
-  // size에 따라 높이만 정의
-  const sizeClassName = {
-    sm: 'h-64',
-    md: 'h-72',
-    lg: 'h-96',
-  }[size];
+            if (officialTrailer) {
+                setTrailerKey(officialTrailer.key);
+            } else if (videos.length > 0) {
+                setTrailerKey(videos[0].key);
+            }
+        } catch (error) {
+            console.error("Failed to fetch trailer:", error);
+        }
+    };
 
-  const cardWrapperClassName = `
-    relative group no-underline flex-shrink-0 h-full w-full
+    const handleMouseEnter = () => {
+        hoverTimeoutRef.current = setTimeout(() => {
+            setIsHovered(true);
+            fetchTrailer();
+        }, 500); // 0.5초 지연
+    };
+
+    const handleMouseLeave = () => {
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+        }
+        setIsHovered(false);
+        setTrailerKey(null);
+    };
+
+    const cardClasses = `
+    relative group no-underline flex-shrink-0 w-full
     transition-all duration-300 ease-in-out
-    hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:z-10
+    ${isHovered ? 'scale-125 -translate-y-4 shadow-2xl z-20' : 'hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:z-10'}
+    ${sizeClass}
   `;
 
-  return (
-    <div 
-      className={cardWrapperClassName} 
-    >
-      <Link to={`/movie/${id}`} className="block w-full h-full">
-        <div className="relative border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg h-full flex flex-col">
-          <img 
-            src={posterUrl} 
-            alt={`${title} poster`} 
-            className="w-full h-full object-cover block"
-          />
-          
-          {isWatched && (
-            <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center text-white text-xl font-bold z-20">
-              시청 완료
-            </div>
-          )}
+    return (
+        <div
+            className={cardClasses}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            <Link to={`/movie/${id}`} className="block w-full h-full">
+                <div className="relative border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg h-full flex flex-col">
+                    {isHovered && trailerKey ? (
+                        <>
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=0&controls=0&loop=1&playlist=${trailerKey}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full object-cover"
+                            ></iframe>
+                            {/* Clickable overlay for navigation */}
+                            <div className="absolute inset-0 z-10 cursor-pointer"></div>
+                        </>
+                    ) : (
+                        <img
+                            src={posterUrl}
+                            alt={`${title} 포스터`}
+                            className="w-full h-full object-cover block"
+                            loading="lazy"
+                        />
+                    )}
 
-          {isFavorite !== undefined && onToggleFavorite && (
-            <button
-              onClick={handleFavoriteClick}
-              className="absolute top-2 right-2 p-1.5 bg-black bg-opacity-60 rounded-full text-white hover:bg-opacity-80 transition-colors z-30"
-              aria-label={isFavorite ? '찜 해제' : '찜하기'}
-            >
-              {isFavorite ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4.5 4.5 0 010-5.656z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              )}
-            </button>
-          )}
+                    {isWatched && !isHovered && (
+                        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white text-xl font-bold z-20 transition-opacity">
+                            시청 완료
+                        </div>
+                    )}
 
-          {showWatchlistControls && onToggleWatched && (
-            <div 
-              onClick={handleWatchlistClick}
-              className="absolute top-2 left-2 p-1.5 bg-black bg-opacity-60 rounded-full cursor-pointer hover:bg-opacity-80 z-30"
-            >
-              <input
-                type="checkbox"
-                checked={isWatched}
-                readOnly
-                className="form-checkbox h-5 w-5 text-yellow-500 rounded bg-transparent border-gray-400 focus:ring-0"
-              />
-            </div>
-          )}
+                    {isFavorite !== undefined && onToggleFavorite && (
+                         <button
+                            onClick={handleFavoriteClick}
+                            className="absolute top-2 right-2 p-1.5 bg-black bg-opacity-60 rounded-full text-white hover:bg-opacity-80 transition-colors z-30 transform hover:scale-110"
+                            aria-label={isFavorite ? '찜 해제' : '찜하기'}
+                        >
+                            {isFavorite ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4.5 4.5 0 010-5.656z" clipRule="evenodd" />
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            )}
+                        </button>
+                    )}
 
-          <button
-            onClick={fetchTrailer}
-            className="absolute bottom-2 left-2 p-1.5 bg-blue-600 bg-opacity-80 rounded-full text-white hover:bg-opacity-100 transition-colors z-30"
-            aria-label="트레일러 보기"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-            </svg>
-          </button>
+                    {showWatchlistControls && onToggleWatched && (
+                        <button
+                            onClick={handleWatchlistClick}
+                            className="absolute top-2 left-2 p-1 bg-black bg-opacity-60 rounded-full cursor-pointer hover:bg-opacity-80 z-30 transition-colors"
+                            aria-label={isWatched ? '시청 목록에서 제거' : '시청 완료 표시'}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={isWatched}
+                                readOnly
+                                className="h-5 w-5 rounded bg-transparent border-white text-yellow-500 cursor-pointer focus:ring-0"
+                            />
+                        </button>
+                    )}
 
-          {showTitle && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2 z-20">
-              <h4 className="text-center font-semibold text-sm text-white truncate">
-                {title}
-              </h4>
-            </div>
-          )}
+                    {showTitle && !isHovered && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-2 z-20">
+                            <h4 className="text-center font-semibold text-sm text-white truncate">
+                                {title}
+                            </h4>
+                        </div>
+                    )}
+                </div>
+            </Link>
         </div>
-      </Link>
-
-      {isTrailerModalOpen && trailerKey && (
-        <TrailerModal trailerKey={trailerKey} onClose={closeTrailerModal} />
-      )}
-    </div>
-  );
+    );
 };
 
 export default MovieCard;

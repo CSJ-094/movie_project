@@ -29,6 +29,25 @@ interface MovieDetails {
     backdrop_path: string | null;
   } | null;
 }
+
+interface AiReviewSummary {
+  goodPoints: string;
+  badPoints: string;
+  overall: string;
+  positiveRatio: number;
+  negativeRatio: number;
+  neutralRatio: number;
+}
+
+interface CombinedReview {
+  source: string;
+  author: string;
+  content: string;
+  translated?: string | null;
+  rating: number | null;
+  createdAt: string | null;
+}
+
 interface Video { key: string; site: string; type: string; name: string; }
 interface RecommendedMovie { id: number; title: string; poster_path: string; }
 interface Cast { id: number; name: string; character: string; profile_path: string | null; }
@@ -121,6 +140,13 @@ const MovieDetailPage: React.FC = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
+    // AI 요약 + 외부(TMDB) 리뷰 상태
+  const [aiSummary, setAiSummary] = useState<AiReviewSummary | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [externalReviews, setExternalReviews] = useState<CombinedReview[]>([]);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
 
   // Movie details fetching
   useEffect(() => {
@@ -194,29 +220,17 @@ const MovieDetailPage: React.FC = () => {
 
   // Recommended movies fetching
   useEffect(() => {
-    if (!movieId) return; // movie 객체 전체가 로딩되기 전이라도 ID만 있으면 요청 가능
-
+    if (!movie || movie.genres.length === 0) return;
     const fetchRecommendations = async () => {
+      const genreIds = movie.genres.map(g => g.id).join(',');
       try {
-        // 백엔드 API 호출
-        const response = await axiosInstance.get(`/movies/${movieId}/recommendations`);
-
-        // 백엔드에서 주는 데이터는 MovieDoc 형태이므로 필요한 필드만 매핑
-        const recommendations = response.data.map((item: any) => ({
-          id: Number(item.movieId), // 백엔드는 String ID일 수 있으므로 변환
-          title: item.title,
-          poster_path: item.posterUrl ? item.posterUrl.replace('https://image.tmdb.org/t/p/w500', '') : null
-        }));
-
-        setRecommendedMovies(recommendations);
-      } catch (error) {
-        console.error("Failed to fetch recommendations from Backend:", error);
-        setRecommendedMovies([]);
-      }
+        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR&with_genres=${genreIds}&sort_by=popularity.desc`);
+        const data = await response.json();
+        setRecommendedMovies(data.results.filter((rec: RecommendedMovie) => rec.id !== movie.id).slice(0, 10));
+      } catch (error) { console.error("Failed to fetch recommendations:", error); }
     };
-
     fetchRecommendations();
-  }, [movieId]);
+  }, [movie]);
 
   // Overview clamping
   useEffect(() => {
@@ -297,6 +311,59 @@ const MovieDetailPage: React.FC = () => {
     fetchMyReview();
   }, [movieId, isLoggedIn]);
 
+  // TMDB 외부 리뷰 (대표 N개)만 가져오기
+useEffect(() => {
+  if (!movieId) return;
+
+  const fetchExternalReviews = async () => {
+    try {
+      // 백엔드: GET /api/movies/{movieId}/reviews?limit=10
+      const resp = await axiosInstance.get<{
+        movieId: string;
+        reviews: CombinedReview[];
+      }>(`/movies/${movieId}/reviews`, {
+        params: { limit: 10 }, // 일단 대표 10개만
+      });
+
+      const tmdbReviews = resp.data.reviews.filter(
+        (r) => r.source && r.source.startsWith('TMDB'),
+      );
+
+      setExternalReviews(tmdbReviews);
+    } catch (error) {
+      console.error('Failed to fetch external reviews:', error);
+      setExternalReviews([]);
+    }
+  };
+
+  fetchExternalReviews();
+}, [movieId]);
+
+// AI 요약만 별도 호출
+useEffect(() => {
+  if (!movieId) return;
+
+  setAiError(null);
+  setAiSummary(null);
+
+  const fetchAiSummary = async () => {
+    setAiLoading(true);
+
+    try {
+      const resp = await axiosInstance.get<AiReviewSummary>(
+        `/movies/${movieId}/review-summary`
+      );
+      setAiSummary(resp.data);
+    } catch (error) {
+      console.error('Failed to fetch AI summary:', error);
+      setAiError('AI 기반 리뷰 요약을 불러오는 데 실패했습니다.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  fetchAiSummary();
+}, [movieId]);
 
   const toggleFavorite = async () => {
     if (!isLoggedIn) {
@@ -368,16 +435,7 @@ const MovieDetailPage: React.FC = () => {
 
   const handleBooking = () => {
     if (isLoggedIn) {
-      // 영화 정보를 state로 전달
-      navigate('/booking', { 
-        state: { 
-          movieId: movie?.id,
-          title: movie?.title,
-          posterUrl: movie?.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
-          voteAverage: movie?.vote_average,
-          releaseDate: movie?.release_date
-        } 
-      });
+      alert('예매 페이지로 이동합니다. (구현 필요)');
     } else {
       alert('로그인이 필요한 서비스입니다.');
       navigate('/login');
@@ -508,6 +566,39 @@ const MovieDetailPage: React.FC = () => {
     if (cert === '18' || cert.includes('청불')) return 'bg-red-600';
     return 'bg-gray-600';
   };
+
+  // === 여기서부터: 리뷰 카운트 + 통합 리스트 생성 ===
+  const totalReviewCount = allReviews.length + externalReviews.length;
+
+  const combinedReviews = [
+    // 앱 유저 리뷰
+    ...allReviews.map((r) => ({
+      type: 'USER' as const,
+      key: `user-${r.id}`,
+      userName: r.userName,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.updatedAt,
+      source: 'APP',
+      originalContent: null as string | null,
+    })),
+    // TMDB 리뷰
+    ...externalReviews.map((r, idx) => ({
+      type: 'TMDB' as const,
+      key: `tmdb-${idx}`,
+      userName: r.author || '익명',
+      rating: r.rating,
+      comment: r.translated || r.content,
+      createdAt: r.createdAt,
+      source: r.source,
+      originalContent: r.translated ? r.content : null,
+    })),
+  ];
+
+  // 전체 중에서 실제로 화면에 보여줄 리스트 (대표 3개 or 전체)
+const visibleReviews = showAllReviews
+  ? combinedReviews
+  : combinedReviews.slice(0, 3); // 처음에는 3개만
 
 
   if (loading) {
@@ -742,6 +833,56 @@ const MovieDetailPage: React.FC = () => {
           </div>
         )}
 
+        {/* AI 리뷰 요약 섹션 */}
+        <div className="mt-12">
+          <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">
+            AI 리뷰 한눈에 보기
+          </h2>
+
+          {aiLoading && (
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+              <p className="text-gray-700 dark:text-gray-300">
+                리뷰 요약을 불러오는 중입니다...
+              </p>
+            </div>
+          )}
+
+          {aiError && !aiLoading && !aiSummary && (
+            <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg">
+              <p className="text-red-700 dark:text-red-200">{aiError}</p>
+            </div>
+          )}
+
+          {aiSummary && !aiLoading && (
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                TMDB/앱 리뷰를 기반으로 한 AI 요약입니다.
+              </p>
+              <div>
+                <h3 className="font-semibold text-gray-800 dark:text-white mb-1">한 줄 요약</h3>
+                <p className="text-gray-800 dark:text-gray-200">{aiSummary.overall}</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800 dark:text-white mb-1">좋았던 점</h3>
+                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-line">
+                  {aiSummary.goodPoints}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800 dark:text-white mb-1">아쉬운 점</h3>
+                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-line">
+                  {aiSummary.badPoints}
+                </p>
+              </div>
+              <div className="flex gap-4 text-sm text-gray-700 dark:text-gray-300">
+                <span>👍 긍정 {Math.round(aiSummary.positiveRatio * 100)}%</span>
+                <span>👎 부정 {Math.round(aiSummary.negativeRatio * 100)}%</span>
+                <span>😐 중립 {Math.round(aiSummary.neutralRatio * 100)}%</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* 리뷰 섹션 */}
         <div className="mt-12">
           <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">리뷰</h2>
@@ -752,15 +893,7 @@ const MovieDetailPage: React.FC = () => {
                 {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
               </h3>
               <div className="flex items-center mb-4">
-<<<<<<< Updated upstream
                 <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
-                <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" />
-=======
-                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">
-                  평점:
-                </span>
-                <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" maxRating={10} />
->>>>>>> Stashed changes
               </div>
 
               <textarea
@@ -789,89 +922,86 @@ const MovieDetailPage: React.FC = () => {
             </div>
           ) : (
             <p className="text-gray-600 dark:text-gray-400 text-center py-4">
-              리뷰를 작성하려면 <Link to="/login" className="text-blue-500 hover:underline">로그인</Link> 해주세요.
+              리뷰를 작성하려면{' '}
+              <Link to="/login" className="text-blue-500 hover:underline">
+                로그인
+              </Link>{' '}
+              해주세요.
             </p>
           )}
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">모든 리뷰 ({allReviews.length})</h3>
-            {allReviews && Array.isArray(allReviews) && allReviews.length === 0 ? ( // reviews -> allReviews
-              <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+              모든 리뷰 ({totalReviewCount})
+            </h3>
+
+            {combinedReviews.length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">
+                아직 작성된 리뷰가 없습니다.
+              </p>
             ) : (
               <div className="space-y-6">
-<<<<<<< Updated upstream
-                {allReviews && Array.isArray(allReviews) && allReviews.map((review) => ( // reviews -> allReviews
-                  <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <span className="font-bold text-lg text-gray-900 dark:text-white">{review.userName}</span>
-                        <span className="ml-3 text-yellow-500 flex items-center">
-                          {'⭐'.repeat(review.rating)}
-                          <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/5)</span>
-                        </span>
-=======
                 {visibleReviews.map((review) => {
-                  const isTmdb = review.type === 'TMDB';
+                  const isTmdb = review.source.startsWith('TMDB');
+                  const dateLabel = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : '';
 
-                  const dateLabel =
-                    review.createdAt && !Number.isNaN(Date.parse(review.createdAt))
-                      ? new Date(review.createdAt).toLocaleDateString()
-                      : '';
-
-                  // 앱/TMDB 모두 10점 만점이므로, 별 10개 기준으로 환산
-                  const rawRating = review.rating ?? 0;
-                  const starCount = Math.max(0, Math.min(10, Math.round(rawRating)));
-
-                  const ratingLabel = // TMDB는 /10, 앱은 /10으로 표시
-                    review.rating != null
-                      ? isTmdb
-                        ? `(${review.rating}/10)`
-                        : `(${review.rating}/5)`
-                      : '';
+                  // 10점 만점 평점을 5개 별로 표현 (반쪽 별 포함)
+                  const displayRating = (review.rating ?? 0) / 2;
 
                   return (
-                    <div
-                      key={review.key}
-                      className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
+                    <div key={review.key} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
-                          <span className="font-bold text-lg text-gray-900 dark:text-white">
-                            {review.userName}
-                          </span>
+                          <span className="font-bold text-lg text-gray-900 dark:text-white">{review.userName}</span>
                           {isTmdb && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">
-                              TMDB 리뷰
-                            </span>
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">TMDB 리뷰</span>
                           )}
                           {review.rating != null && (
-                            <span className="ml-3 text-yellow-500 flex items-center">
-                              {'⭐'.repeat(starCount)}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">
-                                {ratingLabel}
+                            <div className="ml-3 flex items-center">
+                              <StarRating
+                                rating={review.rating}
+                                maxRating={10}
+                                readOnly={true}
+                                size="sm"
+                              />
+                              <span className="ml-2 text-gray-700 dark:text-gray-300 text-sm">
+                                ({review.rating.toFixed(1)})
                               </span>
-                            </span>
+                            </div>
                           )}
                         </div>
                         {dateLabel && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {dateLabel}
-                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{dateLabel}</span>
                         )}
->>>>>>> Stashed changes
                       </div>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(review.updatedAt).toLocaleDateString()}
-                      </span>
+
+                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">{review.comment}</p>
+
+                      {isTmdb && review.originalContent && (
+                        <details className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          <summary className="cursor-pointer">원문 보기</summary>
+                          <p className="mt-1 whitespace-pre-line">{review.originalContent}</p>
+                        </details>
+                      )}
                     </div>
-                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{review.comment}</p>
+                  );
+                })}
+
+                {combinedReviews.length > 3 && (
+                  <div className="flex justify-center mt-4">
+                    <button
+                      onClick={() => setShowAllReviews((prev) => !prev)}
+                      className="px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 rounded-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      {showAllReviews ? '리뷰 접기' : '리뷰 전체보기'}
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
         </div>
-      </div>
+      </div> {/* 하단 컨텐츠 섹션 끝 */}
 
       {/* 트레일러 모달 */}
       {isTrailerModalOpen && trailerKey && (
@@ -879,7 +1009,10 @@ const MovieDetailPage: React.FC = () => {
           className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
           onClick={closeTrailerModal}
         >
-          <div className="relative w-11/12 md:w-3/4 lg:w-2/3 aspect-w-16 aspect-h-9" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="relative w-11/12 md:w-3/4 lg:w-2/3 aspect-w-16 aspect-h-9"
+            onClick={(e) => e.stopPropagation()}
+          >
             <iframe
               src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
               title="YouTube video player"
@@ -890,11 +1023,14 @@ const MovieDetailPage: React.FC = () => {
             <button
               onClick={closeTrailerModal}
               className="absolute -top-10 -right-2 text-white text-4xl font-bold"
-            >&times;</button>
+            >
+              &times;
+            </button>
           </div>
         </div>
       )}
     </div>
   );
 };
+
 export default MovieDetailPage;
