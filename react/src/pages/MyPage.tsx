@@ -82,8 +82,8 @@ interface Booking {
 
 // 분리된 컴포넌트들을 임시로 이 파일에 정의했다고 가정합니다.
 // 실제 프로젝트에서는 위에서 제안한 대로 별도 파일로 분리해야 합니다.
-const BookingItem: React.FC<{ booking: Booking }> = ({ booking }) => {
-    // ... BookingItem 구현 내용 (위의 1단계 참고) ...
+const BookingItem: React.FC<{ booking: Booking; onCancel?: () => void }> = ({ booking, onCancel }) => {
+    const [loading, setLoading] = React.useState(false);
     const posterUrl = booking.posterPath ? `${IMAGE_BASE_URL}${booking.posterPath}` : NO_IMAGE_URL.replace('200x300', '100x150');
 
     const statusClasses = {
@@ -92,6 +92,21 @@ const BookingItem: React.FC<{ booking: Booking }> = ({ booking }) => {
         'CANCELLED': 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200',
     };
     const statusClass = statusClasses[booking.bookingStatus as keyof typeof statusClasses] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+
+    // 예매 취소 핸들러
+    const handleCancel = async () => {
+        if (!window.confirm('정말 이 예매를 취소하시겠습니까?')) return;
+        setLoading(true);
+        try {
+            await axiosInstance.delete(`/bookings/${booking.bookingId}`);
+            alert('예매가 취소되었습니다.');
+            if (onCancel) onCancel();
+        } catch (err: any) {
+            alert(err?.response?.data?.message || '예매 취소에 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="flex space-x-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600 transition-shadow hover:shadow-lg">
@@ -111,6 +126,16 @@ const BookingItem: React.FC<{ booking: Booking }> = ({ booking }) => {
                     <li><strong className='font-bold'>좌석:</strong> {booking.seats.join(', ')} ({booking.seatCount}석)</li>
                     <li><strong className='font-bold'>총 금액:</strong> {booking.totalPrice.toLocaleString()}원</li>
                 </ul>
+                {/* 예매 취소 버튼 */}
+                {booking.bookingStatus === 'CONFIRMED' && (
+                    <button
+                        className="mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-4 rounded transition-colors disabled:opacity-60"
+                        onClick={handleCancel}
+                        disabled={loading}
+                    >
+                        {loading ? '취소 중...' : '예매 취소'}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -270,6 +295,17 @@ const MyPage: React.FC = () => {
 
         return details;
     }, []);
+
+    // 예매 내역만 새로고침하는 함수 (BookingItem에서 onCancel로 사용)
+    const fetchBookings = useCallback(async () => {
+        if (!profile) return;
+        try {
+            const bookingsResponse = await axiosInstance.get<Booking[]>(`/bookings/user/${profile.id}`);
+            setBookings(bookingsResponse.data || []);
+        } catch (err) {
+            // 무시 또는 에러 처리
+        }
+    }, [profile]);
 
     useEffect(() => {
         if (!isLoggedIn) {
@@ -453,14 +489,16 @@ const MyPage: React.FC = () => {
 
                 {/* 예매 내역 섹션 */}
                 <div className="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings.length || 0})</h2>
+                    <h2 className="text-2xl font-semibold mb-4">예매 내역 ({bookings.filter(booking => booking.bookingStatus !== 'CANCELLED').length || 0})</h2>
                     {(bookings.length || 0) === 0 ? (
                         <p className="text-gray-600 dark:text-gray-400">예매 내역이 없습니다.</p>
                     ) : (
                         <div className="space-y-4">
-                            {bookings.map(booking => (
-                                <BookingItem key={booking.bookingId} booking={booking} />
-                            ))}
+                            {bookings
+                                .filter(booking => booking.bookingStatus !== 'CANCELLED')
+                                .map(booking => (
+                                    <BookingItem key={booking.bookingId} booking={booking} onCancel={fetchBookings} />
+                                ))}
                         </div>
                     )}
                 </div>

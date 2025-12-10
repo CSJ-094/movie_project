@@ -65,16 +65,18 @@ public class ShowtimeService {
      * 영화 + 영화관 + 날짜별 시간표 조회 (예매 페이지용)
      */
     public List<ShowtimeResponseDto> getShowtimesByMovieTheaterAndDate(String movieId, Long theaterId, LocalDate date) {
+        // movieId에 "tmdb_" 접두사가 없으면 자동으로 붙임
+        String dbMovieId = movieId.startsWith("tmdb_") ? movieId : "tmdb_" + movieId;
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
-        List<Showtime> showtimes = showtimeRepository.findByMovieIdAndTheaterIdAndDateRange(movieId, theaterId, startOfDay, endOfDay);
+        List<Showtime> showtimes = showtimeRepository.findByMovieIdAndTheaterIdAndDateRange(dbMovieId, theaterId, startOfDay, endOfDay);
 
         return showtimes.stream()
-                .map(showtime -> {
-                    ShowtimeResponseDto dto = ShowtimeResponseDto.fromEntity(showtime);
-                    enrichWithMovieData(dto);
-                    return dto;
+            .map(showtime -> {
+                ShowtimeResponseDto dto = ShowtimeResponseDto.fromEntity(showtime);
+                enrichWithMovieData(dto);
+                return dto;
                 })
                 .collect(Collectors.toList());
     }

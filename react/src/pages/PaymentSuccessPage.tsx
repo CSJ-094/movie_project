@@ -1,6 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import { useEffect, useState, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import axiosInstance from '../api/axiosInstance';
 
 export default function PaymentSuccessPage() {
   const navigate = useNavigate();
@@ -14,103 +16,94 @@ export default function PaymentSuccessPage() {
     bookingId: 0
   });
   const hasConfirmed = useRef(false); // 중복 실행 방지
+  const { userEmail } = useAuth();
 
   useEffect(() => {
     const confirmPayment = async () => {
-      // 이미 실행되었으면 중단
-      if (hasConfirmed.current) {
-        console.log('이미 예매가 처리되었습니다.');
-        return;
-      }
+      if (hasConfirmed.current) return;
       hasConfirmed.current = true;
-      const paymentKey = searchParams.get('paymentKey') || '';
-      const orderId = searchParams.get('orderId') || '';
-      const amount = Number(searchParams.get('amount')) || 0;
-      const bookingDataParam = searchParams.get('bookingData');
-      
-      let bookingData = null;
-      if (bookingDataParam) {
-        try {
-          bookingData = JSON.parse(decodeURIComponent(bookingDataParam));
-          console.log('예매 정보:', bookingData);
-          console.log('showtimeId 확인:', bookingData.showtimeId);
-        } catch (error) {
-          console.error('예매 정보 파싱 실패:', error);
-        }
-      }
-
       try {
-        // 1. 먼저 예매 정보 저장 (백엔드 Booking 테이블에 저장)
-        let bookingId = 1; // 기본값
-        
-        if (bookingData && bookingData.showtimeId) {
-          console.log('예매 생성 시작...');
+        // 결제 파라미터 추출
+        const paymentKey = searchParams.get('paymentKey') || '';
+        const orderId = searchParams.get('orderId') || '';
+        const amount = Number(searchParams.get('amount')) || 0;
+        const bookingDataParam = searchParams.get('bookingData');
+
+        let bookingData = null;
+        if (bookingDataParam) {
           try {
-            const bookingResponse = await axios.post('http://localhost:8484/api/bookings', {
-              userId: 1, // TODO: 실제 로그인된 사용자 ID로 변경
+            bookingData = JSON.parse(decodeURIComponent(bookingDataParam));
+          } catch (error) {
+            console.error('예매 정보 파싱 실패:', error);
+          }
+        }
+
+        // 사용자 프로필에서 userId 조회 (axiosInstance 사용)
+        let userId = null;
+        try {
+          const profileRes = await axiosInstance.get('http://localhost:8484/api/user/profile');
+          userId = profileRes.data.id;
+        } catch (e) {
+          console.error('사용자 프로필 조회 실패:', e);
+          alert('로그인 정보 확인에 실패했습니다. 다시 로그인 해주세요.');
+          setIsConfirming(false);
+          return;
+        }
+
+        // 예매 정보 저장 (axiosInstance 사용)
+        let bookingId = 0;
+        if (bookingData && bookingData.showtimeId && userId) {
+          try {
+            const bookingRes = await axiosInstance.post('http://localhost:8484/api/bookings', {
+              userId,
               showtimeId: bookingData.showtimeId,
-              seats: bookingData.seats, // 배열 그대로 전달
+              seats: bookingData.seats,
               seatCount: bookingData.seatCount,
               totalPrice: bookingData.totalPrice,
               bookingStatus: 'CONFIRMED'
             });
-            
-            bookingId = bookingResponse.data.bookingId;
-            console.log('예매 저장 완료, bookingId:', bookingId);
+            bookingId = bookingRes.data.bookingId;
           } catch (error) {
             console.error('예매 저장 실패:', error);
-            throw error; // 예매 실패시 결제도 중단
+            alert('예매 저장에 실패했습니다.');
+            setIsConfirming(false);
+            return;
           }
         } else {
-          console.error('예매 데이터 누락! bookingData:', bookingData);
           alert('예매 정보가 누락되었습니다. 다시 시도해주세요.');
+          setIsConfirming(false);
           return;
         }
 
-        // 2. 결제 정보 저장
-        const response = await axios.post('http://localhost:8484/api/payment/confirm', {
-          paymentKey,
-          orderId,
-          amount,
-          userId: 1, // TODO: 실제 로그인된 사용자 ID로 변경
-          bookingId: bookingId,
-          method: '카드', // TODO: 실제 결제 수단으로 변경
-          orderName: '영화 예매' // TODO: 실제 주문명으로 변경
-        });
+        // 결제 정보 저장 (axiosInstance 사용)
+        try {
+          await axiosInstance.post('http://localhost:8484/api/payment/confirm', {
+            paymentKey,
+            orderId,
+            amount,
+            userId,
+            bookingId,
+            method: '카드',
+            orderName: '영화 예매'
+          });
+        } catch (error) {
+          console.error('결제 승인 실패:', error);
+          alert('결제 승인에 실패했습니다.');
+          setIsConfirming(false);
+          return;
+        }
 
-        console.log('결제 승인 완료:', response.data);
         setPaymentInfo({ paymentKey, orderId, amount, bookingId });
         setIsConfirming(false);
       } catch (error) {
-        console.error('결제 승인 실패:', error);
-        alert('결제 승인에 실패했습니다. 고객센터로 문의해주세요.');
         setIsConfirming(false);
       }
     };
-
     confirmPayment();
-  }, [searchParams]);
+  }, []); // 최초 1회만 실행
 
   const handleCancel = async () => {
-    if (!confirm('정말로 결제를 취소하시겠습니까?')) {
-      return;
-    }
-
-    setIsCanceling(true);
-    try {
-      await axios.post('http://localhost:8484/api/payment/cancel', {
-        paymentKey: paymentInfo.paymentKey,
-        cancelReason: '고객 요청'
-      });
-      
-      alert('결제가 취소되었습니다.');
-      navigate('/');
-    } catch (error) {
-      console.error('결제 취소 실패:', error);
-      alert('결제 취소에 실패했습니다.');
-    } finally {
-      setIsCanceling(false);
-    }
+    // ...existing code...
   };
 
   if (isConfirming) {
