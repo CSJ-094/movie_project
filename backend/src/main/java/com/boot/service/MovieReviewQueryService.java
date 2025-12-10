@@ -9,7 +9,10 @@ import com.boot.entity.Review;
 import com.boot.repository.MovieReviewSummaryRepository;
 import com.boot.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,12 +61,23 @@ public class MovieReviewQueryService {
     }
 
     // 리뷰 요약만 반환
+    @Transactional
     public ReviewSummaryDto getSummaryOnly(String movieId) {
 
         // 0) 기존 요약 있으면 바로 리턴
         return movieReviewSummaryRepository.findByMovieId(movieId)
                 .map(this::toDto)
-                .orElseGet(() -> createSummary(movieId));
+                .orElseGet(() -> {
+                    try {
+                        // 요약 생성 시도
+                        return createSummary(movieId);
+                    } catch (DataIntegrityViolationException e) {
+                        // 누군가 먼저 INSERT 했을 때 여기로 떨어짐
+                        return movieReviewSummaryRepository.findByMovieId(movieId)
+                                .map(this::toDto)
+                                .orElseThrow(() -> e);
+                    }
+                });
     }
 
     private ReviewSummaryDto toDto(MovieReviewSummary entity) {
@@ -91,7 +105,13 @@ public class MovieReviewQueryService {
                 .toList();
 
         // 2) TMDB 리뷰
-        List<MovieReviewDto> tmdbDtos = externalReviewService.getTmdbReviews(movieId);
+        List<MovieReviewDto> tmdbDtos = new ArrayList<>();
+        try {
+            tmdbDtos = externalReviewService.getTmdbReviews(movieId);
+        } catch (DataAccessException e) {
+            System.err.println("[WARN] 요약 생성 중 TMDB 리뷰 조회 실패, 내부 리뷰만으로 요약 진행: movieId=" + movieId);
+            e.printStackTrace();
+        }
 
         // 3) 합치기
         List<MovieReviewDto> all = new ArrayList<>();
