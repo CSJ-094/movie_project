@@ -31,4 +31,7 @@ public class MovieSearchRequest {
 
 	    @Schema(description = "페이지 크기", example = "20")
 	    private Integer size = 20;
+
+		@Schema(description = "성인여부", example ="false")
+		private boolean isAdult;
 }

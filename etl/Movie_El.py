@@ -1,3 +1,6 @@
+import re
+import threading
+
 import requests
 from elasticsearch import Elasticsearch, helpers
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -121,13 +124,21 @@ INDEX_SETTINGS = {
                 "fields": {
                     "keyword":{ "type": "keyword" }
                 }
-            }
+            },
+            "country_check": { "type": "keyword" }
         }
     }
 }
 
 # Elasticsearch 클라이언트 초기화
 es = Elasticsearch(ES_URL)
+
+thread_local=threading.local()
+
+def get_session():
+    if not hasattr(thread_local, "session"):
+        thread_local.session = create_requests_session()
+    return thread_local.session
 
 try:
     info = es.info()
@@ -181,8 +192,8 @@ def get_movie_details(movie_id):
     """
     하나의 영화 ID에 대한 상세 정보를 가져오는 함수 (스레드 안전성을 위해 내부에서 세션 생성)
     """
-    # 각 스레드가 독립적인 세션을 사용하도록 함수 내부에서 생성
-    session = create_requests_session()
+
+    session = get_session()
 
     # 기본 상세 정보 + 등급(release_dates) + OTT(watch/providers)
     url = f"{TMDB_BASE_URL}{movie_id}?api_key={API_KEY}&language=ko-KR&append_to_response=release_dates,watch/providers"
@@ -198,13 +209,37 @@ def get_movie_details(movie_id):
 
         data = response.json()
 
-        # 러닝타임
-        runtime = data.get('runtime', 0)
-        if runtime is None: runtime = 0
 
-        # 관람등급
+        # 러닝타임
+        runtime = data.get('runtime', 0) or 0
+
         certification = ""
+        is_adult_flag = data.get('adult', False)
         release_dates_results = data.get('release_dates', {}).get('results', [])
+        kr_release = False
+        kr_title = False
+        COUNTRY_LIST = ['US','JP']
+        country_release = False
+
+        country_check = []
+        if 'production_countries' in data:
+            country_check = [c['iso_3166_1'] for c in data['production_countries']]
+            for country in country_check:
+                if country in COUNTRY_LIST:
+                    country_release = True
+                    break
+
+        title = data.get('title', '')
+        kr_title = bool(re.search("[가-힣]", title))
+
+        for item in release_dates_results:
+            if item['iso_3166_1'] == 'KR':
+                kr_release = True
+                break
+
+        if not kr_release and not kr_title and not country_release:
+            return None
+
         for item in release_dates_results:
             if item['iso_3166_1'] == 'KR':
                 for release in item['release_dates']:
@@ -212,6 +247,38 @@ def get_movie_details(movie_id):
                         certification = release['certification']
                         break
             if certification: break
+
+        if not certification:
+            ADULT_KEYWORDS = [
+                '18', 'R-18', 'R18', 'R18+',
+                '21', '21+', 'R21', 'R-21', 'D-21',
+                'X', 'RX', 'RESTRICTED', 'A', 'NC-17'
+            ]
+
+            for item in release_dates_results:
+                # 2-A. 미국(US) 등급 변환 (신뢰도 높음)
+                if item['iso_3166_1'] == 'US':
+                    for release in item['release_dates']:
+                        us_cert = release.get('certification', '')
+                        if us_cert in ['R', 'NC-17', 'NR']: certification = "19"
+                        elif us_cert == 'PG-13': certification = "15"
+                        elif us_cert == 'PG': certification = "12"
+                        elif us_cert == 'G': certification = "All"
+
+                        if certification: break # 미국 등급 찾았으면 내부 루프 종료
+
+
+                if not certification:
+                    for release in item['release_dates']:
+                        cert_val = release.get('certification', '').strip().upper()
+
+                        if cert_val in ADULT_KEYWORDS or any(k in cert_val for k in ADULT_KEYWORDS):
+                            certification = "19"
+                            break
+
+                if certification: break
+        if is_adult_flag:
+            certification = "19"
 
         # OTT
         ott_providers = []
@@ -238,6 +305,7 @@ def get_movie_details(movie_id):
             'ott_providers': ott_providers,
             'ott_link': ott_link,
             'companies': companies,
+            'country_check': country_check
         }
 
     except requests.exceptions.RequestException as e:
@@ -266,7 +334,8 @@ def generate_actions(all_movies, now_playing_ids):
             "certification": movie.get('certification', ''),
             "ott_providers": movie.get('ott_providers', []),
             "ott_link": movie.get('ott_link'),
-            "companies": movie.get('companies', [])
+            "companies": movie.get('companies', []),
+            "country_check": movie.get('country_check')
         }
         yield {
             "_index": INDEX_NAME,
@@ -319,6 +388,7 @@ def fetch_and_index_movies_process():
                 all_movies[mid]['ott_providers'] = result['ott_providers']
                 all_movies[mid]['ott_link'] = result['ott_link']
                 all_movies[mid]['companies'] = result['companies']
+                all_movies[mid]['country_check'] = result['country_check']
 
     # 4. Elasticsearch에 데이터 적재 (벌크 API 및 진행 상황 표시)
     logger.info("\n--- Loading Data to Elasticsearch ---")
