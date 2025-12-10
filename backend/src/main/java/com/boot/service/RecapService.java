@@ -175,10 +175,8 @@ public class RecapService {
         for (Rating r : ratings) {
             Movie m = movieMap.get(String.valueOf(r.getMovieId()));
             if (m != null && m.getVoteAverage() != null) {
-                double diff = r.getRating() * 2 - m.getVoteAverage(); // User is 5.0 scale, TMDB is 10.0 scale?
-                // Wait, Rating entity comment says "0.5 ~ 5.0". ES Movie vote_average is
-                // usually 0-10.
-                // So UserRating * 2 to match scale.
+                // 사용자 평점과 TMDB 평점 모두 10점 만점이므로, 그대로 차이를 계산합니다.
+                double diff = r.getRating() - m.getVoteAverage();
                 if (diff > maxDiff) {
                     maxDiff = diff;
                     hiddenGemEntity = r;
@@ -187,7 +185,8 @@ public class RecapService {
         }
 
         RecapResponseDto.MovieSummary hiddenGemSummary = null;
-        if (hiddenGemEntity != null && maxDiff > 1.0) { // Only if significantly higher
+        // 사용자가 준 평점이 7점 이상이고, 평점 차이가 2.5점 이상일 때 '숨은 보석'으로 인정합니다.
+        if (hiddenGemEntity != null && hiddenGemEntity.getRating() >= 7.0 && maxDiff > 2.5) {
             Movie m = movieMap.get(String.valueOf(hiddenGemEntity.getMovieId()));
             if (m != null) {
                 hiddenGemSummary = RecapResponseDto.MovieSummary.builder()

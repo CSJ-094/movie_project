@@ -70,6 +70,96 @@ interface Booking {
   screenType: string;
 }
 
+<<<<<<< Updated upstream
+=======
+const ReviewList: React.FC<ReviewListProps> = ({ reviews, movieDetails }) => {
+    return (
+        <div className="mb-10">
+            <h2 className="text-2xl font-semibold mb-4">작성한 리뷰 ({reviews?.length || 0})</h2>
+            {(reviews?.length || 0) === 0 ? (
+                <p className="text-gray-600 dark:text-gray-400">작성한 리뷰가 없습니다.</p>
+            ) : (
+                <div className="space-y-6">
+                    {reviews.map(review => {
+                        const movieTitle = movieDetails.find(m => m.id === review.movieId)?.title ?? `영화 ID: ${review.movieId}`;
+
+                        return (
+                            <div key={review.id} className="bg-gray-50 dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">{movieTitle}</h3>
+                                    <span className="ml-3 text-yellow-500 flex items-center">
+                                        {'⭐'.repeat(Math.round(review.rating))}
+                                        <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/10)</span>
+                                    </span>
+                                </div>
+                                <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2">{review.comment}</p>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                    작성일: {new Date(review.createdAt).toLocaleDateString()}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// PasswordChangeForm.tsx (별도 파일로 분리)
+interface PasswordChangeFormProps {
+    error: string | null;
+    success: string | null;
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+    setCurrentPassword: (pw: string) => void;
+    setNewPassword: (pw: string) => void;
+    setConfirmPassword: (pw: string) => void;
+    handleChangePassword: (e: React.FormEvent) => void;
+    handleDeleteAccount: () => void;
+    userEmail: string;
+}
+
+const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({
+                                                                   error, success, currentPassword, newPassword, confirmPassword,
+                                                                   setCurrentPassword, setNewPassword, setConfirmPassword,
+                                                                   handleChangePassword, handleDeleteAccount, userEmail
+                                                               }) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-10">
+        <h2 className="text-2xl font-semibold mb-4">계정 관리</h2>
+        <p className="text-lg mb-6"><strong className='font-bold'>이메일:</strong> {userEmail}</p>
+
+        <div className="border-t pt-6 border-gray-200 dark:border-gray-700">
+            <h2 className="text-2xl font-semibold mb-4">비밀번호 변경</h2>
+            {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+            {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+            <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                    <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="currentPassword">현재 비밀번호</label>
+                    <input type="password" id="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <div>
+                    <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="newPassword">새 비밀번호</label>
+                    <input type="password" id="newPassword" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <div>
+                    <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="confirmPassword">새 비밀번호 확인</label>
+                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 border rounded-lg text-gray-700 focus:outline-none focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+                <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">비밀번호 변경</button>
+            </form>
+        </div>
+
+        <div className="mt-8 border-t pt-6 border-red-300 dark:border-red-700">
+            <h2 className="text-2xl font-semibold mb-4 text-red-500">계정 삭제</h2>
+            <button onClick={handleDeleteAccount} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">회원 탈퇴</button>
+        </div>
+    </div>
+);
+
+
+// --- MyPage Main Component ---
+>>>>>>> Stashed changes
 
 const MyPage: React.FC = () => {
     const { userEmail, isLoggedIn } = useAuth();

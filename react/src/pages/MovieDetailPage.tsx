@@ -752,8 +752,15 @@ const MovieDetailPage: React.FC = () => {
                 {isEditingReview ? '내 리뷰 수정' : '리뷰 작성'}
               </h3>
               <div className="flex items-center mb-4">
+<<<<<<< Updated upstream
                 <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
                 <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" />
+=======
+                <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">
+                  평점:
+                </span>
+                <StarRating rating={reviewRating} onRatingChange={setReviewRating} size="md" maxRating={10} />
+>>>>>>> Stashed changes
               </div>
 
               <textarea
@@ -792,6 +799,7 @@ const MovieDetailPage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400">아직 작성된 리뷰가 없습니다.</p>
             ) : (
               <div className="space-y-6">
+<<<<<<< Updated upstream
                 {allReviews && Array.isArray(allReviews) && allReviews.map((review) => ( // reviews -> allReviews
                   <div key={review.id} className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-2">
@@ -801,6 +809,56 @@ const MovieDetailPage: React.FC = () => {
                           {'⭐'.repeat(review.rating)}
                           <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">({review.rating}/5)</span>
                         </span>
+=======
+                {visibleReviews.map((review) => {
+                  const isTmdb = review.type === 'TMDB';
+
+                  const dateLabel =
+                    review.createdAt && !Number.isNaN(Date.parse(review.createdAt))
+                      ? new Date(review.createdAt).toLocaleDateString()
+                      : '';
+
+                  // 앱/TMDB 모두 10점 만점이므로, 별 10개 기준으로 환산
+                  const rawRating = review.rating ?? 0;
+                  const starCount = Math.max(0, Math.min(10, Math.round(rawRating)));
+
+                  const ratingLabel = // TMDB는 /10, 앱은 /10으로 표시
+                    review.rating != null
+                      ? isTmdb
+                        ? `(${review.rating}/10)`
+                        : `(${review.rating}/5)`
+                      : '';
+
+                  return (
+                    <div
+                      key={review.key}
+                      className="bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <span className="font-bold text-lg text-gray-900 dark:text-white">
+                            {review.userName}
+                          </span>
+                          {isTmdb && (
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border border-gray-400 text-gray-600 dark:text-gray-300">
+                              TMDB 리뷰
+                            </span>
+                          )}
+                          {review.rating != null && (
+                            <span className="ml-3 text-yellow-500 flex items-center">
+                              {'⭐'.repeat(starCount)}
+                              <span className="ml-1 text-gray-700 dark:text-gray-300 text-sm">
+                                {ratingLabel}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                        {dateLabel && (
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {dateLabel}
+                          </span>
+                        )}
+>>>>>>> Stashed changes
                       </div>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(review.updatedAt).toLocaleDateString()}

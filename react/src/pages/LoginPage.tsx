@@ -102,7 +102,7 @@ const LoginPage: React.FC = () => {
                     </a>
                 </div>
                 <p className="text-center mt-4 text-gray-600 dark:text-gray-400">
-                    계정이 없으신가요? <Link to="/signup" className="text-blue-500 hover:underline">회원가입</Link>
+                    계정이 없으신가요? <Link to="/register" className="text-blue-500 hover:underline">회원가입</Link>
                 </p>
                 <p className="text-center mt-2 text-sm text-gray-500">
                     <Link to="/forgot-password" className="hover:underline">비밀번호를 잊으셨나요?</Link>
