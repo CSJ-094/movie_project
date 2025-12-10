@@ -435,7 +435,18 @@ useEffect(() => {
 
   const handleBooking = () => {
     if (isLoggedIn) {
-      alert('예매 페이지로 이동합니다. (구현 필요)');
+      // alert 대신 예매 페이지로 이동
+      if (movie) {
+        navigate('/booking', {
+          state: {
+            movieId: movie.id,
+            title: movie.title,
+            posterUrl: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+            voteAverage: movie.vote_average,
+            releaseDate: movie.release_date
+          }
+        });
+      }
     } else {
       alert('로그인이 필요한 서비스입니다.');
       navigate('/login');
