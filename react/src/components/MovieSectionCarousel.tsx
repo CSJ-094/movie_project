@@ -154,7 +154,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
           768: { slidesPerView: 4, spaceBetween: 20 },
           1024: { slidesPerView: 5, spaceBetween: 20 },
         }}
-        className="movie-section-swiper"
+        className="movie-section-swiper !overflow-visible py-16"
       >
         {movies.map((movie) => (
           <SwiperSlide key={movie.id} className="h-auto">
@@ -168,7 +168,6 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
               isWatched={movie.watched ?? watchlistMovieIds.has(movie.id)}
               onToggleWatched={onToggleWatched ? () => onToggleWatched(movie.id) : undefined}
               showWatchlistControls={showWatchlistControls}
-              rating={ratedMovies[movie.id]}
             />
           </SwiperSlide>
         ))}
