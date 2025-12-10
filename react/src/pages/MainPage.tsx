@@ -123,7 +123,7 @@ const MainPage: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white">
+        <div className="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white overflow-x-hidden">
             <MovieCarousel />
 
             <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

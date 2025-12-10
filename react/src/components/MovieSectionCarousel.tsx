@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, FreeMode } from 'swiper/modules';
+import { FreeMode } from 'swiper/modules';
+import type { Swiper as SwiperInstance } from 'swiper/types';
 import MovieCard from './MovieCard';
 import MovieCardSkeleton from './MovieCardSkeleton';
 import axios from 'axios';
 
 import 'swiper/css';
-import 'swiper/css/navigation';
 import 'swiper/css/free-mode';
 
 interface MovieSummary {
@@ -41,11 +41,11 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   favoriteMovieIds = new Set(),
   watchlistMovieIds = new Set(),
 }) => {
+  const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [movies, setMovies] = useState<MovieSummary[]>(initialMovies || []);
   const [loading, setLoading] = useState(initialLoading || !!fetchUrl);
   const [error, setError] = useState<string | null>(null);
   
-  // 무한 스크롤을 위한 상태 추가
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -96,13 +96,25 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
     } else if (initialMovies) {
       setMovies(initialMovies);
       setLoading(initialLoading);
-      setHasMore(false); // 직접 받은 데이터는 더 불러올 수 없음
+      setHasMore(false);
     }
   }, [fetchUrl, title, initialMovies, initialLoading, loadMovies]);
 
   const handleReachEnd = () => {
     if (hasMore && !loadingMore && fetchUrl) {
       loadMovies(currentPage + 1);
+    }
+  };
+
+  const slideNext = () => {
+    if (swiper) {
+      swiper.slideTo(swiper.activeIndex + 7);
+    }
+  };
+
+  const slidePrev = () => {
+    if (swiper) {
+      swiper.slideTo(swiper.activeIndex - 7);
     }
   };
 
@@ -139,16 +151,21 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   }
 
   return (
-    <div className="mb-12">
+    <div className="mb-12 relative group">
       <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">{title}</h2>
+      
+      <button onClick={slidePrev} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 transition-opacity opacity-0 group-hover:opacity-100 disabled:opacity-0" disabled={swiper?.isBeginning}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+      </button>
+
       <Swiper
-        modules={[Navigation, FreeMode]}
+        modules={[FreeMode]}
+        onSwiper={setSwiper}
         spaceBetween={20}
         slidesPerView={2}
-        navigation
         freeMode={true}
         grabCursor={true}
-        onReachEnd={handleReachEnd} // 끝에 도달했을 때 이벤트 핸들러
+        onReachEnd={handleReachEnd}
         breakpoints={{
           640: { slidesPerView: 3, spaceBetween: 20 },
           768: { slidesPerView: 4, spaceBetween: 20 },
@@ -171,7 +188,6 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
             />
           </SwiperSlide>
         ))}
-        {/* 더 불러올 데이터가 있을 때 로딩 스피너를 마지막 슬라이드로 추가 */}
         {hasMore && fetchUrl && (
           <SwiperSlide className="h-auto flex items-center justify-center">
             <div className="w-48 h-72 flex items-center justify-center">
@@ -183,6 +199,10 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
           </SwiperSlide>
         )}
       </Swiper>
+
+      <button onClick={slideNext} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 transition-opacity opacity-0 group-hover:opacity-100 disabled:opacity-0" disabled={swiper?.isEnd}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+      </button>
     </div>
   );
 };
