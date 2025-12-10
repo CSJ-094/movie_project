@@ -149,7 +149,7 @@ const BookingItem: React.FC<{ booking: Booking; onCancel?: () => void; onDetail?
     );
 };
 
-// MovieSection 및 ReviewList 컴포넌트도 위에서처럼 정의되었다고 가정하고 MainPage에 적용합니다.
+// MovieSection 및 ReviewList 컴포넌트도 위에서처럼 정의되었다고 가정합니다.
 
 // ReviewList.tsx (별도 파일로 분리)
 interface ReviewListProps {
@@ -488,7 +488,7 @@ const MyPage: React.FC = () => {
     // --- 최종 렌더링 ---
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-8 overflow-x-hidden">
             <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
                 <h1 className="text-4xl font-bold mb-8 text-center">내 프로필</h1>
 

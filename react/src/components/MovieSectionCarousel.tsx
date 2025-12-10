@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, FreeMode } from 'swiper/modules';
+import type { Swiper as SwiperInstance } from 'swiper/types';
 import MovieCard from './MovieCard';
 import MovieCardSkeleton from './MovieCardSkeleton';
 import axios from 'axios';
 
 import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/free-mode';
 
 interface MovieSummary {
   id: string;
@@ -41,11 +39,14 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   favoriteMovieIds = new Set(),
   watchlistMovieIds = new Set(),
 }) => {
+  const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
+  const [isBeginning, setIsBeginning] = useState(true);
+  const [isEnd, setIsEnd] = useState(false);
+
   const [movies, setMovies] = useState<MovieSummary[]>(initialMovies || []);
   const [loading, setLoading] = useState(initialLoading || !!fetchUrl);
   const [error, setError] = useState<string | null>(null);
   
-  // 무한 스크롤을 위한 상태 추가
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -88,21 +89,40 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [fetchUrl, title]);
+  }, [fetchUrl, title]); // loadingMore 의존성 제거
+
+  const loadMoreMovies = useCallback(() => {
+    if (hasMore && !loadingMore) {
+      loadMovies(currentPage + 1);
+    }
+  }, [hasMore, loadingMore, currentPage, loadMovies]);
 
   useEffect(() => {
     if (fetchUrl) {
+      // fetchUrl이 변경될 때 상태를 초기화하고 첫 페이지를 로드합니다.
+      setMovies([]);
+      setCurrentPage(1);
+      setHasMore(true);
       loadMovies(1);
     } else if (initialMovies) {
       setMovies(initialMovies);
       setLoading(initialLoading);
-      setHasMore(false); // 직접 받은 데이터는 더 불러올 수 없음
+      setHasMore(false);
     }
-  }, [fetchUrl, title, initialMovies, initialLoading, loadMovies]);
+  }, [fetchUrl, title, initialMovies, initialLoading]); // loadMovies를 의존성 배열에서 제거하여 불필요한 재실행 방지
 
-  const handleReachEnd = () => {
-    if (hasMore && !loadingMore && fetchUrl) {
-      loadMovies(currentPage + 1);
+  const slideNext = () => {
+    if (!swiper) return;
+    if (isEnd) {
+      loadMoreMovies();
+    } else {
+      swiper.slideTo(swiper.activeIndex + 7);
+    }
+  };
+
+  const slidePrev = () => {
+    if (swiper) {
+      swiper.slideTo(swiper.activeIndex - 7);
     }
   };
 
@@ -139,16 +159,27 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   }
 
   return (
-    <div className="mb-12">
+    <div className="mb-12 relative group">
       <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">{title}</h2>
+      
+      <button onClick={slidePrev} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 transition-opacity opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" disabled={isBeginning}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+      </button>
+
       <Swiper
-        modules={[Navigation, FreeMode]}
+        onSwiper={(s) => {
+          setSwiper(s);
+          setIsBeginning(s.isBeginning);
+          setIsEnd(s.isEnd);
+        }}
+        onSlideChange={(s) => {
+          setIsBeginning(s.isBeginning);
+          setIsEnd(s.isEnd);
+        }}
+        onReachEnd={loadMoreMovies} // 드래그 로딩 핸들러
         spaceBetween={20}
         slidesPerView={2}
-        navigation
-        freeMode={true}
         grabCursor={true}
-        onReachEnd={handleReachEnd} // 끝에 도달했을 때 이벤트 핸들러
         breakpoints={{
           640: { slidesPerView: 3, spaceBetween: 20 },
           768: { slidesPerView: 4, spaceBetween: 20 },
@@ -171,8 +202,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
             />
           </SwiperSlide>
         ))}
-        {/* 더 불러올 데이터가 있을 때 로딩 스피너를 마지막 슬라이드로 추가 */}
-        {hasMore && fetchUrl && (
+        {(loadingMore) && (
           <SwiperSlide className="h-auto flex items-center justify-center">
             <div className="w-48 h-72 flex items-center justify-center">
                 <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -183,6 +213,10 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
           </SwiperSlide>
         )}
       </Swiper>
+
+      <button onClick={slideNext} className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 transition-opacity opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" disabled={isEnd && !hasMore}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+      </button>
     </div>
   );
 };
