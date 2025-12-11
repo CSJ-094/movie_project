@@ -199,24 +199,34 @@ public class MovieSearchService {
             // 디버깅을 위해 생성된 Query를 로깅
             logger.debug("Elasticsearch Query: {}", builtBoolQuery.toString());
 
-            // 2. function_score 쿼리 (지금은 평점 부스팅만 적용)
-            SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                    .index("movies")
-                    .from(from)
-                    .size(size)
-                    .query(q -> q
-                            .functionScore(fs -> fs
-                                    .query(builtBoolQuery) // 이미 빌드된 쿼리 사용
-                                    .functions(f -> f
-                                            .fieldValueFactor(fvf -> fvf
-                                                    .field("vote_average")
-                                                    .factor(1.2)
-                                                    .modifier(FieldValueFactorModifier.Log1p)
-                                                    .missing(1.0))
-                                            .weight(1.2))
-                                    .scoreMode(FunctionScoreMode.Sum)
-                                    .boostMode(FunctionBoostMode.Sum))),
-                    Movie.class);
+            // 2. 검색 요청 빌드 (정렬 조건에 따라 분기)
+            SearchResponse<Movie> response = elasticsearchClient.search(s -> {
+                var searchBuilder = s.index("movies").from(from).size(size);
+
+                // 정렬 조건이 있을 경우, 해당 기준으로 정렬
+                if (request.getSortBy() != null && !request.getSortBy().isBlank()) {
+                    SortOrder order = "asc".equalsIgnoreCase(request.getSortOrder()) ? SortOrder.Asc : SortOrder.Desc;
+                    searchBuilder.query(builtBoolQuery)
+                                 .sort(sort -> sort.field(f -> f.field(request.getSortBy()).order(order)));
+                } else {
+                    // 정렬 조건이 없으면, 기존의 function_score 쿼리 사용
+                    searchBuilder.query(q -> q
+                        .functionScore(fs -> fs
+                            .query(builtBoolQuery)
+                            .functions(f -> f
+                                .fieldValueFactor(fvf -> fvf
+                                    .field("vote_average")
+                                    .factor(1.2)
+                                    .modifier(FieldValueFactorModifier.Log1p)
+                                    .missing(1.0))
+                                .weight(1.2))
+                            .scoreMode(FunctionScoreMode.Sum)
+                            .boostMode(FunctionBoostMode.Sum)
+                        )
+                    );
+                }
+                return searchBuilder;
+            }, Movie.class);
 
             long totalHits = response.hits().total() != null
                     ? response.hits().total().value()
