@@ -9,10 +9,6 @@ import axios from 'axios';
 const TMDB_API_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-interface Movie {
-    id: string;
-    title: string;
-}
 
 interface Genre {
     id: number;
