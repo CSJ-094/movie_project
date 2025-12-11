@@ -909,6 +909,12 @@ const visibleReviews = showAllReviews
               </h3>
               <div className="flex items-center mb-4">
                 <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
+                <StarRating
+                  rating={reviewRating}
+                  onRatingChange={handleRatingChange}
+                  maxRating={10}
+                  size="md"
+                />
               </div>
 
               <textarea

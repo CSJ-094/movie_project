@@ -125,20 +125,28 @@ const MainPage: React.FC = () => {
     return (
         <div className="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white overflow-x-hidden">
             <MovieCarousel />
+            
+            {/* 퀵매칭 버튼 추가 */}
+            <div className="py-12 text-center">
+                <button
+                    onClick={handleQuickMatchClick}
+                    className="bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all text-xl"
+                >
+                    🚀 30초 영화 퀵매칭 시작하기
+                </button>
+            </div>
 
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-                {/* 퀵매칭 버튼 추가 */}
-                <div className="mb-12 text-center">
-                    <button
-                        onClick={handleQuickMatchClick}
-                        className="bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all text-xl"
-                    >
-                        🚀 30초 영화 퀵매칭 시작하기
-                    </button>
-                </div>
-
-                {isLoggedIn && (
+            {/* 
+              [수정] 캐러셀 컨테이너에 max-w-screen-xl와 mx-auto를 추가하여
+              전체 섹션의 너비를 제한하고 중앙에 정렬합니다. 이렇게 하면 양옆에 여백이 생깁니다.
+            */}
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                {/* 
+                  [수정] 각 MovieSectionCarousel에 maxItems={5} prop을 추가하여
+                  내부적으로 5개의 영화만 표시하도록 제한합니다.
+                  '내가 찜한 영화'는 movies prop을 직접 잘라서 전달합니다.
+                */}
+                {isLoggedIn && favoriteMoviesDetails.length > 0 && (
                     <MovieSectionCarousel
                         key="favorites"
                         title="내가 찜한 영화"
@@ -182,8 +190,8 @@ const MainPage: React.FC = () => {
                     favoriteMovieIds={favoriteMovieIds}
                     showWatchlistControls={false}
                 />
-                
-                {/* 모든 장르를 동적으로 렌더링 */}
+
+                {/* 장르별 영화도 5개씩만 표시 */}
                 {genres.map(genre => (
                     <MovieSectionCarousel
                         key={genre.id}
