@@ -5,6 +5,7 @@ import com.boot.entity.QuickMatchFeedback;
 import com.boot.entity.QuickMatchSession;
 import com.boot.service.QuickMatchService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -102,6 +103,23 @@ public class QuickMatchController {
     @GetMapping("/result")
     public QuickMatchResultResponse getResult(@RequestParam String sessionId) {
         return quickMatchService.getResult(sessionId);
+    }
+
+    /**
+     * 대안 영화 추천 받기
+     * POST /api/quickmatch/alternative
+     */
+    @PostMapping("/alternative")
+    public ResponseEntity<QuickMatchRecommendationDto> getAlternative(
+            @RequestBody QuickMatchAlternativeRequest request
+    ) {
+        QuickMatchRecommendationDto dto =
+                quickMatchService.getAlternativeRecommendation(
+                        request.getSessionId(),
+                        request.getCurrentMovieId()
+                );
+
+        return ResponseEntity.ok(dto);
     }
 
 }

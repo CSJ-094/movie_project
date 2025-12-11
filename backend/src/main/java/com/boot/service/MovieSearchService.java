@@ -66,18 +66,18 @@ public class MovieSearchService {
             // 퀵매치 후보: 유명하고, 어느 정도 인기 있고, 성인 영화는 제외
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
                             .index("movies")
-                            .size(3000) // 넉넉하게 3000개 정도까지
+                            .size(8000) // 넉넉하게 3000개 정도까지
                             .query(q -> q
                                     .bool(b -> b
-                                            // 1) 최소 평가 수: 듣보잡 컷
+                                            // 1) 최소 평가 수: 듣보잡 X
                                             .filter(f -> f.range(r -> r
                                                     .field("vote_count")
-                                                    .gte(JsonData.of(500)) // 필요하면 300, 800 이런 식으로 조절 가능
+                                                    .gte(JsonData.of(300)) // 필요하면 300, 800 이런 식으로 조절 가능
                                             ))
-                                            // 2) 최소 인기도: 너무 묻힌 영화 컷
+                                            // 2) 최소 인기도: 너무 묻힌 영화 X
                                             .filter(f -> f.range(r -> r
                                                     .field("popularity")
-                                                    .gte(JsonData.of(20))
+                                                    .gte(JsonData.of(5))
                                             ))
                                             // 3) 성인 영화 제외
                                             .filter(f -> f.term(t -> t
