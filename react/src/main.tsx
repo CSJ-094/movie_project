@@ -27,6 +27,7 @@ import ActorDetailPage from './pages/ActorDetailPage.tsx'; // ActorDetailPage �
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import QuickMatchPage from './pages/QuickMatchPage.tsx';
 import MovieListPage from './pages/MovieListPage.tsx'; // MovieListPage 임포트 추가
+import NewsPage from './pages/NewsPage.tsx'; // NewsPage 임포트 추가
 import ErrorPage from './pages/ErrorPage.tsx';
 
 
@@ -75,7 +76,7 @@ const router = createBrowserRouter([
         element: <ActorDetailPage />,
       },
       {
-        path: "quickmatch",              
+        path: "quickmatch",
         element: <QuickMatchPage />,
       },
       {
@@ -101,6 +102,10 @@ const router = createBrowserRouter([
       {
         path: "oauth2/callback",
         element: <OAuth2CallbackPage />,
+      },
+      {
+        path: "news", // '/news' 경로 추가
+        element: <NewsPage />,
       },
       // [추가] AppHeader의 카테고리별 영화 목록 페이지 라우트
       {

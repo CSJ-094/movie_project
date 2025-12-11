@@ -166,6 +166,7 @@ const Header: React.FC = () => {
 
             {/* 내비게이션 링크 */}
             <Link to="/" className="text-gray-800 dark:text-white hover:text-red-600 dark:hover:text-red-500 px-3 py-2 rounded-md font-medium transition-colors">홈</Link>
+            <Link to="/news" className="text-gray-800 dark:text-white hover:text-red-600 dark:hover:text-red-500 px-3 py-2 rounded-md font-medium transition-colors">영화 이슈</Link>
             {isLoggedIn && (
               <Link to="/mypage" className="text-gray-800 dark:text-white hover:text-red-600 dark:hover:text-red-500 px-3 py-2 rounded-md font-medium transition-colors">마이페이지</Link>
             )}
@@ -213,6 +214,7 @@ const Header: React.FC = () => {
       <div ref={mobileMenuRef} className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'} bg-white dark:bg-gray-800 pb-4 border-t border-gray-200 dark:border-gray-700`}>
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
           <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className={navLinkClass}>홈</Link>
+          <Link to="/news" onClick={() => setIsMobileMenuOpen(false)} className={navLinkClass}>영화 이슈</Link>
           {isLoggedIn && (
             <Link to="/mypage" onClick={() => setIsMobileMenuOpen(false)} className={navLinkClass}>마이페이지</Link>
           )}

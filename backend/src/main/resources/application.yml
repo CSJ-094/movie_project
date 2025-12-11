@@ -85,3 +85,8 @@ toss:
   payments:
     secret:
       key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
+
+naver:
+  api:
+    client-id: B_YgjtTqSGCBwP9vBwFx
+    client-secret: ECokvSP2Gu
