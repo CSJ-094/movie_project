@@ -65,6 +65,10 @@ interface Review {
   updatedAt: string;
 }
 
+
+// 기본 이미지 처리
+const NO_IMAGE_URL = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe957375e70239d6abdd549fd7568c89281b2179b5f4470e2e12895792dfa5.svg";
+
 // --- 상단 카테고리 헤더 컴포넌트 ---
 const AppHeader: React.FC = () => {
   const location = useLocation();
@@ -791,8 +795,14 @@ const visibleReviews = showAllReviews
                 <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline">
                   <div>
                     <img
-                      src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
-                      alt={actor.name}
+                        src={actor.profile_path
+                            ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                            : NO_IMAGE_URL
+                        }
+                        alt={actor.name}
+                        onError={(e) => {
+                          e.currentTarget.src = NO_IMAGE_URL;
+                        }}
                       className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
                     />
                     <p className="mt-2 font-semibold text-sm text-gray-900 dark:text-white">{actor.name}</p>
