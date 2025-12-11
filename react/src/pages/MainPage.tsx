@@ -12,7 +12,6 @@ const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 interface Movie {
     id: string;
     title: string;
-    poster_path: string;
 }
 
 interface Genre {
@@ -22,14 +21,12 @@ interface Genre {
 
 interface UserProfile {
     favoriteMovieIds: string[];
-    watchlistMovies: { movieId: string; watched: boolean }[];
 }
 
 const MainPage: React.FC = () => {
     const { isLoggedIn } = useAuth();
     const [favoriteMovieIds, setFavoriteMovieIds] = useState<Set<string>>(new Set());
-    const [watchlistMovieIds, setWatchlistMovieIds] = useState<Set<string>>(new Set());
-    const [favoriteMoviesDetails, setFavoriteMoviesDetails] = useState<Movie[]>([]);
+    // favoriteMoviesDetails, watchlistMovieIds 상태 제거
     const [loadingFavorites, setLoadingFavorites] = useState(true);
     const [genres, setGenres] = useState<Genre[]>([]);
 
@@ -63,28 +60,7 @@ const MainPage: React.FC = () => {
         if (isLoggedIn) {
             try {
                 const response = await axiosInstance.get<UserProfile>('/user/profile');
-                const fetchedFavoriteMovieIds = new Set(response.data.favoriteMovieIds || []);
-                setFavoriteMovieIds(fetchedFavoriteMovieIds);
-                setWatchlistMovieIds(
-                    new Set(response.data.watchlistMovies?.map(item => String(item.movieId)) || [])
-                );
-
-                if (fetchedFavoriteMovieIds.size > 0) {
-                    setLoadingFavorites(true);
-                    const movieDetailsPromises = Array.from(fetchedFavoriteMovieIds).map(id =>
-                        axios.get(`${TMDB_BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&language=ko-KR`)
-                            .then(res => ({
-                                id: String(res.data.id),
-                                title: res.data.title,
-                                poster_path: res.data.poster_path,
-                            }))
-                            .catch(() => null)
-                    );
-                    const results = await Promise.all(movieDetailsPromises);
-                    setFavoriteMoviesDetails(results.filter(Boolean) as Movie[]);
-                } else {
-                    setFavoriteMoviesDetails([]);
-                }
+                setFavoriteMovieIds(new Set(response.data.favoriteMovieIds || []));
             } catch (err) {
                 console.error('사용자 데이터를 불러오는데 실패했습니다.', err);
             } finally {
@@ -92,8 +68,6 @@ const MainPage: React.FC = () => {
             }
         } else {
             setFavoriteMovieIds(new Set());
-            setWatchlistMovieIds(new Set());
-            setFavoriteMoviesDetails([]);
             setLoadingFavorites(false);
         }
     }, [isLoggedIn]);
@@ -146,12 +120,13 @@ const MainPage: React.FC = () => {
                   내부적으로 5개의 영화만 표시하도록 제한합니다.
                   '내가 찜한 영화'는 movies prop을 직접 잘라서 전달합니다.
                 */}
-                {isLoggedIn && favoriteMoviesDetails.length > 0 && (
+                {/* [수정] 찜한 영화가 하나 이상 있을 때만 캐러셀을 표시합니다. */}
+                {isLoggedIn && favoriteMovieIds.size > 0 && (
                     <MovieSectionCarousel
                         key="favorites"
                         title="내가 찜한 영화"
-                        movies={favoriteMoviesDetails}
-                        loading={loadingFavorites}
+                        // [수정] fetchUrl을 백엔드 API로 지정
+                        fetchUrl="/favorites/details"
                         onToggleFavorite={handleToggleFavorite}
                         favoriteMovieIds={favoriteMovieIds}
                         showWatchlistControls={false}
@@ -161,7 +136,7 @@ const MainPage: React.FC = () => {
                 <MovieSectionCarousel
                     key="popular"
                     title="인기 영화"
-                    fetchUrl={`${TMDB_BASE_URL}/movie/popular`}
+                    fetchUrl="/movies/popular" // 백엔드 엔드포인트로 변경
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
                     showWatchlistControls={false}
@@ -169,7 +144,7 @@ const MainPage: React.FC = () => {
                 <MovieSectionCarousel
                     key="now_playing"
                     title="지금 상영중인 영화"
-                    fetchUrl={`${TMDB_BASE_URL}/movie/now_playing`}
+                    fetchUrl="/movies/now-playing" // 백엔드 엔드포인트로 변경
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
                     showWatchlistControls={false}
@@ -177,7 +152,7 @@ const MainPage: React.FC = () => {
                 <MovieSectionCarousel
                     key="top_rated"
                     title="높은 평점 영화"
-                    fetchUrl={`${TMDB_BASE_URL}/movie/top_rated`}
+                    fetchUrl="/movies/top-rated" // 백엔드 엔드포인트로 변경
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
                     showWatchlistControls={false}
@@ -185,7 +160,7 @@ const MainPage: React.FC = () => {
                 <MovieSectionCarousel
                     key="upcoming"
                     title="개봉 예정 영화"
-                    fetchUrl={`${TMDB_BASE_URL}/movie/upcoming`}
+                    fetchUrl="/movies/upcoming" // 백엔드 엔드포인트로 변경
                     onToggleFavorite={handleToggleFavorite}
                     favoriteMovieIds={favoriteMovieIds}
                     showWatchlistControls={false}
@@ -196,7 +171,7 @@ const MainPage: React.FC = () => {
                     <MovieSectionCarousel
                         key={genre.id}
                         title={`${genre.name} 영화`}
-                        fetchUrl={`${TMDB_BASE_URL}/discover/movie?with_genres=${genre.id}`}
+                        fetchUrl={`/movies/discover?genreId=${genre.id}`} // 백엔드 엔드포인트로 변경
                         onToggleFavorite={handleToggleFavorite}
                         favoriteMovieIds={favoriteMovieIds}
                         showWatchlistControls={false}
