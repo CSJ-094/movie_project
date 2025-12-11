@@ -28,11 +28,20 @@ public class NaverNewsController {
 
     @GetMapping
     public ResponseEntity<?> getNews(@RequestParam(name = "query", required = false, defaultValue = "영화") String query,
-            @RequestParam(name = "sort", required = false, defaultValue = "date") String sort) {
+            @RequestParam(name = "sort", required = false, defaultValue = "date") String sort,
+            @RequestParam(name = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "12") int size) {
+        System.out.println(
+                "NaverNewsController.getNews called with query: " + query + ", sort: " + sort + ", page: " + page);
         try {
+            int start = (page - 1) * size + 1;
+            // Naver API 'start' parameter max is 1000
+            if (start > 1000)
+                start = 1000;
+
             String encodedQuery = java.net.URLEncoder.encode(query, StandardCharsets.UTF_8);
             String apiURL = "https://openapi.naver.com/v1/search/news.json?query=" + encodedQuery +
-                    "&display=20&start=1&sort=" + sort;
+                    "&display=" + size + "&start=" + start + "&sort=" + sort;
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Naver-Client-Id", clientId);

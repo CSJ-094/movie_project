@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
+
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -66,8 +66,9 @@ public class JwtTokenProvider {
 
     /**
      * OAuth2 로그인 또는 다른 커스텀 로직에서 이메일과 역할을 기반으로 AccessToken을 생성하는 메서드
+     * 
      * @param email 사용자의 이메일 (토큰의 subject)
-     * @param role 사용자의 역할
+     * @param role  사용자의 역할
      * @return 생성된 AccessToken 문자열
      */
     public String createToken(String email, String role) {
@@ -91,7 +92,8 @@ public class JwtTokenProvider {
             throw new RuntimeException("권한 정보가 없는 토큰입니다.");
         }
 
-        Collection<? extends GrantedAuthority> authorities = Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
+        Collection<? extends GrantedAuthority> authorities = Arrays
+                .stream(claims.get(AUTHORITIES_KEY).toString().split(","))
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
@@ -110,7 +112,7 @@ public class JwtTokenProvider {
         } catch (SecurityException | MalformedJwtException e) {
             log.info("Invalid JWT Token", e);
         } catch (ExpiredJwtException e) {
-            log.info("Expired JWT Token", e);
+            log.info("Expired JWT Token: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
             log.info("Unsupported JWT Token", e);
         } catch (IllegalArgumentException e) {
@@ -121,6 +123,7 @@ public class JwtTokenProvider {
 
     /**
      * JWT 토큰에서 사용자 고유값(subject, 일반적으로 이메일)을 추출합니다.
+     * 
      * @param token JWT 토큰 문자열
      * @return 토큰의 subject (사용자 이메일)
      */

@@ -26,94 +26,92 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtTokenProvider jwtTokenProvider;
+        private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   CustomOAuth2UserService customOAuth2UserService) throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                        CustomOAuth2UserService customOAuth2UserService) throws Exception {
 
-        http
-                // CORS 설정
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // HTTP Basic 인증 비활성화
-                .httpBasic(httpBasic -> httpBasic.disable())
-                // Form Login 비활성화
-                .formLogin(formLogin -> formLogin.disable())
-                // CSRF 비활성화 (JWT)
-                .csrf(csrf -> csrf.disable())
-                // 세션 사용 안 함
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                http
+                                // CORS 설정
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                // HTTP Basic 인증 비활성화
+                                .httpBasic(httpBasic -> httpBasic.disable())
+                                // Form Login 비활성화
+                                .formLogin(formLogin -> formLogin.disable())
+                                // CSRF 비활성화 (JWT)
+                                .csrf(csrf -> csrf.disable())
+                                // 세션 사용 안 함
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // 인가 설정
-                .authorizeHttpRequests(authz -> authz
-                        // 로그인/회원가입/이메일 인증/소셜 로그인 등 공개
-                        .requestMatchers("/api/user/login", "/api/user/signup",
-                                "/api/user/verify", "/", "/auth/**", "/oauth2/**",
-                                "/login/**", "/error")
-                        .permitAll()
+                                // 인가 설정
+                                .authorizeHttpRequests(authz -> authz
+                                                // 로그인/회원가입/이메일 인증/소셜 로그인 등 공개
+                                                .requestMatchers("/api/user/login", "/api/user/signup",
+                                                                "/api/user/verify", "/", "/auth/**", "/oauth2/**",
+                                                                "/login/**", "/error")
+                                                .permitAll()
 
-                        // Swagger 공개
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
-                                "/swagger-ui/**", "/swagger-resources/**",
-                                "/webjars/**")
-                        .permitAll()
+                                                // Swagger 공개
+                                                .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
+                                                                "/swagger-ui/**", "/swagger-resources/**",
+                                                                "/webjars/**")
+                                                .permitAll()
 
-                        // 관리자 전용
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                                // 관리자 전용
+                                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // GET 요청은 누구나 가능하도록 설정
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/movies/**",
-                                "/api/search/**",
-                                "/api/reviews/**",
-                                "/api/theaters/**",
-                                "/api/showtimes/**",
-                                "/api/favorites/**",
-                                "/api/watchlist/**")
-                        .permitAll()
+                                                // GET 요청은 누구나 가능하도록 설정
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/movies/**",
+                                                                "/api/search/**",
+                                                                "/api/reviews/**",
+                                                                "/api/theaters/**",
+                                                                "/api/showtimes/**",
+                                                                "/api/favorites/**",
+                                                                "/api/watchlist/**",
+                                                                "/api/news/**")
+                                                .permitAll()
 
-                        // 퀵매칭 전체 공개 (모든 메서드)
-                        .requestMatchers("/api/quickmatch/**").permitAll()
+                                                // 퀵매칭 전체 공개 (모든 메서드)
+                                                .requestMatchers("/api/quickmatch/**").permitAll()
 
-                        // 리뷰 작성(POST)은 인증된 사용자만 가능
-                        .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
+                                                // 리뷰 작성(POST)은 인증된 사용자만 가능
+                                                .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
 
-                        // 나머지는 인증 필요
-                        .anyRequest().authenticated()
-                )
+                                                // 나머지는 인증 필요
+                                                .anyRequest().authenticated())
 
-                // OAuth2 로그인 설정
-                .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo ->
-                                userInfo.userService(customOAuth2UserService))
-                        .successHandler(oAuth2AuthenticationSuccessHandler)
-                )
+                                // OAuth2 로그인 설정
+                                .oauth2Login(oauth2 -> oauth2
+                                                .userInfoEndpoint(userInfo -> userInfo
+                                                                .userService(customOAuth2UserService))
+                                                .successHandler(oAuth2AuthenticationSuccessHandler))
 
-                // JWT 필터 추가
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                                // JWT 필터 추가
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // 프론트엔드 주소
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                configuration.setAllowedOrigins(List.of("http://localhost:5173")); // 프론트엔드 주소
+                configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+                configuration.setAllowedHeaders(List.of("*"));
+                configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }
