@@ -71,6 +71,7 @@ public class MovieController {
         MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setSortBy("vote_average");
         request.setSortOrder("desc");
+        request.setVoteCount(300);
         return ResponseEntity.ok(movieSearchService.search(request));
     }
 
