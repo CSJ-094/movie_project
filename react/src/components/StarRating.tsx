@@ -28,11 +28,22 @@ const StarRating: React.FC<StarRatingProps> = ({ rating, onRatingChange, readOnl
         return (
           <div
             key={starIndex}
-            className={`cursor-${readOnly ? 'default' : 'pointer'} text-yellow-400 ${starSize}`}
-            onMouseEnter={() => !readOnly && setHoverRating(starIndex * (maxRating / 5))}
-            onMouseLeave={() => !readOnly && setHoverRating(0)}
-            onClick={() => !readOnly && onRatingChange && onRatingChange(starIndex * (maxRating / 5))}
+            className={`relative cursor-${readOnly ? 'default' : 'pointer'} text-yellow-400 ${starSize}`}
+            onMouseLeave={() => !readOnly && setHoverRating(0)} // 마우스가 별 영역을 떠나면 호버 상태 초기화
           >
+            {/* 별의 왼쪽 절반 (0.5점 단위) */}
+            <div
+              className="absolute left-0 top-0 h-full w-1/2 z-10"
+              onMouseEnter={() => !readOnly && setHoverRating((starIndex - 0.5) * (maxRating / 5))}
+              onClick={() => !readOnly && onRatingChange && onRatingChange((starIndex - 0.5) * (maxRating / 5))}
+            />
+            {/* 별의 오른쪽 절반 (1점 단위) */}
+            <div
+              className="absolute right-0 top-0 h-full w-1/2 z-10"
+              onMouseEnter={() => !readOnly && setHoverRating(starIndex * (maxRating / 5))}
+              onClick={() => !readOnly && onRatingChange && onRatingChange(starIndex * (maxRating / 5))}
+            />
+
             <svg fill="currentColor" viewBox="0 0 24 24" className="relative">
               {/* 배경이 되는 빈 별 (회색) */}
               <path

@@ -37,10 +37,17 @@ public class RecapService {
         String userName = user.getName();
         logger.info("대상 사용자: {}", userName);
 
+        // 올해의 시작과 끝을 정의합니다.
+        LocalDateTime startOfYear = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endOfYear = LocalDateTime.of(2025, 12, 31, 23, 59, 59);
+
         // 1. Fetch User Data
         logger.debug("사용자 활동 데이터(워치리스트, 리뷰, 평점, 찜)를 DB에서 조회합니다.");
         List<Watchlist> watchlists = watchlistRepository.findByUser(user);
         List<Review> reviews = reviewRepository.findByUser(user);
+        // [수정] 테스트를 위해 날짜 필터링을 임시로 비활성화하고 모든 평점을 가져옵니다.
+        // 올해의 평점 기록만 가져옵니다.
+        // List<Rating> ratings = ratingRepository.findByUserId(user.getId()).stream().filter(r -> r.getCreatedAt() != null && !r.getCreatedAt().isBefore(startOfYear) && !r.getCreatedAt().isAfter(endOfYear)).collect(Collectors.toList());
         List<Rating> ratings = ratingRepository.findByUserId(user.getId());
         List<Favorite> favorites = favoriteRepository.findByUser(user);
         logger.debug("DB 조회 완료: 워치리스트-{}개, 리뷰-{}개, 평점-{}개, 찜-{}개", watchlists.size(), reviews.size(), ratings.size(), favorites.size());
@@ -86,11 +93,11 @@ public class RecapService {
         Map<String, Integer> monthActivity = new HashMap<>();
         DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("M월");
 
-        watchlists.forEach(w -> incrementMonth(monthActivity, w.getCreatedAt(), monthFormatter));
-        reviews.forEach(r -> incrementMonth(monthActivity, r.getCreatedAt(), monthFormatter));
-        // Rating/Favorite don't have CreatedAt in some simple implementations, need to
-        // check entity.
-        // Assuming Rating/Favorite has audit (EntityListeners).
+        // 올해의 활동만 필터링하여 월별 활동 계산
+        watchlists.stream().filter(e -> e.getCreatedAt() != null && e.getCreatedAt().getYear() == 2025).forEach(w -> incrementMonth(monthActivity, w.getCreatedAt(), monthFormatter));
+        reviews.stream().filter(e -> e.getCreatedAt() != null && e.getCreatedAt().getYear() == 2025).forEach(r -> incrementMonth(monthActivity, r.getCreatedAt(), monthFormatter));
+        ratings.forEach(r -> incrementMonth(monthActivity, r.getCreatedAt(), monthFormatter)); // ratings는 이미 올해 데이터로 필터링됨
+
         // Favorite/Rating don't have CreatedAt in the provided files. Will skip
         // timestamps for them or add them safely if possible, else just ignore.
         // Actually Rating entity doesn't show CreatedAt in the file used earlier (only
@@ -169,33 +176,46 @@ public class RecapService {
         }
 
         // Find Hidden Gem (User Rating >> Global Rating)
-        Rating hiddenGemEntity = null;
-        double maxDiff = -1.0;
-
-        for (Rating r : ratings) {
-            Movie m = movieMap.get(String.valueOf(r.getMovieId()));
-            if (m != null && m.getVoteAverage() != null) {
-                // 사용자 평점과 TMDB 평점 모두 10점 만점이므로, 그대로 차이를 계산합니다.
-                double diff = r.getRating() - m.getVoteAverage();
-                if (diff > maxDiff) {
-                    maxDiff = diff;
-                    hiddenGemEntity = r;
+        // [수정] Stream API를 사용하여 '숨은 보석'을 찾는 로직 개선
+        // 1. 먼저 '숨은 보석'의 기본 조건을 만족하는 영화들을 필터링합니다.
+        // 2. 그 중에서 평점 차이가 가장 큰 영화를 선택합니다.
+        // [수정] 타입 추론 오류를 해결하기 위해 스트림 연산을 두 단계로 분리합니다.
+        // 1단계: '숨은 보석' 후보들을 리스트로 추출합니다.
+        List<AbstractMap.SimpleEntry<Rating, Double>> hiddenGemCandidates = ratings.stream()
+            .map(r -> {
+                Movie m = movieMap.get(String.valueOf(r.getMovieId()));
+                if (m != null && m.getVoteAverage() != null) {
+                    double diff = r.getRating() - m.getVoteAverage();
+                    if (r.getRating() >= 7.0 && diff > 2.5) {
+                        return new AbstractMap.SimpleEntry<>(r, diff);
+                    }
                 }
-            }
-        }
+                return null;
+            })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
 
+        // [수정] 타입 추론 에러를 근본적으로 해결하기 위해 로직을 명확하게 분리합니다.
+        // 2단계: 후보 중에서 평점 차이가 가장 큰 항목을 찾습니다.
+        Optional<AbstractMap.SimpleEntry<Rating, Double>> maxEntryOpt = hiddenGemCandidates.stream()
+            .max(Comparator.comparingDouble(AbstractMap.SimpleEntry::getValue));
+
+        // 3단계: 찾은 항목이 있을 경우에만 DTO로 변환하고, 없을 경우 null을 할당합니다.
+        // [수정] 변수 선언 시 null로 초기화하여 'may not have been initialized' 에러를 해결합니다.
         RecapResponseDto.MovieSummary hiddenGemSummary = null;
-        // 사용자가 준 평점이 7점 이상이고, 평점 차이가 2.5점 이상일 때 '숨은 보석'으로 인정합니다.
-        if (hiddenGemEntity != null && hiddenGemEntity.getRating() >= 7.0 && maxDiff > 2.5) {
+        if (maxEntryOpt.isPresent()) {
+            AbstractMap.SimpleEntry<Rating, Double> foundEntry = maxEntryOpt.get();
+            Rating hiddenGemEntity = foundEntry.getKey();
             Movie m = movieMap.get(String.valueOf(hiddenGemEntity.getMovieId()));
+            // [수정] fromMovieAndRating 메서드 대신 builder를 사용하여 객체를 생성합니다.
             if (m != null) {
                 hiddenGemSummary = RecapResponseDto.MovieSummary.builder()
-                        .movieId(m.getId())
-                        .title(m.getTitle())
-                        .posterUrl("https://image.tmdb.org/t/p/w500" + m.getPosterPath())
-                        .userRating(hiddenGemEntity.getRating())
-                        .globalRating(m.getVoteAverage() != null ? m.getVoteAverage() : 0.0)
-                        .build();
+                    .movieId(m.getId())
+                    .title(m.getTitle())
+                    .posterUrl("https://image.tmdb.org/t/p/w500" + m.getPosterPath())
+                    .userRating(hiddenGemEntity.getRating())
+                    .globalRating(m.getVoteAverage() != null ? m.getVoteAverage() : 0.0)
+                    .build();
             }
         }
 

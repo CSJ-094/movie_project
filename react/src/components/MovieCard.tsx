@@ -23,7 +23,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
     posterUrl,
     isFavorite,
     onToggleFavorite,
-    size = 'lg',
+    size = 'md', // [수정] 기본값을 'md'로 변경하여 외부에서 전달된 size prop이 적용되도록 합니다.
     showTitle = true,
     isWatched = false,
     showWatchlistControls = false,
@@ -36,7 +36,8 @@ const MovieCard: React.FC<MovieCardProps> = ({
     const sizeClass = useMemo(() => {
         switch (size) {
             case 'sm': return 'h-64';
-            case 'md': return 'h-72';
+            // [수정] md 사이즈의 높이를 h-[280px]에서 h-[275px]로 추가 미세 조정합니다.
+            case 'md': return 'h-[275px]';
             case 'lg':
             default: return 'h-96';
         }
@@ -80,6 +81,9 @@ const MovieCard: React.FC<MovieCardProps> = ({
     };
 
     const handleMouseEnter = () => {
+        // [수정] 포스터가 없을 경우(placeholder 이미지 사용 시) 예고편을 불러오지 않음
+        if (posterUrl.includes('placeholder')) return;
+
         hoverTimeoutRef.current = setTimeout(() => {
             setIsHovered(true);
             fetchTrailer();
@@ -95,10 +99,11 @@ const MovieCard: React.FC<MovieCardProps> = ({
     };
 
     const cardClasses = `
-    relative group no-underline flex-shrink-0 w-full
+    relative group no-underline flex-shrink-0
     transition-all duration-300 ease-in-out
     ${isHovered ? 'scale-125 -translate-y-4 shadow-2xl z-20' : 'hover:scale-105 hover:-translate-y-1 hover:shadow-2xl hover:z-10'}
-    ${sizeClass}
+    ${sizeClass} 
+    w-[185px]
   `;
 
     return (
@@ -125,11 +130,19 @@ const MovieCard: React.FC<MovieCardProps> = ({
                             <div className="absolute inset-0 z-10 cursor-pointer"></div>
                         </>
                     ) : (
+                        // [수정] 이미지 로딩 실패 시 대체 이미지로 교체하는 onError 핸들러 추가
                         <img
                             src={posterUrl}
                             alt={`${title} 포스터`}
                             className="w-full h-full object-cover block"
                             loading="lazy"
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                // 무한 루프 방지: 이미 대체 이미지로 설정된 경우는 다시 시도하지 않음
+                                if (!target.src.includes('placeholder')) {
+                                    target.src = 'https://placehold.co/200x300?text=No+Image';
+                                }
+                            }}
                         />
                     )}
 

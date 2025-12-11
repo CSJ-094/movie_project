@@ -533,6 +533,8 @@ const MyPage: React.FC = () => {
                     title="찜한 영화"
                     movies={favoriteMoviesDetails}
                     loading={loading}
+                    // [수정] centered prop을 제거하여 메인 페이지와 동일한 중앙 정렬 캐러셀을 사용합니다.
+                    cardSize="lg" // 찜한 영화 카드 크기를 'lg'로 설정
                     onToggleFavorite={handleToggleFavorite}
                 />
 
@@ -541,9 +543,11 @@ const MyPage: React.FC = () => {
                     title="보고싶어요"
                     movies={watchlistMoviesDetails}
                     loading={loading}
+                    // [수정] centered prop을 제거하여 메인 페이지와 동일한 중앙 정렬 캐러셀을 사용합니다.
                     onToggleWatched={handleToggleWatched}
                     showWatchlistControls={true}
                     ratedMovies={profile.ratedMovies}
+                    cardSize="lg" // 보고싶어요 카드 크기를 'lg'로 설정
                 />
 
                 {/* 작성한 리뷰 섹션 */}

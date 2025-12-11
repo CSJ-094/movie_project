@@ -67,6 +67,7 @@ const QuickMatchPage: React.FC = () => {
   const [phase, setPhase] = useState<"MATCHING" | "RESULT">("MATCHING");
   const [result, setResult] = useState<QuickMatchResultResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [favoriteMovieIds, setFavoriteMovieIds] = useState<Set<string>>(new Set()); // 찜하기
 
   // 1) 세션 생성
   useEffect(() => {
@@ -96,6 +97,21 @@ const QuickMatchPage: React.FC = () => {
 
     createSession();
   }, []);
+
+  // 2) 로그인된 사용자 찜 목록 가져오기
+useEffect(() => {
+  const fetchFavorites = async () => {
+    try {
+      const res = await axiosInstance.get<string[]>("/favorites");
+      setFavoriteMovieIds(new Set(res.data));
+    } catch (err) {
+      console.error("찜한 영화 불러오기 실패", err);
+    }
+  };
+
+  fetchFavorites();
+}, []);
+
 
   // 2) 다음 영화 가져오기
   const fetchNextMovie = useCallback(
@@ -162,6 +178,26 @@ const QuickMatchPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // 찜 토글 함수
+const toggleFavorite = async (movieId: string) => {
+  console.log('favorite click', movieId); // 디버깅용, 나중에 지워도 됨
+
+  try {
+    // 최종 URL: POST /api/favorites/{movieId}
+    const res = await axiosInstance.post(`/favorites/${movieId}`);
+    const isFavorited = res.data.isFavorited;
+
+    setFavoriteMovieIds((prev) => {
+      const copy = new Set(prev);
+      if (isFavorited) copy.add(movieId);
+      else copy.delete(movieId);
+      return copy;
+    });
+  } catch (err) {
+    console.error("찜 토글 실패", err);
+  }
+};
 
   // 4) 결과 조회
   const fetchResult = async (sid: string) => {
@@ -342,8 +378,27 @@ const QuickMatchPage: React.FC = () => {
                     display: "flex",
                     flexDirection: "column",
                     boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                    position: "relative"
                   }}
                 >
+
+                  {/* 찜하기 하트 버튼 */}
+              <button
+                onClick={() => toggleFavorite(r.movieId)}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  fontSize: 22,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: favoriteMovieIds.has(r.movieId) ? "#f87171" : "#ffffff90",
+                  zIndex: 2,  
+                }}
+                >
+                  {favoriteMovieIds.has(r.movieId) ? "❤️" : "🤍"}
+              </button>
                   {r.posterUrl && (
                     <div style={{ position: "relative" }}>
                       <img
