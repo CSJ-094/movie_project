@@ -89,7 +89,7 @@ const MainPage: React.FC = () => {
         }
         setFavoriteMovieIds(newFavoriteIds);
         try {
-            await axiosInstance.post(`/favorites/toggle/${movieId}`);
+            await axiosInstance.post(`/favorites/${movieId}`);
         } catch (err) {
             setFavoriteMovieIds(new Set(favoriteMovieIds)); // 롤백
             alert('찜 상태 변경에 실패했습니다.');
