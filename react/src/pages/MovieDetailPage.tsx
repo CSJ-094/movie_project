@@ -65,6 +65,10 @@ interface Review {
   updatedAt: string;
 }
 
+
+// 기본 이미지 처리
+const NO_IMAGE_URL = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe957375e70239d6abdd549fd7568c89281b2179b5f4470e2e12895792dfa5.svg";
+
 // --- 상단 카테고리 헤더 컴포넌트 ---
 const AppHeader: React.FC = () => {
   const location = useLocation();
@@ -259,17 +263,35 @@ const MovieDetailPage: React.FC = () => {
 
   // Recommended movies fetching
   useEffect(() => {
-    if (!movie || movie.genres.length === 0) return;
+    if (!movieId) return;
+
     const fetchRecommendations = async () => {
-      const genreIds = movie.genres.map(g => g.id).join(',');
       try {
-        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR&with_genres=${genreIds}&sort_by=popularity.desc`);
-        const data = await response.json();
-        setRecommendedMovies(data.results.filter((rec: RecommendedMovie) => rec.id !== movie.id).slice(0, 10));
-      } catch (error) { console.error("Failed to fetch recommendations:", error); }
+
+        const response = await axiosInstance.get<any[]>(`/movies/${movieId}/recommendations`);
+
+
+        const mappedRecommendations = response.data.map((doc: any) => {
+          const cleanPosterPath = doc.posterUrl
+              ? doc.posterUrl.replace('https://image.tmdb.org/t/p/w500', '')
+              : null;
+
+          return {
+            id: Number(doc.movieId), //
+            title: doc.title,
+            poster_path: cleanPosterPath
+          };
+        });
+
+        setRecommendedMovies(mappedRecommendations);
+      } catch (error) {
+        console.error("Failed to fetch recommendations:", error);
+        setRecommendedMovies([]);
+      }
     };
+
     fetchRecommendations();
-  }, [movie]);
+  }, [movieId]);
 
   // Overview clamping
   useEffect(() => {
@@ -809,8 +831,14 @@ const visibleReviews = showAllReviews
                 <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline">
                   <div>
                     <img
-                      src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
-                      alt={actor.name}
+                        src={actor.profile_path
+                            ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                            : NO_IMAGE_URL
+                        }
+                        alt={actor.name}
+                        onError={(e) => {
+                          e.currentTarget.src = NO_IMAGE_URL;
+                        }}
                       className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
                     />
                     <p className="mt-2 font-semibold text-sm text-gray-900 dark:text-white">{actor.name}</p>
@@ -945,6 +973,12 @@ const visibleReviews = showAllReviews
               </h3>
               <div className="flex items-center mb-4">
                 <span className="text-lg font-medium text-gray-700 dark:text-gray-300 mr-3">평점:</span>
+                <StarRating
+                  rating={reviewRating}
+                  onRatingChange={handleRatingChange}
+                  maxRating={10}
+                  size="md"
+                />
               </div>
 
               <textarea

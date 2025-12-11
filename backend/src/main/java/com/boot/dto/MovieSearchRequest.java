@@ -34,4 +34,13 @@ public class MovieSearchRequest {
 
 		@Schema(description = "성인여부", example ="false")
 		private boolean isAdult;
+
+		@Schema(description = "정렬 기준 필드", example = "vote_average")
+		private String sortBy;
+
+		@Schema(description = "정렬 순서 (asc 또는 desc)", example = "desc")
+		private String sortOrder;
+
+		@Schema(description = "투표 수" ,example ="10")
+		private Integer VoteCount;
 }

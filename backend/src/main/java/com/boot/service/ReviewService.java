@@ -1,7 +1,9 @@
 package com.boot.service;
 
+import com.boot.entity.Rating; // Rating 엔티티 import
 import com.boot.entity.Review;
 import com.boot.entity.User;
+import com.boot.repository.RatingRepository; // RatingRepository import
 import com.boot.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -19,6 +21,7 @@ import java.util.Optional;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
+    private final RatingRepository ratingRepository; // RatingRepository 주입
     private final UserService userService; // User 정보를 가져오기 위해 주입
 
     // UserService getter (ReviewController에서 사용)
@@ -40,7 +43,7 @@ public class ReviewService {
     // 리뷰 생성
     @Transactional
     public Review createReview(String movieId, Integer rating, String comment) {
-        User currentUser = getCurrentUser();
+        User currentUser = getCurrentUser(); // 현재 사용자 정보 가져오기
         
         // 이미 리뷰를 작성했는지 확인
         Optional<Review> existingReview = reviewRepository.findByMovieIdAndUser(movieId, currentUser);
@@ -56,7 +59,10 @@ public class ReviewService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-        return reviewRepository.save(review);
+        Review savedReview = reviewRepository.save(review);
+        
+        updateRating(currentUser, movieId, rating); // Rating 테이블 업데이트
+        return savedReview;
     }
 
     // 특정 영화의 모든 리뷰 조회
@@ -73,7 +79,7 @@ public class ReviewService {
 
     // 리뷰 수정
     @Transactional
-    public Review updateReview(Long reviewId, Integer newRating, String newComment) {
+    public Review updateReview(Long reviewId, Integer newRating, String newComment) { // newRating 타입 Integer로 변경
         User currentUser = getCurrentUser();
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NoSuchElementException("리뷰를 찾을 수 없습니다: " + reviewId));
@@ -85,7 +91,9 @@ public class ReviewService {
         review.setRating(newRating);
         review.setComment(newComment);
         review.setUpdatedAt(LocalDateTime.now());
-        return reviewRepository.save(review);
+        Review updatedReview = reviewRepository.save(review);
+        updateRating(currentUser, review.getMovieId(), newRating); // Rating 테이블 업데이트
+        return updatedReview;
     }
 
     // 리뷰 삭제
@@ -99,6 +107,7 @@ public class ReviewService {
             throw new SecurityException("리뷰를 삭제할 권한이 없습니다.");
         }
         reviewRepository.delete(review);
+        ratingRepository.deleteByUserAndMovieId(currentUser, review.getMovieId()); // Rating 테이블에서도 삭제
     }
 
     // 특정 영화에 대한 특정 사용자의 리뷰 조회
@@ -113,5 +122,28 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public List<Review> findByUser(User user) {
         return reviewRepository.findByUser(user);
+    }
+
+    /**
+     * Rating 테이블에 평점을 생성하거나 업데이트하는 헬퍼 메서드
+     * @param user 현재 사용자
+     * @param movieIdStr 영화 ID (String)
+     * @param ratingValue 평점 값
+     */
+    private void updateRating(User user, String movieIdStr, Integer ratingValue) {
+        Optional<Rating> existingRating = ratingRepository.findByUserAndMovieId(user, movieIdStr);
+
+        if (existingRating.isPresent()) {
+            Rating ratingToUpdate = existingRating.get();
+            ratingToUpdate.setRating(ratingValue);
+            ratingRepository.save(ratingToUpdate);
+        } else {
+            // 기본 생성자를 사용하고 setter로 값을 설정합니다.
+            Rating newRating = new Rating();
+            newRating.setUser(user);
+            newRating.setMovieId(movieIdStr);
+            newRating.setRating(ratingValue);
+            ratingRepository.save(newRating);
+        }
     }
 }

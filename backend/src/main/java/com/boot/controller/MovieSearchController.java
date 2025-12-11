@@ -71,12 +71,6 @@ public class MovieSearchController {
         }
     }
 
-    @GetMapping("/{movieId}/recommendations")
-    public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable("movieId") String movieId) {
-        List<MovieDoc> recommendations = movieSearchService.recommend(movieId);
-        return ResponseEntity.ok(recommendations);
-    }
-
     @Operation(summary = "오타 교정 제안 API", description = "입력된 키워드에 대한 오타 교정 제안을 제공하는 API")
     @GetMapping("/suggest")
     public ResponseEntity<List<String>> suggestKeywords(@RequestParam("keyword") String keyword) {
