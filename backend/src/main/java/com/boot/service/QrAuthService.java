@@ -2,6 +2,7 @@ package com.boot.service;
 
 import com.boot.dto.QrSessionStatusResponse;
 import com.boot.dto.QrSessionStatusResponse.QrAuthStatus;
+import com.boot.dto.TokenInfo;
 import com.boot.jwt.JwtTokenProvider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,9 +11,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -27,13 +30,16 @@ public class QrAuthService {
     private final ObjectMapper objectMapper;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final UserService userService; // UserService 주입
 
     public QrAuthService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper,
-                         JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
+                         JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService,
+                         UserService userService) { // 생성자에 UserService 추가
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
+        this.userService = userService;
     }
 
     @Data
@@ -45,10 +51,6 @@ public class QrAuthService {
         private String jwtToken;
     }
 
-    /**
-     * 새로운 QR 코드 인증 세션을 생성합니다.
-     * @return 생성된 세션 ID
-     */
     public String generateSession() {
         String sessionId = UUID.randomUUID().toString();
         String redisKey = QR_SESSION_KEY_PREFIX + sessionId;
@@ -65,13 +67,7 @@ public class QrAuthService {
         return sessionId;
     }
 
-    /**
-     * 모바일 앱으로부터 받은 정보로 QR 세션을 인증합니다.
-     * @param sessionId QR 코드로부터 얻은 세션 ID
-     * @param mobileAuthToken 모바일 앱에 로그인된 사용자의 JWT 토큰
-     * @return 인증 성공 여부
-     */
-    public boolean authenticateSession(String sessionId, String mobileAuthToken) {
+    public boolean authenticateSession(String sessionId, String mobileAuthToken, String username, String password) {
         String redisKey = QR_SESSION_KEY_PREFIX + sessionId;
         ValueOperations<String, String> ops = redisTemplate.opsForValue();
         String sessionJson = ops.get(redisKey);
@@ -81,71 +77,79 @@ public class QrAuthService {
             return false;
         }
 
-        QrSessionState sessionState; // try 블록 외부에서 선언
-
         try {
-            sessionState = objectMapper.readValue(sessionJson, QrSessionState.class);
-        } catch (JsonProcessingException e) {
-            System.err.println("Error deserializing QR session state for " + sessionId + ": " + e.getMessage());
-            throw new RuntimeException("Failed to read QR session state from Redis.", e);
-        }
+            QrSessionState sessionState = objectMapper.readValue(sessionJson, QrSessionState.class);
 
-        try {
             if (sessionState.getStatus() != QrAuthStatus.PENDING) {
                 System.out.println("Session " + sessionId + " is not in PENDING state. Current: " + sessionState.getStatus());
                 return false;
             }
 
-            // 1. mobileAuthToken 유효성 검증 및 사용자 정보 추출
-            if (!jwtTokenProvider.validateToken(mobileAuthToken)) {
-                sessionState.setStatus(QrAuthStatus.FAILED);
-                ops.set(redisKey, objectMapper.writeValueAsString(sessionState), QR_SESSION_TIMEOUT);
-                System.out.println("Session " + sessionId + " authentication failed: Invalid mobileAuthToken.");
+            String userIdentifier;
+            String webJwtToken;
+
+            // 1. 인증 방식 결정: mobileAuthToken 우선, 없으면 username/password 사용
+            if (StringUtils.hasText(mobileAuthToken)) {
+                // 기존 로직: 모바일 토큰으로 인증
+                if (!jwtTokenProvider.validateToken(mobileAuthToken)) {
+                    updateSessionStatus(redisKey, sessionState, QrAuthStatus.FAILED, null, null);
+                    System.out.println("Session " + sessionId + " authentication failed: Invalid mobileAuthToken.");
+                    return false;
+                }
+                userIdentifier = jwtTokenProvider.getUserPk(mobileAuthToken);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(userIdentifier);
+                String userRole = userDetails.getAuthorities().stream()
+                                .findFirst()
+                                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                                .orElse("ROLE_USER");
+                webJwtToken = jwtTokenProvider.createToken(userIdentifier, userRole);
+
+            } else if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
+                // 새로운 로직: username/password로 인증
+                try {
+                    TokenInfo tokenInfo = userService.login(username, password);
+                    userIdentifier = username;
+                    webJwtToken = tokenInfo.getAccessToken(); // 로그인 성공 후 발급된 토큰 사용
+                } catch (AuthenticationException | IllegalArgumentException e) {
+                    updateSessionStatus(redisKey, sessionState, QrAuthStatus.FAILED, null, null);
+                    System.out.println("Session " + sessionId + " authentication failed for user " + username + ": " + e.getMessage());
+                    return false;
+                }
+            } else {
+                // 인증 정보가 전혀 없는 경우
+                updateSessionStatus(redisKey, sessionState, QrAuthStatus.FAILED, null, null);
+                System.out.println("Session " + sessionId + " authentication failed: No credentials provided.");
                 return false;
             }
 
-            // 토큰에서 사용자 이름 (이메일) 추출
-            String username = jwtTokenProvider.getUserPk(mobileAuthToken);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            String userRole = userDetails.getAuthorities().stream()
-                            .findFirst()
-                            .map(grantedAuthority -> grantedAuthority.getAuthority())
-                            .orElse("ROLE_USER");
-
-            // 2. 웹 페이지용 새로운 JWT 토큰 생성
-            String webJwtToken = jwtTokenProvider.createToken(username, userRole);
-
-            sessionState.setStatus(QrAuthStatus.AUTHENTICATED);
-            sessionState.setUserId(username);
-            sessionState.setJwtToken(webJwtToken); // 웹 페이지용 토큰 저장
-
-            // Redis에 업데이트된 세션 상태 저장 (TTL 유지)
-            ops.set(redisKey, objectMapper.writeValueAsString(sessionState), QR_SESSION_TIMEOUT);
-            System.out.println("Session " + sessionId + " authenticated by user: " + username + " with mobile token in Redis.");
+            // 2. 인증 성공 후 세션 상태 업데이트
+            updateSessionStatus(redisKey, sessionState, QrAuthStatus.AUTHENTICATED, userIdentifier, webJwtToken);
+            System.out.println("Session " + sessionId + " authenticated by user: " + userIdentifier + " in Redis.");
             return true;
 
         } catch (JsonProcessingException e) {
-            System.err.println("Error serializing QR session state for " + sessionId + ": " + e.getMessage());
-            throw new RuntimeException("Failed to update QR session state in Redis.", e);
-        } catch (Exception e) { // UserDetailsService.loadUserByUsername 등에서 발생할 수 있는 예외 처리
-            // 이 catch 블록은 sessionState가 이미 초기화된 상태에서 발생한 예외를 처리합니다.
-            // 따라서 sessionState는 항상 null이 아닙니다.
-            sessionState.setStatus(QrAuthStatus.FAILED);
+            System.err.println("Error processing QR session state for " + sessionId + ": " + e.getMessage());
+            throw new RuntimeException("Failed to process QR session state.", e);
+        } catch (Exception e) {
+            // 예상치 못한 오류 발생 시 FAILED 처리
             try {
-                ops.set(redisKey, objectMapper.writeValueAsString(sessionState), QR_SESSION_TIMEOUT);
-            } catch (JsonProcessingException ex) {
-                System.err.println("Error serializing FAILED state: " + ex.getMessage());
+                QrSessionState sessionState = objectMapper.readValue(ops.get(redisKey), QrSessionState.class);
+                updateSessionStatus(redisKey, sessionState, QrAuthStatus.FAILED, null, null);
+            } catch (Exception innerEx) {
+                System.err.println("Failed to update session to FAILED after an exception: " + innerEx.getMessage());
             }
             System.out.println("Session " + sessionId + " authentication failed due to internal error: " + e.getMessage());
             return false;
         }
     }
 
-    /**
-     * 특정 세션 ID의 현재 인증 상태를 조회합니다.
-     * @param sessionId 조회할 세션 ID
-     * @return 세션 상태 응답 DTO
-     */
+    private void updateSessionStatus(String redisKey, QrSessionState sessionState, QrAuthStatus status, String userId, String jwtToken) throws JsonProcessingException {
+        sessionState.setStatus(status);
+        sessionState.setUserId(userId);
+        sessionState.setJwtToken(jwtToken);
+        redisTemplate.opsForValue().set(redisKey, objectMapper.writeValueAsString(sessionState), QR_SESSION_TIMEOUT);
+    }
+
     public QrSessionStatusResponse getSessionStatus(String sessionId) {
         String redisKey = QR_SESSION_KEY_PREFIX + sessionId;
         String sessionJson = redisTemplate.opsForValue().get(redisKey);

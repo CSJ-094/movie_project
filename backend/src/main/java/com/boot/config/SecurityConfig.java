@@ -7,6 +7,8 @@ import com.boot.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager; // AuthenticationManager 임포트
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration; // AuthenticationConfiguration 임포트
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -35,9 +37,16 @@ public class SecurityConfig {
                 return new BCryptPasswordEncoder();
         }
 
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                        CustomOAuth2UserService customOAuth2UserService) throws Exception {
+
+    // AuthenticationManager 빈 노출
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   CustomOAuth2UserService customOAuth2UserService) throws Exception {
 
                 http
                                 // CORS 설정
@@ -52,13 +61,17 @@ public class SecurityConfig {
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                                // 인가 설정
-                                .authorizeHttpRequests(authz -> authz
-                                                // 로그인/회원가입/이메일 인증/소셜 로그인 등 공개
-                                                .requestMatchers("/api/user/login", "/api/user/signup",
-                                                                "/api/user/verify", "/", "/auth/**", "/oauth2/**",
-                                                                "/login/**", "/error")
-                                                .permitAll()
+
+                // 인가 설정
+                .authorizeHttpRequests(authz -> authz
+                        // QR 인증 관련 엔드포인트 공개 (가장 먼저 위치)
+                        .requestMatchers("/api/qr-auth/**").permitAll()
+
+                        // 로그인/회원가입/이메일 인증/소셜 로그인 등 공개
+                        .requestMatchers("/api/user/login", "/api/user/signup",
+                                "/api/user/verify", "/", "/auth/**", "/oauth2/**",
+                                "/login/**", "/error")
+                        .permitAll()
 
                                                 // Swagger 공개
                                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui.html",
