@@ -62,37 +62,56 @@ public class MovieSearchService {
             new GenreOption(37, "서부"));
 
     public List<MovieDoc> getWideCandidatePool() {
+        try {
+            // 퀵매치 후보: 유명하고, 어느 정도 인기 있고, 성인 영화는 제외
+            SearchResponse<Movie> response = elasticsearchClient.search(s -> s
+                            .index("movies")
+                            .size(3000) // 넉넉하게 3000개 정도까지
+                            .query(q -> q
+                                    .bool(b -> b
+                                            // 1) 최소 평가 수: 듣보잡 컷
+                                            .filter(f -> f.range(r -> r
+                                                    .field("vote_count")
+                                                    .gte(JsonData.of(500)) // 필요하면 300, 800 이런 식으로 조절 가능
+                                            ))
+                                            // 2) 최소 인기도: 너무 묻힌 영화 컷
+                                            .filter(f -> f.range(r -> r
+                                                    .field("popularity")
+                                                    .gte(JsonData.of(20))
+                                            ))
+                                            // 3) 성인 영화 제외
+                                            .filter(f -> f.term(t -> t
+                                                    .field("adult")
+                                                    .value(false)
+                                            ))
+                                    )
+                            )
+                            // 평가 수 많은 순 + 인기도 순으로 정렬
+                            .sort(sort -> sort
+                                    .field(f -> f
+                                            .field("vote_count")
+                                            .order(SortOrder.Desc)
+                                    )
+                            )
+                            .sort(sort -> sort
+                                    .field(f -> f
+                                            .field("popularity")
+                                            .order(SortOrder.Desc)
+                                    )
+                            ),
+                    Movie.class
+            );
 
-        // 인기 TOP 800
-        MovieSearchRequest req1 = new MovieSearchRequest();
-        req1.setPage(0);
-        req1.setSize(800);
+            return response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .map(this::toMovieDoc)
+                    .toList();
 
-        List<MovieDoc> popular = search(req1).getMovies();
-
-        // 평점 TOP 800
-        MovieSearchRequest req2 = new MovieSearchRequest();
-        req2.setPage(1);
-        req2.setSize(800);
-        req2.setMinRating(7.0f);
-
-        List<MovieDoc> topRated = search(req2).getMovies();
-
-        // 최근 10년 신작 TOP 300
-        MovieSearchRequest req3 = new MovieSearchRequest();
-        req3.setPage(0);
-        req3.setSize(300);
-        req3.setReleaseDateFrom(LocalDate.now().minusYears(10));
-
-        List<MovieDoc> recent = search(req3).getMovies();
-
-        // 합치고 중복 제거
-        Map<String, MovieDoc> merged = new HashMap<>();
-        for (MovieDoc m : popular) merged.put(m.getMovieId(), m);
-        for (MovieDoc m : topRated) merged.put(m.getMovieId(), m);
-        for (MovieDoc m : recent) merged.put(m.getMovieId(), m);
-
-        return new ArrayList<>(merged.values()); // 약 1500개
+        } catch (Exception e) {
+            logger.error("퀵매치 후보 로딩 중 오류 발생: {}", e.getMessage(), e);
+            throw new RuntimeException("퀵매치 후보 로딩 실패: " + e.getMessage(), e);
+        }
     }
 
 

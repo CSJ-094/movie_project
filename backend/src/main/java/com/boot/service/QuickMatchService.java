@@ -7,6 +7,7 @@ import com.boot.entity.QuickMatchSession;
 import com.boot.repository.QuickMatchFeedbackRepository;
 import com.boot.repository.QuickMatchSessionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,11 +17,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QuickMatchService {
 
     private final QuickMatchSessionRepository sessionRepository;
     private final QuickMatchFeedbackRepository feedbackRepository;
     private final MovieSearchService movieSearchService;
+    private final AiRecommendationService aiRecommendationService;
 
     // 장르 ID → 이름 매핑
     private static final Map<Integer, String> GENRE_NAME_MAP = Map.ofEntries(
@@ -134,8 +137,8 @@ public class QuickMatchService {
                 .map(QuickMatchFeedback::getMovieId)
                 .toList();
 
-        // 넓은 후보 풀: 인기 상위 1500개 정도
-        List<MovieDoc> pool = movieSearchService.findPopularMovies(1500);
+        // 넓은 후보 풀: 평가수/인기도 기반으로 걸러진 유명 영화들
+        List<MovieDoc> pool = movieSearchService.getWideCandidatePool();
 
         // 이미 평가한 영화는 제외
         pool = pool.stream()
@@ -255,7 +258,7 @@ public class QuickMatchService {
                 .toList();
 
         List<QuickMatchRecommendationDto> recommendations =
-                buildRecommendations(pref, seenMovieIds);
+                buildRecommendations(pref, seenMovieIds, summaryDto);
 
         return QuickMatchResultResponse.builder()
                 .summary(summaryDto)
@@ -577,7 +580,8 @@ public class QuickMatchService {
      */
     private List<QuickMatchRecommendationDto> buildRecommendations(
             PreferenceSummary pref,
-            List<String> seenMovieIds
+            List<String> seenMovieIds,
+            QuickMatchResultSummaryDto summaryDto
     ) {
         MovieSearchRequest req = new MovieSearchRequest();
 
@@ -600,33 +604,19 @@ public class QuickMatchService {
                     .toList());
         }
 
-        // 연도는 실제 추천 로직에서는 사용하지 않음
-
         MovieSearchResponse resp = movieSearchService.search(req);
 
-        List<QuickMatchRecommendationDto> result = new ArrayList<>();
+        // 🔹 1차로 후보 MovieDoc만 모아 둔다
+        List<MovieDoc> selected = new ArrayList<>();
 
-        // 1차: 장르 필터 포함 결과에서 추천 뽑기
         for (MovieDoc doc : resp.getMovies()) {
-
             if (seenMovieIds.contains(doc.getMovieId())) continue;
-
-            String reason = buildReasonText(pref);
-
-            result.add(
-                    QuickMatchRecommendationDto.builder()
-                            .movieId(doc.getMovieId())
-                            .title(doc.getTitle())
-                            .posterUrl(doc.getPosterUrl())
-                            .reason(reason)
-                            .build()
-            );
-
-            if (result.size() >= 10) break;
+            selected.add(doc);
+            if (selected.size() >= 10) break;
         }
 
-        // 2차: 추천이 너무 적으면(예: 5개 미만) 장르 필터 풀고 다시 채우기
-        if (result.size() < 5) {
+        // 🔹 추천이 너무 적으면(예: 5개 미만) 장르 필터 풀고 다시 채우기
+        if (selected.size() < 5) {
             MovieSearchRequest fallbackReq = new MovieSearchRequest();
             fallbackReq.setPage(0);
             fallbackReq.setSize(120);
@@ -638,23 +628,38 @@ public class QuickMatchService {
 
                 if (seenMovieIds.contains(doc.getMovieId())) continue;
 
-                boolean alreadyAdded = result.stream()
+                boolean alreadyAdded = selected.stream()
                         .anyMatch(r -> r.getMovieId().equals(doc.getMovieId()));
                 if (alreadyAdded) continue;
 
-                String reason = buildReasonText(pref);
-
-                result.add(
-                        QuickMatchRecommendationDto.builder()
-                                .movieId(doc.getMovieId())
-                                .title(doc.getTitle())
-                                .posterUrl(doc.getPosterUrl())
-                                .reason(reason)
-                                .build()
-                );
-
-                if (result.size() >= 10) break;
+                selected.add(doc);
+                if (selected.size() >= 10) break;
             }
+        }
+
+        if (selected.isEmpty()) {
+            return List.of();
+        }
+
+        // 🔹 여기서 한 번만 AI 호출해서 reason 리스트 받아오기
+        List<String> reasons = aiRecommendationService.generateReasons(summaryDto, selected);
+
+        // 🔹 영화 + reason 매핑해서 DTO로 변환
+        List<QuickMatchRecommendationDto> result = new ArrayList<>();
+
+        for (int i = 0; i < selected.size(); i++) {
+            MovieDoc doc = selected.get(i);
+            String reason = (i < reasons.size() ? reasons.get(i)
+                    : "당신의 취향과 장르 선호를 반영해 고른 추천 작품이에요.");
+
+            result.add(
+                    QuickMatchRecommendationDto.builder()
+                            .movieId(doc.getMovieId())
+                            .title(doc.getTitle())
+                            .posterUrl(doc.getPosterUrl())
+                            .reason(reason)
+                            .build()
+            );
         }
 
         return result;

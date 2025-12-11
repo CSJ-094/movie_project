@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import StarRating from '../components/StarRating';
+import TicketModal from '../components/TicketModal';
 import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
@@ -114,6 +115,10 @@ const MovieDetailSkeleton: React.FC = () => (
 );
 
 const MovieDetailPage: React.FC = () => {
+    // 티켓 모달 상태
+    const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+    // 샘플 예매 정보 (실제 예매 연동 전까지 임시)
+    const [ticketInfo, setTicketInfo] = useState<any>(null);
   const { movieId } = useParams<{ movieId: string }>();
   const [movie, setMovie] = useState<MovieDetails | null>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
@@ -434,12 +439,22 @@ useEffect(() => {
   };
 
   const handleBooking = () => {
-    if (isLoggedIn) {
-      alert('예매 페이지로 이동합니다. (구현 필요)');
-    } else {
+    if (!isLoggedIn) {
       alert('로그인이 필요한 서비스입니다.');
       navigate('/login');
+      return;
     }
+    if (!movie) return;
+    // 예매 페이지로 이동 (영화 정보 state로 전달)
+    navigate('/booking', {
+      state: {
+        movieId: movie.id,
+        title: movie.title,
+        posterUrl: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+        voteAverage: movie.vote_average,
+        releaseDate: movie.release_date
+      }
+    });
   };
 
   const openTrailerModal = () => setIsTrailerModalOpen(true);
@@ -1008,6 +1023,11 @@ const visibleReviews = showAllReviews
           </div>
         </div>
       </div> {/* 하단 컨텐츠 섹션 끝 */}
+
+      {/* 티켓 모달 */}
+      {isTicketModalOpen && ticketInfo && (
+        <TicketModal booking={ticketInfo} onClose={() => setIsTicketModalOpen(false)} />
+      )}
 
       {/* 트레일러 모달 */}
       {isTrailerModalOpen && trailerKey && (

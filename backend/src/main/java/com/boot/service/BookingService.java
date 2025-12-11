@@ -33,6 +33,8 @@ public class BookingService {
     private final ShowtimeRepository showtimeRepository;
     private final UserRepository userRepository;
     private final ElasticsearchClient elasticsearchClient;
+    private final com.boot.repository.PaymentRepository paymentRepository;
+    private final com.boot.service.PaymentService paymentService;
 
     /**
      * 예매 페이지용 영화 목록 조회 (지역별 실제 상영 중인 영화)
@@ -226,10 +228,25 @@ public class BookingService {
             throw new IllegalStateException("취소할 수 없는 예매입니다.");
         }
 
-        // 예매 취소
+        // 1. 결제 정보 조회 (예매에 연결된 결제)
+        var payments = paymentRepository.findByBookingId(bookingId);
+        if (payments != null && !payments.isEmpty()) {
+            var payment = payments.get(0); // 하나의 예매에 결제 1건 가정
+            if (payment.getStatus() != com.boot.entity.Payment.PaymentStatus.CANCELED) {
+                // 결제 취소 요청
+                com.boot.dto.PaymentCancelRequest cancelRequest = new com.boot.dto.PaymentCancelRequest(
+                        payment.getPaymentKey(), "예매 취소로 인한 결제 취소");
+                var result = paymentService.cancelPayment(cancelRequest);
+                if (!(Boolean.TRUE.equals(result.get("success")))) {
+                    throw new RuntimeException("결제 취소에 실패했습니다.");
+                }
+            }
+        }
+
+        // 2. 예매 취소
         booking.cancel();
 
-        // 좌석 복구
+        // 3. 좌석 복구
         Showtime showtime = booking.getShowtime();
         showtime.increaseAvailableSeats(booking.getSeatCount());
 
