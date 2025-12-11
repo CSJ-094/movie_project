@@ -5,6 +5,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ko } from 'date-fns/locale';
 
+// ...existing code...
 interface Movie {
   movieId: number;
   title: string;
@@ -50,16 +51,24 @@ interface Showtime {
 }
 
 export default function BookingPage() {
+    // 영화사별 드롭다운 상태 관리
+    const [openChains, setOpenChains] = useState<{[chain: string]: boolean}>({});
+    const toggleChain = (chain: string) => {
+      setOpenChains(prev => ({ ...prev, [chain]: !prev[chain] }));
+    };
   const location = useLocation();
   const navigate = useNavigate();
-  const movieFromDetail = location.state as { movieId?: number; title?: string; posterUrl?: string; voteAverage?: number; releaseDate?: string } | null;
-  
+  // nowPlayingMovies도 함께 받을 수 있도록 타입 확장
+  const movieFromDetail = location.state as { movieId?: number; title?: string; posterUrl?: string; voteAverage?: number; releaseDate?: string; nowPlayingMovies?: Movie[] } | null;
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedTheater, setSelectedTheater] = useState<Theater | null>(null);
   const [selectedShowtime, setSelectedShowtime] = useState<Showtime | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [regions, setRegions] = useState<RegionGroup[]>([]);
+  const [regionGroups, setRegionGroups] = useState<RegionGroup[]>([]); // [{name: 지역, theaters: []}]
+  const [selectedRegionIdx, setSelectedRegionIdx] = useState(0); // 좌측 지역 인덱스
+  // 특별관 탭 제거: theaterTab 관련 코드 삭제
   const [showtimes, setShowtimes] = useState<Showtime[]>([]);
   const [loadingShowtimes, setLoadingShowtimes] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -129,6 +138,32 @@ export default function BookingPage() {
 };
 
   useEffect(() => {
+    // location.state에 nowPlayingMovies가 있으면 우선 사용
+    if (movieFromDetail && Array.isArray(movieFromDetail.nowPlayingMovies) && movieFromDetail.nowPlayingMovies.length > 0) {
+      setMovies(movieFromDetail.nowPlayingMovies);
+      // 선택 영화도 맞춰서 세팅
+      if (movieFromDetail.movieId) {
+        const matchedMovie = movieFromDetail.nowPlayingMovies.find((m) => m.movieId === movieFromDetail.movieId);
+        if (matchedMovie) {
+          setSelectedMovie(matchedMovie);
+        } else {
+          // 목록에 없는 경우(상영 중이 아님) 맨 앞에 추가
+          const newMovie: Movie = {
+            movieId: movieFromDetail.movieId,
+            title: movieFromDetail.title || '',
+            posterUrl: movieFromDetail.posterUrl || '',
+            voteAverage: movieFromDetail.voteAverage || 0,
+            releaseDate: movieFromDetail.releaseDate || '',
+            overview: '',
+            isNowPlaying: true
+          };
+          setMovies([newMovie, ...movieFromDetail.nowPlayingMovies]);
+          setSelectedMovie(newMovie);
+        }
+      }
+      return;
+    }
+    // 기존 fetchMovies 로직 (백엔드에서 가져오기)
     const fetchMovies = async () => {
       try {
         const response = await axios.get('http://localhost:8484/api/bookings/movies', {
@@ -138,26 +173,20 @@ export default function BookingPage() {
         if (!Array.isArray(movieList) && Array.isArray(response.data.movies)) {
           movieList = response.data.movies;
         }
-        // 배열이 아니면 빈 배열로 초기화 (find 오류 방지)
         if (!Array.isArray(movieList)) {
           movieList = [];
         }
-        // API 응답의 is_now_playing 값을 Movie 타입에 맞게 변환
         movieList = movieList.map((m: any) => ({
           ...m,
           isNowPlaying: m.is_now_playing ?? m.isNowPlaying
         }));
-
-        // MovieDetailPage에서 전달받은 영화 정보가 있으면 처리
         if (movieFromDetail && movieFromDetail.movieId) {
           const matchedMovie = movieList.find(
             (m: Movie) => m.movieId === movieFromDetail.movieId
           );
           if (matchedMovie) {
-            // 목록에 이미 있는 경우 해당 영화 선택
             setSelectedMovie(matchedMovie);
           } else {
-            // 목록에 없는 경우 (상영 중이 아님) 맨 앞에 추가
             const newMovie: Movie = {
               movieId: movieFromDetail.movieId,
               title: movieFromDetail.title || '',
@@ -165,13 +194,12 @@ export default function BookingPage() {
               voteAverage: movieFromDetail.voteAverage || 0,
               releaseDate: movieFromDetail.releaseDate || '',
               overview: '',
-              isNowPlaying: true // 예매하기 진입 시 기본값 true로 설정
+              isNowPlaying: true
             };
             movieList = [newMovie, ...movieList];
             setSelectedMovie(newMovie);
           }
         }
-        // 항상 10개만 보여주기
         setMovies(movieList.slice(0, 10));
       } catch (error) {
         console.error('영화 목록 가져오기 실패:', error);
@@ -182,35 +210,27 @@ export default function BookingPage() {
 
   // 부산 극장 데이터 가져오기
   useEffect(() => {
+    // 전국 극장 데이터 불러와서 지역별 그룹핑
     const fetchTheaters = async () => {
       try {
-        const response = await axios.get('http://localhost:8484/api/theaters', {
-          params: { region: '부산' }
-        });
-        console.log('극장 API 응답:', response.data);
-        // API 응답이 배열이 아니거나, 객체 안에 theaters 배열이 있는 경우 모두 처리
+        const response = await axios.get('http://localhost:8484/api/theaters');
         const theaterList: Theater[] = Array.isArray(response.data) ? response.data : (response.data?.theaters || []);
-
-        // 체인별로 그룹핑
-        const groupedByChain = theaterList.reduce((acc, theater) => {
-          const chain = theater.chain;
-          if (!acc[chain]) {
-            acc[chain] = [];
-          }
-          acc[chain].push(theater);
+        // 지역별 그룹핑
+        const groupedByRegion = theaterList.reduce((acc, theater) => {
+          const region = theater.region;
+          if (!acc[region]) acc[region] = [];
+          acc[region].push(theater);
           return acc;
         }, {} as Record<string, Theater[]>);
-        // RegionGroup 형식으로 변환
-        const regionGroups: RegionGroup[] = Object.keys(groupedByChain).map(chain => ({
-          name: chain,
-          theaters: groupedByChain[chain]
+        const regionGroups: RegionGroup[] = Object.keys(groupedByRegion).map(region => ({
+          name: region,
+          theaters: groupedByRegion[region]
         }));
-        setRegions(regionGroups);
+        setRegionGroups(regionGroups);
       } catch (error) {
-        console.error('극장 목록 가져오기 실패:', error);
+        setRegionGroups([]);
       }
     };
-
     fetchTheaters();
   }, []);
 
@@ -343,8 +363,8 @@ export default function BookingPage() {
           {/* 선택한 영화 포스터 영역 */}
           <div className="col-span-2 border-r dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-              <div className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
-                선택 영화
+              <div className="py-3 px-4 text-center font-bold text-lg text-gray-900 dark:text-white">
+                선택하신 영화
               </div>
             </div>
             <div className="p-4">
@@ -373,8 +393,8 @@ export default function BookingPage() {
           {/* 영화 선택 */}
           <div className="col-span-3 border-r dark:border-gray-700 min-h-[600px] bg-white dark:bg-gray-800">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-              <div className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
-                영화
+              <div className="py-3 px-4 text-center font-bold text-lg text-gray-900 dark:text-white">
+                그 외 상영중인 영화들
               </div>
             </div>
             <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 250px)' }}>
@@ -415,38 +435,65 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* 극장 선택 */}
-          <div className="col-span-2 border-r dark:border-gray-700 min-h-[600px] bg-white dark:bg-gray-800">
+          {/* 극장 선택 (첨부 이미지 스타일) */}
+          <div className="col-span-3 border-r dark:border-gray-700 min-h-[600px] bg-white dark:bg-gray-800">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-              <div className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
-                극장
-              </div>
+              <div className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">극장</div>
+              {/* 탭 */}
+              {/* 특별관 탭 완전 제거 */}
             </div>
-            <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 250px)' }}>
-              {regions.map((regionGroup) => (
-                <div key={regionGroup.name} className="border-b dark:border-gray-700">
-                  <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2">
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{regionGroup.name}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({regionGroup.theaters.length})</span>
-                  </div>
-                  {regionGroup.theaters.map((theater) => (
-                    <button
-                      key={theater.id}
-                      onClick={() => setSelectedTheater(theater)}
-                      className={`w-full px-6 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm ${
-                        selectedTheater?.id === theater.id ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium' : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {theater.name.replace(theater.chain, '').trim()}
-                    </button>
-                  ))}
-                </div>
-              ))}
-              {regions.length === 0 && (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                  <p className="font-medium mb-2">극장 로딩 중...</p>
-                </div>
-              )}
+            <div className="flex h-full" style={{minHeight:'500px'}}>
+              {/* 좌측: 지역 리스트 */}
+              <div className="w-[45%] border-r dark:border-gray-700 overflow-y-auto bg-[#1a2233]" style={{maxHeight:'calc(100vh - 250px)'}}>
+                {regionGroups.map((region, idx) => (
+                  <button
+                    key={region.name}
+                    onClick={()=>setSelectedRegionIdx(idx)}
+                    className={`w-full px-4 py-2 text-left text-sm border-b dark:border-gray-700 transition-all
+                      ${selectedRegionIdx===idx?'bg-[#232b3e] text-white font-bold':'bg-transparent text-gray-300'}
+                      hover:bg-[#232b3e] hover:text-white`}
+                  >
+                    {region.name} <span className="text-xs text-gray-400">({region.theaters.length})</span>
+                  </button>
+                ))}
+              </div>
+              {/* 우측: 해당 지역의 극장 리스트 (영화사별 그룹핑) */}
+              <div className="w-[55%] overflow-y-auto bg-[#232b3e]" style={{maxHeight:'calc(100vh - 250px)'}}>
+                {(() => {
+                  // 특별관 필터 완전 제거: 항상 전체 극장만 노출
+                  const theaters = (regionGroups[selectedRegionIdx]?.theaters||[]);
+                  // 영화사별 그룹핑
+                  const chains = Array.from(new Set(theaters.map(t=>t.chain)));
+                  return chains.map(chain => (
+                    <div key={chain} className="mb-4">
+                      <button
+                        className="flex items-center px-4 py-2 bg-gradient-to-r from-[#2c3e70] to-[#1a2233] rounded-t-lg border-b-2 border-[#7fa2ff] w-full font-bold text-[#7fa2ff] justify-between"
+                        onClick={() => toggleChain(chain)}
+                      >
+                        <span>{chain}</span>
+                        <span>{openChains[chain] ? '▲' : '▼'}</span>
+                      </button>
+                      {openChains[chain] && (
+                        <div className="border-l-4 border-[#7fa2ff] bg-[#232b3e]">
+                          {theaters.filter(t=>t.chain===chain).map(theater=>(
+                            <button
+                              key={theater.id}
+                              onClick={()=>setSelectedTheater(theater)}
+                              className={`w-full px-4 py-2 text-left text-sm border-b border-gray-700 transition-all
+                                ${selectedTheater?.id===theater.id
+                                  ? 'bg-[#232b3e] text-white font-bold'
+                                  : 'bg-transparent text-gray-300 font-bold'}
+                                hover:bg-[#232b3e] hover:text-white`}
+                            >
+                              {theater.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
           </div>
 

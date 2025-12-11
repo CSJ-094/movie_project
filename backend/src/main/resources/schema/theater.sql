@@ -63,3 +63,17 @@ CREATE TABLE IF NOT EXISTS booking (
     INDEX idx_booking_status (booking_status),
     INDEX idx_booking_time (booking_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+ALTER TABLE showtime
+  ADD COLUMN region VARCHAR(50) NOT NULL AFTER price,
+  ADD COLUMN city VARCHAR(50) NOT NULL AFTER region,
+  ADD INDEX idx_region_city_start (region, city, start_time),
+  ADD INDEX idx_region_city_movie (region, city, movie_id, start_time);
+
+  UPDATE showtime s
+JOIN screen sc ON s.screen_id = sc.id
+JOIN theater t ON sc.theater_id = t.id
+SET s.region = t.region,
+    s.city = t.city
+WHERE s.region IS NULL OR s.city IS NULL;
