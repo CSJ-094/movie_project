@@ -1,5 +1,6 @@
 package com.boot.controller;
 
+import com.boot.dto.MovieDoc;
 import java.time.LocalDate;
 import com.boot.dto.MovieSearchRequest;
 import com.boot.dto.MovieSearchResponse;
@@ -12,6 +13,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -105,5 +107,12 @@ public class MovieController {
         request.setSortBy("popularity");
         request.setSortOrder("desc");
         return ResponseEntity.ok(movieSearchService.search(request));
+    }
+
+    @Operation(summary = "추천 영화 목록 조회", description = "특정 영화와 유사한 영화 목록을 조회합니다.")
+    @GetMapping("/{movieId}/recommendations")
+    public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable("movieId") String movieId) {
+        List<MovieDoc> recommendations = movieSearchService.recommend(movieId);
+        return ResponseEntity.ok(recommendations);
     }
 }

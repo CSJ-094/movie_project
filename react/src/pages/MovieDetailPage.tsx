@@ -6,7 +6,10 @@ import TicketModal from '../components/TicketModal';
 import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
-import AppHeader from '../components/AppHeader'; // [수정] 올바른 경로로 변경
+import AppHeader from '../components/AppHeader';
+
+// [추가] NO_IMAGE_URL 상수를 정의하여 ReferenceError를 해결합니다.
+const NO_IMAGE_URL = 'https://placehold.co/200x300?text=No+Image';
 
 // --- 타입 정의 ---
 interface MovieDetails {
