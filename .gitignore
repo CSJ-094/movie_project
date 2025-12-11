@@ -4,3 +4,6 @@
 
 # .iml 파일 (모듈 파일)을 무시합니다.
 *.iml
+
+# Node.js 패키지 종속성 폴더 제외
+node_modules/

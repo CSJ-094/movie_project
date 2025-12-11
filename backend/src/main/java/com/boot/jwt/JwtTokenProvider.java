@@ -38,28 +38,24 @@ public class JwtTokenProvider {
 
     public JwtTokenProvider(@Value("${jwt.secret-key}") String secretKey,
             @Value("${jwt.expiration-time}") long expirationTime) {
-        // 0.12.x에서는 Key 객체를 직접 생성해서 사용 권장
-        // HMAC-SHA 알고리즘을 위한 키 생성 (문자열 키를 바이트로 변환)
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
         this.expirationTime = expirationTime;
     }
 
     // 유저 정보를 가지고 AccessToken을 생성하는 메서드
     public TokenInfo generateToken(Authentication authentication) {
-        // 권한 가져오기
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
         Instant now = Instant.now();
-        // Access Token 생성
         Date accessTokenExpiresIn = Date.from(now.plusMillis(expirationTime));
         String accessToken = Jwts.builder()
                 .subject(authentication.getName())
                 .claim(AUTHORITIES_KEY, authorities)
                 .issuedAt(Date.from(now))
                 .expiration(accessTokenExpiresIn)
-                .signWith(key) // 0.12.x 방식: 알고리즘 자동 추론
+                .signWith(key)
                 .compact();
 
         return TokenInfo.builder()
@@ -89,19 +85,16 @@ public class JwtTokenProvider {
 
     // JWT 토큰을 복호화하여 토큰에 들어있는 정보를 꺼내는 메서드
     public Authentication getAuthentication(String accessToken) {
-        // 토큰 복호화
         Claims claims = parseClaims(accessToken);
 
         if (claims.get(AUTHORITIES_KEY) == null) {
             throw new RuntimeException("권한 정보가 없는 토큰입니다.");
         }
 
-        // 클레임에서 권한 정보 가져오기
         Collection<? extends GrantedAuthority> authorities = Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
-        // UserDetails 객체를 만들어서 Authentication 리턴
         UserDetails principal = new User(claims.getSubject(), "", authorities);
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);
     }
@@ -124,6 +117,20 @@ public class JwtTokenProvider {
             log.info("JWT claims string is empty.", e);
         }
         return false;
+    }
+
+    /**
+     * JWT 토큰에서 사용자 고유값(subject, 일반적으로 이메일)을 추출합니다.
+     * @param token JWT 토큰 문자열
+     * @return 토큰의 subject (사용자 이메일)
+     */
+    public String getUserPk(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
     }
 
     private Claims parseClaims(String accessToken) {
