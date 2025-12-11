@@ -94,6 +94,40 @@ const MovieDetailPage: React.FC = () => {
   const [cast, setCast] = useState<Cast[]>([]);
   const [collection] = useState<Collection | null>(null);
   const [recommendedMovies, setRecommendedMovies] = useState<RecommendedMovie[]>([]);
+  // Top 10 now playing movies 상태
+  const [nowPlayingMovies, setNowPlayingMovies] = useState<{
+    movieId: number;
+    title: string;
+    posterUrl: string;
+    voteAverage: number;
+    releaseDate: string;
+    overview: string;
+    isNowPlaying: boolean;
+  }[]>([]);
+    // Top 10 now playing movies fetch
+    useEffect(() => {
+      const fetchNowPlaying = async () => {
+        try {
+          // TMDB API에서 now playing 영화 10개 가져오기
+          const apiKey = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
+          const res = await fetch(`https://api.themoviedb.org/3/movie/now_playing?api_key=${apiKey}&language=ko-KR&page=1`);
+          const data = await res.json();
+          const movies = (data.results || []).slice(0, 10).map((m: any) => ({
+            movieId: m.id,
+            title: m.title,
+            posterUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : '',
+            voteAverage: m.vote_average,
+            releaseDate: m.release_date,
+            overview: m.overview,
+            isNowPlaying: true
+          }));
+          setNowPlayingMovies(movies);
+        } catch (e) {
+          setNowPlayingMovies([]);
+        }
+      };
+      fetchNowPlaying();
+    }, []);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { isLoggedIn } = useAuth();
@@ -432,14 +466,16 @@ useEffect(() => {
       return;
     }
     if (!movie) return;
-    // 예매 페이지로 이동 (영화 정보 state로 전달)
+    // 예매 페이지로 이동 (영화 정보 + top 10 now playing 영화 state로 전달)
     navigate('/booking', {
       state: {
         movieId: movie.id,
         title: movie.title,
         posterUrl: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
         voteAverage: movie.vote_average,
-        releaseDate: movie.release_date
+        releaseDate: movie.release_date,
+        // top 10 now playing 영화 리스트 전달
+        nowPlayingMovies: nowPlayingMovies
       }
     });
   };
@@ -760,8 +796,14 @@ const visibleReviews = showAllReviews
                 <Link to={`/person/${actor.id}`} key={actor.id} className="flex-shrink-0 w-32 text-center no-underline">
                   <div>
                     <img
-                      src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
-                      alt={actor.name}
+                        src={actor.profile_path
+                            ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                            : NO_IMAGE_URL
+                        }
+                        alt={actor.name}
+                        onError={(e) => {
+                          e.currentTarget.src = NO_IMAGE_URL;
+                        }}
                       className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
                     />
                     <p className="mt-2 font-semibold text-sm text-gray-900 dark:text-white">{actor.name}</p>
