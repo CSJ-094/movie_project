@@ -1,5 +1,6 @@
 package com.boot.controller;
 
+import com.boot.dto.MovieDoc;
 import java.time.LocalDate;
 
 import com.boot.dto.MovieDoc;
