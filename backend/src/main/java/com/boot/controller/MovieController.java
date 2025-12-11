@@ -1,6 +1,8 @@
 package com.boot.controller;
 
 import java.time.LocalDate;
+
+import com.boot.dto.MovieDoc;
 import com.boot.dto.MovieSearchRequest;
 import com.boot.dto.MovieSearchResponse;
 import com.boot.service.UserService;
@@ -12,10 +14,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -105,5 +104,9 @@ public class MovieController {
         request.setSortBy("popularity");
         request.setSortOrder("desc");
         return ResponseEntity.ok(movieSearchService.search(request));
+    }
+    @GetMapping("/{movieId}/recommendations")
+    public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable("movieId") String movieId) {
+        return ResponseEntity.ok(movieSearchService.recommend(movieId));
     }
 }

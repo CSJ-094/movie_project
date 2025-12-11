@@ -66,6 +66,8 @@ interface Review {
   updatedAt: string;
 }
 
+const NO_IMAGE_URL = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe957375e70239d6abdd549fd7568c89281b2179b5f4470e2e12895792dfa5.svg";
+
 // --- 스켈레톤 UI ---
 const MovieDetailSkeleton: React.FC = () => (
   <div className="animate-pulse">
