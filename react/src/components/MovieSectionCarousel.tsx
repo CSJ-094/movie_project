@@ -9,21 +9,7 @@ import axiosInstance from '../api/axiosInstance'; // axiosInstance 임포트
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 
-// [추가] 슬라이드 투명도 효과를 위한 CSS를 동적으로 주입합니다.
-// 이렇게 하면 중앙에 위치한 슬라이드를 제외한 나머지 슬라이드들이 반투명하게 보입니다.
-const style = document.createElement('style');
-// [수정] CSS만으로 투명도 효과를 제어하도록 변경합니다.
-style.textContent = `
-  .movie-section-swiper .swiper-slide {
-    opacity: 0.4;
-    transition: opacity 0.3s ease;
-  }
-  /* [수정] JS로 제어할 is-center-visible 클래스를 가진 슬라이드만 선명하게 만듭니다. */
-  .movie-section-swiper .swiper-slide.is-center-visible {
-    opacity: 1;
-  }
-`;
-document.head.appendChild(style);
+// [제거] JS 로직으로 변경하므로 스타일 주입 코드는 제거합니다.
 
 interface MovieSummary {
   id: string;
@@ -66,31 +52,10 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   const [movies, setMovies] = useState<MovieSummary[]>(initialMovies || []);
   const [loading, setLoading] = useState(initialLoading || !!fetchUrl);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-
-  // [수정] JS로 슬라이드 투명도를 제어하는 함수 (더 정확한 로직으로 변경)
-  const updateSlideVisibility = useCallback((swiperInstance: SwiperInstance) => {
-    if (!swiperInstance || !swiperInstance.slides) return;
-
-    // 모든 슬라이드에서 클래스 초기화
-    swiperInstance.slides.forEach(slide => {
-      slide.classList.remove('is-center-visible');
-    });
-
-    // [수정] 중앙 3개 슬라이드를 선명하게 만들기 위한 로직
-    // activeIndex는 중앙 슬라이드를 가리킵니다.
-    const activeIndex = swiperInstance.activeIndex;
-    const visibleRange = 1; // 중앙 기준 양옆으로 1개씩
-
-    for (let i = -visibleRange; i <= visibleRange; i++) {
-      const slide = swiperInstance.slides[activeIndex + i];
-      if (slide) slide.classList.add('is-center-visible');
-    }
-  }, []);
-
 
   const loadMovies = useCallback(async (page: number) => {
     if (!fetchUrl) return;
@@ -191,12 +156,6 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
     }
   }, [fetchUrl, title, initialMovies, initialLoading]); // loadMovies를 의존성 배열에서 제거하여 불필요한 재실행 방지
 
-  useEffect(() => {
-    if (swiper) {
-      updateSlideVisibility(swiper);
-    }
-  }, [movies, swiper, updateSlideVisibility]); // 영화 목록이 변경될 때도 투명도 업데이트
-
   const slideNext = () => {
     if (!swiper) return;
     if (isEnd) {
@@ -235,7 +194,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
       </div>
     );
   }
-  
+
   if (!movies || movies.length === 0) {
     return (
       <div className="mb-12">
@@ -248,7 +207,7 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
   return (
     <div className="mb-12 relative group">
       <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">{title}</h2>
-      
+
       <button onClick={slidePrev} className="absolute left-0 top-1/2 -translate-y-1/2 z-30 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 transition-opacity opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" disabled={isBeginning}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
@@ -258,13 +217,10 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
           setSwiper(s);
           setIsBeginning(s.isBeginning);
           setIsEnd(s.isEnd);
-          // 초기 로드 시 약간의 지연 후 투명도 설정 (DOM 렌더링 보장)
-          setTimeout(() => updateSlideVisibility(s), 0);
         }}
         onSlideChange={(s) => {
           setIsBeginning(s.isBeginning);
           setIsEnd(s.isEnd);
-          updateSlideVisibility(s); // 슬라이드 변경 시 투명도 업데이트
         }}
         onReachEnd={loadMoreMovies}
         spaceBetween={20}
@@ -282,6 +238,38 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
           640: { slidesPerView: 1, spaceBetween: 10 },
           768: { slidesPerView: 3, spaceBetween: 15 },
           1024: { slidesPerView: 5, spaceBetween: 20 },
+        }}
+        watchSlidesProgress={true}
+        onProgress={(swiper) => {
+          for (let i = 0; i < swiper.slides.length; i++) {
+            const slide = swiper.slides[i];
+            const progress = (slide as any).progress;
+            const absProgress = Math.abs(progress);
+
+            // [로직 수정] 중앙(0)과 양옆(+/-1) 즉, 3개는 선명하게(1) 표시
+            // 그 외(>=2)부터는 반투명하게(0.4) 표시
+            // 1과 2 사이에서 부드럽게 변하도록 처리
+            let opacity = 1;
+
+            if (absProgress <= 1) {
+              // 중앙 ~ 양옆 1칸 까지는 완전 불투명
+              opacity = 1;
+            } else if (absProgress >= 2) {
+              // 2칸 이상 떨어지면 반투명
+              opacity = 0.4;
+            } else {
+              // 1.0 < absProgress < 2.0 사이 구간: 1 -> 0.4 로 선형 보간
+              // (absProgress - 1) 은 0에서 1로 변함
+              opacity = 1 - (absProgress - 1) * 0.6;
+            }
+
+            slide.style.opacity = String(opacity);
+          }
+        }}
+        onSetTransition={(swiper, duration) => {
+          for (let i = 0; i < swiper.slides.length; i++) {
+            swiper.slides[i].style.transitionDuration = `${duration}ms`;
+          }
         }}
         className="movie-section-swiper"
       >
@@ -305,10 +293,10 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
         {(loadingMore) && (
           <SwiperSlide className="h-auto !w-auto flex items-center justify-center">
             <div className="w-48 h-72 flex items-center justify-center">
-                <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+              <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
             </div>
           </SwiperSlide>
         )}

@@ -6,6 +6,7 @@ import TicketModal from '../components/TicketModal';
 import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
+import AppHeader from '../components/AppHeader'; // [수정] 올바른 경로로 변경
 
 // --- 타입 정의 ---
 interface MovieDetails {
@@ -64,42 +65,6 @@ interface Review {
   createdAt: string;
   updatedAt: string;
 }
-
-
-// 기본 이미지 처리
-const NO_IMAGE_URL = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe957375e70239d6abdd549fd7568c89281b2179b5f4470e2e12895792dfa5.svg";
-
-// --- 상단 카테고리 헤더 컴포넌트 ---
-const AppHeader: React.FC = () => {
-  const location = useLocation();
-  const categories = [
-    { name: '현재 상영중', path: '/' },
-    { name: '인기 영화', path: '/popular' },
-    { name: '높은 평점', path: '/top-rated' },
-    { name: '개봉 예정', path: '/upcoming' },
-  ];
-
-  return (
-    <header className="bg-gray-900 bg-opacity-80 backdrop-blur-sm text-white shadow-lg sticky top-0 z-40">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center h-16">
-          <div className="flex items-baseline space-x-4">
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                to={category.path}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${location.pathname === category.path
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-              >{category.name}</Link>
-            ))}
-          </div>
-        </div>
-      </nav>
-    </header>
-  );
-};
 
 // --- 스켈레톤 UI ---
 const MovieDetailSkeleton: React.FC = () => (
