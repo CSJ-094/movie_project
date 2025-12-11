@@ -72,7 +72,7 @@ public class MovieController {
         MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setSortBy("vote_average");
         request.setSortOrder("desc");
-        request.setVoteCount(300);
+        request.setVoteCount(300); //투표수 300미만 잡영화 안뜨게 설정
         return ResponseEntity.ok(movieSearchService.search(request));
     }
 
