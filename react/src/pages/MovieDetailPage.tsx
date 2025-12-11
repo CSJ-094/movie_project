@@ -69,7 +69,8 @@ interface Review {
   updatedAt: string;
 }
 
-const NO_IMAGE_URL = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe957375e70239d6abdd549fd7568c89281b2179b5f4470e2e12895792dfa5.svg";
+// [수정] 배우 프로필 사진이 없을 때 사용할 대체 이미지 URL의 변수명을 변경하여 중복 선언 오류를 해결합니다.
+const NO_PROFILE_IMAGE_URL = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-4-user-grey-d8fe957375e70239d6abdd549fd7568c89281b2179b5f4470e2e12895792dfa5.svg";
 
 // --- 스켈레톤 UI ---
 const MovieDetailSkeleton: React.FC = () => (
@@ -803,11 +804,11 @@ const visibleReviews = showAllReviews
                     <img
                         src={actor.profile_path
                             ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
-                            : NO_IMAGE_URL
+                            : NO_PROFILE_IMAGE_URL
                         }
                         alt={actor.name}
                         onError={(e) => {
-                          e.currentTarget.src = NO_IMAGE_URL;
+                          e.currentTarget.src = NO_PROFILE_IMAGE_URL;
                         }}
                       className="w-full h-48 object-cover rounded-lg shadow-md bg-gray-200 dark:bg-gray-700 transform hover:scale-105 transition-transform duration-200"
                     />
