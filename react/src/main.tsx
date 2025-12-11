@@ -26,6 +26,7 @@ import ActorDetailPage from './pages/ActorDetailPage.tsx'; // ActorDetailPage �
 // import ProfilePage from './pages/ProfilePage.tsx'; // ProfilePage 임포트 제거
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import QuickMatchPage from './pages/QuickMatchPage.tsx';
+import MovieListPage from './pages/MovieListPage.tsx'; // MovieListPage 임포트 추가
 import ErrorPage from './pages/ErrorPage.tsx';
 
 
@@ -100,6 +101,27 @@ const router = createBrowserRouter([
       {
         path: "oauth2/callback",
         element: <OAuth2CallbackPage />,
+      },
+      // [추가] AppHeader의 카테고리별 영화 목록 페이지 라우트
+      {
+        path: "movies/now-playing-page",
+        element: <MovieListPage pageTitle="현재 상영중인 영화" fetchUrl="/movies/now-playing" />,
+      },
+      {
+        path: "movies/popular-page",
+        element: <MovieListPage pageTitle="인기 영화" fetchUrl="/movies/popular" />,
+      },
+      {
+        path: "movies/top-rated-page",
+        element: <MovieListPage pageTitle="높은 평점 영화" fetchUrl="/movies/top-rated" />,
+      },
+      {
+        path: "movies/upcoming-page",
+        element: <MovieListPage pageTitle="개봉 예정 영화" fetchUrl="/movies/upcoming" />,
+      },
+      {
+        path: "movies/all-page",
+        element: <MovieListPage pageTitle="모든 영화" fetchUrl="/movies/all" />,
       },
       // 보호된 라우트 설정
       {

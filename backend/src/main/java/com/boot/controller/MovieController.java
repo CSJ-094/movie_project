@@ -1,20 +1,21 @@
 package com.boot.controller;
 
 import java.time.LocalDate;
-
-import com.boot.dto.MovieDoc;
 import com.boot.dto.MovieSearchRequest;
 import com.boot.dto.MovieSearchResponse;
-import com.boot.service.MovieSearchService;
 import com.boot.service.UserService;
+import com.boot.service.MovieSearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -35,17 +36,22 @@ public class MovieController {
         return false;
     }
 
+    // [추가] 반복되는 MovieSearchRequest 생성을 위한 헬퍼 메서드
+    private MovieSearchRequest createMovieSearchRequest(Pageable pageable, UserDetails userDetails) {
+        MovieSearchRequest request = new MovieSearchRequest();
+        request.setPage(pageable.getPageNumber());
+        request.setSize(pageable.getPageSize());
+        request.setAdult(isAdult(userDetails));
+        return request;
+    }
+
     @Operation(summary = "인기 영화 목록 조회", description = "인기 있는 영화 목록을 페이지별로 조회합니다.")
     @GetMapping("/popular")
     public ResponseEntity<MovieSearchResponse> getPopularMovies(@PageableDefault(size = 20) Pageable pageable,
                                                                 @AuthenticationPrincipal UserDetails userDetails) {
-        MovieSearchRequest request = new MovieSearchRequest();
-        request.setPage(pageable.getPageNumber());
-        request.setSize(pageable.getPageSize());
-
+        MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setSortBy("popularity");
         request.setSortOrder("desc");
-        request.setAdult(isAdult(userDetails));
 
         return ResponseEntity.ok(movieSearchService.search(request));
     }
@@ -54,15 +60,8 @@ public class MovieController {
     @GetMapping("/now-playing")
     public ResponseEntity<MovieSearchResponse> getNowPlayingMovies(@PageableDefault(size = 20) Pageable pageable,
                                                                    @AuthenticationPrincipal UserDetails userDetails) {
-        MovieSearchRequest request = new MovieSearchRequest();
-        request.setPage(pageable.getPageNumber());
-        request.setSize(pageable.getPageSize());
+        MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setNowPlaying(true); // '현재 상영중' 플래그를 true로 설정
-
-        request.setSortBy("popularity");
-        request.setSortOrder("desc");
-        request.setAdult(isAdult(userDetails));
-
         return ResponseEntity.ok(movieSearchService.search(request));
     }
 
@@ -70,16 +69,9 @@ public class MovieController {
     @GetMapping("/top-rated")
     public ResponseEntity<MovieSearchResponse> getTopRatedMovies(@PageableDefault(size = 20) Pageable pageable,
                                                                  @AuthenticationPrincipal UserDetails userDetails) {
-        MovieSearchRequest request = new MovieSearchRequest();
-        request.setPage(pageable.getPageNumber());
-        request.setSize(pageable.getPageSize());
+        MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setSortBy("vote_average");
         request.setSortOrder("desc");
-
-        request.setVoteCount(300);
-
-        request.setAdult(isAdult(userDetails));
-
         return ResponseEntity.ok(movieSearchService.search(request));
     }
 
@@ -87,14 +79,10 @@ public class MovieController {
     @GetMapping("/upcoming")
     public ResponseEntity<MovieSearchResponse> getUpcomingMovies(@PageableDefault(size = 20) Pageable pageable,
                                                                  @AuthenticationPrincipal UserDetails userDetails) {
-        MovieSearchRequest request = new MovieSearchRequest();
-        request.setPage(pageable.getPageNumber());
-        request.setSize(pageable.getPageSize());
+        MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setReleaseDateFrom(LocalDate.now()); // 오늘부터
         request.setSortBy("release_date");
         request.setSortOrder("asc");
-
-        request.setAdult(isAdult(userDetails));
         return ResponseEntity.ok(movieSearchService.search(request));
     }
 
@@ -104,20 +92,18 @@ public class MovieController {
     // [수정] @RequestParam에 "genreId" 이름을 명시하여 파라미터 매핑 오류를 해결합니다.
     public ResponseEntity<MovieSearchResponse> getMoviesByGenre(@RequestParam("genreId") String genreId, @PageableDefault(size = 20) Pageable pageable,
                                                                 @AuthenticationPrincipal UserDetails userDetails) {
-        MovieSearchRequest request = new MovieSearchRequest();
-        request.setPage(pageable.getPageNumber());
-        request.setSize(pageable.getPageSize());
+        MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setGenres(List.of(Integer.parseInt(genreId))); // 서비스에 전달하기 전 Integer로 변환
-
-        request.setSortBy("popularity");
-        request.setSortOrder("desc");
-        request.setAdult(isAdult(userDetails));
-
         return ResponseEntity.ok(movieSearchService.search(request));
     }
-    @GetMapping("/{movieId}/recommendations")
-    public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable("movieId") String movieId) {
-        List<MovieDoc> recommendations = movieSearchService.recommend(movieId);
-        return ResponseEntity.ok(recommendations);
+
+    @Operation(summary = "모든 영화 목록 조회", description = "모든 영화 목록을 페이지별로 조회합니다. 기본 정렬은 인기도순입니다.")
+    @GetMapping("/all")
+    public ResponseEntity<MovieSearchResponse> getAllMovies(@PageableDefault(size = 20) Pageable pageable,
+                                                            @AuthenticationPrincipal UserDetails userDetails) {
+        MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
+        request.setSortBy("popularity");
+        request.setSortOrder("desc");
+        return ResponseEntity.ok(movieSearchService.search(request));
     }
 }
