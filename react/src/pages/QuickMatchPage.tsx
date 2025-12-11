@@ -179,6 +179,34 @@ useEffect(() => {
     }
   };
 
+    // 추천 카드 한 장 교체하기
+  const handleReplaceRecommendation = async (index: number, movieId: string) => {
+    if (!sessionId) return;
+
+    try {
+      const res = await axiosInstance.post<QuickMatchRecommendationDto>(
+        "/quickmatch/alternative",
+        {
+          sessionId,
+          currentMovieId: movieId,
+        }
+      );
+
+      const newCard = res.data;
+
+      setResult((prev) => {
+        if (!prev) return prev;
+        const newRecs = [...prev.recommendations];
+        newRecs[index] = newCard; // 해당 카드만 교체
+        return { ...prev, recommendations: newRecs };
+      });
+    } catch (e) {
+      console.error("대체 추천 요청 실패", e);
+      setError("비슷한 영화 다시 추천 중 오류가 발생했습니다.");
+    }
+  };
+
+
   // 찜 토글 함수
 const toggleFavorite = async (movieId: string) => {
   console.log('favorite click', movieId); // 디버깅용, 나중에 지워도 됨
@@ -360,16 +388,16 @@ const toggleFavorite = async (movieId: string) => {
               </span>
             </div>
 
-            <div
+                        <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
                 gap: 18,
               }}
             >
-              {recommendations.map((r) => (
+              {recommendations.map((r, idx) => (
                 <div
-                  key={r.movieId}
+                  key={`${r.movieId}-${idx}`}
                   style={{
                     border: "1px solid #1f2937",
                     borderRadius: 14,
@@ -378,27 +406,30 @@ const toggleFavorite = async (movieId: string) => {
                     display: "flex",
                     flexDirection: "column",
                     boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-                    position: "relative"
+                    position: "relative",
                   }}
                 >
-
                   {/* 찜하기 하트 버튼 */}
-              <button
-                onClick={() => toggleFavorite(r.movieId)}
-                style={{
-                  position: "absolute",
-                  top: 8,
-                  right: 8,
-                  fontSize: 22,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: favoriteMovieIds.has(r.movieId) ? "#f87171" : "#ffffff90",
-                  zIndex: 2,  
-                }}
-                >
-                  {favoriteMovieIds.has(r.movieId) ? "❤️" : "🤍"}
-              </button>
+                  <button
+                    onClick={() => toggleFavorite(r.movieId)}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: 22,
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: favoriteMovieIds.has(r.movieId)
+                        ? "#f87171"
+                        : "#ffffff90",
+                      zIndex: 2,
+                    }}
+                  >
+                    {favoriteMovieIds.has(r.movieId) ? "❤️" : "🤍"}
+                  </button>
+
+                  {/* 포스터 */}
                   {r.posterUrl && (
                     <div style={{ position: "relative" }}>
                       <img
@@ -413,6 +444,8 @@ const toggleFavorite = async (movieId: string) => {
                       />
                     </div>
                   )}
+
+                  {/* 제목 + 추천 문구 + 한 장 더 뽑기 버튼 */}
                   <div
                     style={{
                       padding: "10px 12px 12px",
@@ -442,6 +475,31 @@ const toggleFavorite = async (movieId: string) => {
                     >
                       {r.reason}
                     </p>
+
+                    <div
+                      style={{
+                        marginTop: 8,
+                        display: "flex",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        onClick={() =>
+                          handleReplaceRecommendation(idx, r.movieId)
+                        }
+                        style={{
+                          fontSize: 11,
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          border: "none",
+                          cursor: "pointer",
+                          backgroundColor: "rgba(31,41,55,0.95)",
+                          color: "#e5e7eb",
+                        }}
+                      >
+                        한 장 더 뽑기
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
