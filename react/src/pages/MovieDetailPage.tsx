@@ -225,17 +225,35 @@ const MovieDetailPage: React.FC = () => {
 
   // Recommended movies fetching
   useEffect(() => {
-    if (!movie || movie.genres.length === 0) return;
+    if (!movieId) return;
+
     const fetchRecommendations = async () => {
-      const genreIds = movie.genres.map(g => g.id).join(',');
       try {
-        const response = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=15d2ea6d0dc1d476efbca3eba2b9bbfb&language=ko-KR&with_genres=${genreIds}&sort_by=popularity.desc`);
-        const data = await response.json();
-        setRecommendedMovies(data.results.filter((rec: RecommendedMovie) => rec.id !== movie.id).slice(0, 10));
-      } catch (error) { console.error("Failed to fetch recommendations:", error); }
+
+        const response = await axiosInstance.get<any[]>(`/movies/${movieId}/recommendations`);
+
+
+        const mappedRecommendations = response.data.map((doc: any) => {
+          const cleanPosterPath = doc.posterUrl
+              ? doc.posterUrl.replace('https://image.tmdb.org/t/p/w500', '')
+              : null;
+
+          return {
+            id: Number(doc.movieId), //
+            title: doc.title,
+            poster_path: cleanPosterPath
+          };
+        });
+
+        setRecommendedMovies(mappedRecommendations);
+      } catch (error) {
+        console.error("Failed to fetch recommendations:", error);
+        setRecommendedMovies([]);
+      }
     };
+
     fetchRecommendations();
-  }, [movie]);
+  }, [movieId]);
 
   // Overview clamping
   useEffect(() => {

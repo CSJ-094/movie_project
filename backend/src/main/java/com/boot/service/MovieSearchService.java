@@ -84,6 +84,9 @@ public class MovieSearchService {
                                                     .field("adult")
                                                     .value(false)
                                             ))
+                                            // 4) 포스터 없는거 제외
+                                            .filter(f -> f.exists(e -> e
+                                                    .field("poster_path")))
                                     )
                             )
                             // 평가 수 많은 순 + 인기도 순으로 정렬
@@ -160,6 +163,14 @@ public class MovieSearchService {
                             .gte(JsonData.of(request.getMinRating())) // Float → JsonData
                     ));
         }
+        // 별점 참여 투표수
+        if (request.getVoteCount() != null) {
+            bool.filter(f -> f
+                    .range(r -> r
+                            .field("vote_count")
+                            .gte(JsonData.of(request.getVoteCount()))
+                    ));
+        }
 
         // (5) 개봉일 범위 → release_date
         if (request.getReleaseDateFrom() != null || request.getReleaseDateTo() != null) {
@@ -177,9 +188,9 @@ public class MovieSearchService {
                     }));
         }
         //성인여부
-        if(!request.isAdult()){
+        if (!request.isAdult()) {
             bool.mustNot(mn -> mn
-                    .terms(t->t
+                    .terms(t -> t
                             .field("certification")
                             .terms(v -> v.value(List.of(
                                     FieldValue.of("18"),
@@ -207,22 +218,22 @@ public class MovieSearchService {
                 if (request.getSortBy() != null && !request.getSortBy().isBlank()) {
                     SortOrder order = "asc".equalsIgnoreCase(request.getSortOrder()) ? SortOrder.Asc : SortOrder.Desc;
                     searchBuilder.query(builtBoolQuery)
-                                 .sort(sort -> sort.field(f -> f.field(request.getSortBy()).order(order)));
+                            .sort(sort -> sort.field(f -> f.field(request.getSortBy()).order(order)));
                 } else {
                     // 정렬 조건이 없으면, 기존의 function_score 쿼리 사용
                     searchBuilder.query(q -> q
-                        .functionScore(fs -> fs
-                            .query(builtBoolQuery)
-                            .functions(f -> f
-                                .fieldValueFactor(fvf -> fvf
-                                    .field("vote_average")
-                                    .factor(1.2)
-                                    .modifier(FieldValueFactorModifier.Log1p)
-                                    .missing(1.0))
-                                .weight(1.2))
-                            .scoreMode(FunctionScoreMode.Sum)
-                            .boostMode(FunctionBoostMode.Sum)
-                        )
+                            .functionScore(fs -> fs
+                                    .query(builtBoolQuery)
+                                    .functions(f -> f
+                                            .fieldValueFactor(fvf -> fvf
+                                                    .field("vote_average")
+                                                    .factor(1.2)
+                                                    .modifier(FieldValueFactorModifier.Log1p)
+                                                    .missing(1.0))
+                                            .weight(1.2))
+                                    .scoreMode(FunctionScoreMode.Sum)
+                                    .boostMode(FunctionBoostMode.Sum)
+                            )
                     );
                 }
                 return searchBuilder;
@@ -273,13 +284,13 @@ public class MovieSearchService {
         try {
             // 2) ES 검색 요청
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                    .index("movies")
-                    .size(size)
-                    .query(q -> q
-                            .match(m -> m
-                                    .field("title.ngram")
-                                    .query(keyword)
-                                    .operator(Operator.And))),
+                            .index("movies")
+                            .size(size)
+                            .query(q -> q
+                                    .match(m -> m
+                                            .field("title.ngram")
+                                            .query(keyword)
+                                            .operator(Operator.And))),
                     Movie.class);
 
             // 3) 결과를 AutocompleteResponse.Item 리스트로 변환
@@ -309,10 +320,10 @@ public class MovieSearchService {
 
         try {
             SearchResponse<Void> response = elasticsearchClient.search(s -> s
-                    .index("movies")
-                    .size(0)
-                    .aggregations("rating_stats", a -> a
-                            .stats(st -> st.field("vote_average"))),
+                            .index("movies")
+                            .size(0)
+                            .aggregations("rating_stats", a -> a
+                                    .stats(st -> st.field("vote_average"))),
                     Void.class);
 
             StatsAggregate stats = response.aggregations()
@@ -345,8 +356,8 @@ public class MovieSearchService {
     public Movie getMovieById(String id) {
         try {
             GetResponse<Movie> response = elasticsearchClient.get(g -> g
-                    .index("movies")
-                    .id(id),
+                            .index("movies")
+                            .id(id),
                     Movie.class);
 
             if (response.found()) {
@@ -368,11 +379,11 @@ public class MovieSearchService {
         }
         try {
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
-                    .index("movies")
-                    .size(ids.size()) // 요청한 ID 개수만큼 조회
-                    .query(q -> q
-                            .ids(i -> i
-                                    .values(ids))),
+                            .index("movies")
+                            .size(ids.size()) // 요청한 ID 개수만큼 조회
+                            .query(q -> q
+                                    .ids(i -> i
+                                            .values(ids))),
                     Movie.class);
 
             return response.hits().hits().stream()
@@ -399,6 +410,7 @@ public class MovieSearchService {
     // MovieDetailPage 추천영화 섹션
     public List<MovieDoc> recommend(String movieId) {
         List<Movie> finalResults = new ArrayList<>();
+        List<FieldValue> adultCerts = List.of(FieldValue.of("19"), FieldValue.of("18"), FieldValue.of("R"), FieldValue.of("Restricted"));
         int targetSize = 10; // 갯수
 
         // MLT(More Like This) 쿼리 사용 (유사도 기반)
@@ -408,11 +420,17 @@ public class MovieSearchService {
                             .index("movies") //movies 인덱스에서 검색하여 targetSize만큼 가져오겠다.
                             .size(targetSize)
                             .query(q -> q
-                                    .moreLikeThis(mlt -> mlt //MLT 필드 시작
-                                            .fields("overview", "title", "actors", "director", "companies") //유사도 분석 필드
-                                            .like(l -> l.document(d -> d.index("movies").id(movieId))) // 기준이 되는 항목 -> 현재 영화 id
-                                            .minTermFreq(1) // 기준 항목에서 [최소 1번] 이상 등장한 단어 사용
-                                            .minDocFreq(1) // DB에서 최소 1번 이상 등장해야 사용
+                                    .bool(b -> b
+                                            .must(m -> m
+                                                    .moreLikeThis(mlt -> mlt //MLT 필드 시작
+                                                            .fields("overview", "title", "actors", "director", "companies") //유사도 분석 필드
+                                                            .like(l -> l.document(d -> d.index("movies").id(movieId))) // 기준이 되는 항목 -> 현재 영화 id
+                                                            .minTermFreq(1) // 기준 항목에서 [최소 1번] 이상 등장한 단어 사용
+                                                            .minDocFreq(1) // DB에서 최소 1번 이상 등장해야 사용
+                                                    )
+                                            )
+                                            .filter(f ->f.exists(e -> e.field("poster_path")))
+                                            .mustNot(mn ->mn.terms(t -> t.field("certification").terms(v -> v.value(adultCerts))))
                                     )
                             ),
                     Movie.class
@@ -453,8 +471,19 @@ public class MovieSearchService {
                                                                             .toList()))
                                                             )
                                                     )
+                                                    .filter(f -> f
+                                                            .exists(e -> e
+                                                                    .field("poster_path"))
+                                                    )
+
                                                     .mustNot(mn -> mn
                                                             .ids(i -> i.values(excludeIds)) //excludeIds에 있는 값은 추가 x
+                                                    )
+                                                    .mustNot(mn -> mn
+                                                            .terms(t -> t
+                                                                    .field("certification")
+                                                                    .terms(v -> v.value(adultCerts))
+                                                            )
                                                     )
                                             )
                                     )
@@ -485,20 +514,20 @@ public class MovieSearchService {
 
         try {
             SearchResponse<Void> response = elasticsearchClient.search(s -> s
-                    .index("movies")
-                    .suggest(su -> su
-                            .suggesters("title-suggester", ts -> ts // suggester 이름
-                                    .text(keyword) // 제안을 받을 텍스트
-                                    .term(t -> t
-                                            .field("title.keyword") // 제안을 생성할 필드
-                                            .suggestMode(SuggestMode.Always) // 항상 제안
-                                            .minDocFreq(1.0f) // 최소 문서 빈도
-                                            .prefixLength(1) // 접두사 길이
-                                            .maxEdits(2) // 최대 편집 거리 (오타 허용 범위)
-                                            .size(5) // 최대 제안 개수
+                            .index("movies")
+                            .suggest(su -> su
+                                    .suggesters("title-suggester", ts -> ts // suggester 이름
+                                            .text(keyword) // 제안을 받을 텍스트
+                                            .term(t -> t
+                                                    .field("title.keyword") // 제안을 생성할 필드
+                                                    .suggestMode(SuggestMode.Always) // 항상 제안
+                                                    .minDocFreq(1.0f) // 최소 문서 빈도
+                                                    .prefixLength(1) // 접두사 길이
+                                                    .maxEdits(2) // 최대 편집 거리 (오타 허용 범위)
+                                                    .size(5) // 최대 제안 개수
+                                            )
                                     )
-                            )
-                    ),
+                            ),
                     Void.class // 실제 문서가 필요 없으므로 Void.class 사용
             );
 

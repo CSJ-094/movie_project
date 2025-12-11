@@ -40,4 +40,7 @@ public class MovieSearchRequest {
 
 		@Schema(description = "정렬 순서 (asc 또는 desc)", example = "desc")
 		private String sortOrder;
+
+		@Schema(description = "투표 수" ,example ="10")
+		private Integer VoteCount;
 }
