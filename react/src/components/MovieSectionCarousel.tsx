@@ -6,6 +6,22 @@ import MovieCardSkeleton from './MovieCardSkeleton';
 import axios from 'axios';
 
 import 'swiper/css';
+import 'swiper/css/effect-coverflow';
+
+// [추가] 슬라이드 투명도 효과를 위한 CSS를 동적으로 주입합니다.
+// 이렇게 하면 중앙에 위치한 슬라이드를 제외한 나머지 슬라이드들이 반투명하게 보입니다.
+const style = document.createElement('style');
+// [수정] CSS는 기본 투명도만 정의하고, 선명하게 보일 슬라이드는 JS로 제어합니다.
+style.textContent = `
+  .movie-section-swiper .swiper-slide {
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+  }
+  .movie-section-swiper .swiper-slide.is-center-visible {
+    opacity: 1;
+  }
+`;
+document.head.appendChild(style);
 
 interface MovieSummary {
   id: string;
@@ -126,6 +142,32 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
     }
   };
 
+  // [추가] 슬라이드 변경 시 투명도 제어를 위한 함수
+  const updateSlideVisibility = useCallback((swiperInstance: SwiperInstance) => {
+    if (!swiperInstance || !swiperInstance.slides) return;
+
+    const activeIndex = swiperInstance.activeIndex;
+    const visibleRange = 2; // [수정] 중앙을 기준으로 양옆에 2개씩 (총 5개)
+
+    // 모든 슬라이드에서 클래스 초기화
+    swiperInstance.slides.forEach(slide => {
+      slide.classList.remove('is-center-visible');
+    });
+
+    // 중앙과 양 옆 3개씩, 총 7개 슬라이드에 클래스 추가
+    // 중앙과 양 옆 2개씩, 총 5개 슬라이드에 클래스 추가
+    for (let i = -visibleRange; i <= visibleRange; i++) {
+      const slide = swiperInstance.slides[activeIndex + i];
+      if (slide) {
+        slide.classList.add('is-center-visible');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (swiper) updateSlideVisibility(swiper);
+  }, [movies, swiper, updateSlideVisibility]); // 영화 목록이 변경될 때도 업데이트
+
   if (loading) {
     return (
       <div className="mb-12">
@@ -171,23 +213,41 @@ const MovieSectionCarousel: React.FC<MovieSectionCarouselProps> = ({
           setSwiper(s);
           setIsBeginning(s.isBeginning);
           setIsEnd(s.isEnd);
+          updateSlideVisibility(s); // 초기 로드 시 투명도 설정
         }}
         onSlideChange={(s) => {
+          updateSlideVisibility(s); // 슬라이드 변경 시 투명도 업데이트
           setIsBeginning(s.isBeginning);
           setIsEnd(s.isEnd);
         }}
-        onReachEnd={loadMoreMovies} // 드래그 로딩 핸들러
+        onUpdate={updateSlideVisibility} // Swiper가 업데이트될 때 (예: 영화 추가 로딩) 투명도 업데이트
+        onReachEnd={loadMoreMovies}
         spaceBetween={20}
-        slidesPerView={2}
+        // [수정] slidesPerView를 고정 숫자로 변경하여 표시되는 영화 개수를 제어합니다.
+        slidesPerView={7}
         grabCursor={true}
-        breakpoints={{
-          640: { slidesPerView: 3, spaceBetween: 20 },
-          768: { slidesPerView: 4, spaceBetween: 20 },
-          1024: { slidesPerView: 5, spaceBetween: 20 },
+        centeredSlides={true}
+        // [수정] 슬라이드 개수가 충분할 때(10개 초과) loop 모드를 활성화하여
+        // 초기 화면에서 왼쪽이 비어 보이는 현상을 방지합니다.
+        // loop 모드는 무한 스크롤과 충돌할 수 있으므로, hasMore가 false일 때도 활성화합니다.
+        loop={movies.length > 10 || !hasMore}
+        effect={'coverflow'}
+        coverflowEffect={{
+          rotate: 5, // 약간의 회전 효과를 주어 입체감을 더합니다.
+          stretch: 0,
+          depth: 100,
+          modifier: 2.5,
+          slideShadows: false,
         }}
-        className="movie-section-swiper !overflow-visible py-16"
+        breakpoints={{
+          640: { spaceBetween: 20 },
+          768: { slidesPerView: 5, spaceBetween: 20 },
+          1024: { slidesPerView: 7, spaceBetween: 20 },
+        }}
+        className="movie-section-swiper"
       >
         {movies.map((movie) => (
+          // [수정] 고정 너비 클래스(!w-48)를 제거하여 Swiper가 너비를 자동으로 계산하도록 합니다.
           <SwiperSlide key={movie.id} className="h-auto">
             <MovieCard
               id={movie.id}
