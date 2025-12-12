@@ -1,5 +1,6 @@
 package com.boot.controller;
 
+import com.boot.dto.MovieDoc;
 import java.time.LocalDate;
 
 import com.boot.dto.MovieDoc;
@@ -71,6 +72,7 @@ public class MovieController {
         MovieSearchRequest request = createMovieSearchRequest(pageable, userDetails);
         request.setSortBy("vote_average");
         request.setSortOrder("desc");
+        request.setVoteCount(300); //투표수 300미만 잡영화 안뜨게 설정
         return ResponseEntity.ok(movieSearchService.search(request));
     }
 
@@ -105,6 +107,8 @@ public class MovieController {
         request.setSortOrder("desc");
         return ResponseEntity.ok(movieSearchService.search(request));
     }
+
+    @Operation(summary = "추천 영화 목록 조회", description = "영화 상세보기 페이지 추천 영화 리스트 요청용")
     @GetMapping("/{movieId}/recommendations")
     public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable("movieId") String movieId) {
         return ResponseEntity.ok(movieSearchService.recommend(movieId));

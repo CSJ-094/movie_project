@@ -42,6 +42,9 @@ interface QuickMatchResultSummaryDto {
   preferredYearRange: string;
   preferredCountry: string[];
   preferredMood: string[];
+  tasteTypeName: string;        
+  avgLikedRating: number | null; 
+  mainKeywords: string[];       
 }
 
 interface QuickMatchRecommendationDto {
@@ -179,6 +182,37 @@ useEffect(() => {
     }
   };
 
+    // 추천 카드 한 장 교체하기
+  const handleReplaceRecommendation = async (index: number, movieId: string) => {
+  if (!sessionId) return;
+
+  try {
+    const res = await axiosInstance.get<QuickMatchRecommendationDto>(
+      "/quickmatch/alternative",
+      {
+        params: {
+          sessionId,
+          currentMovieId: movieId,
+        },
+      }
+    );
+
+    const newCard = res.data;
+
+    setResult((prev) => {
+      if (!prev) return prev;
+      const newRecs = [...prev.recommendations];
+      newRecs[index] = newCard;
+      return { ...prev, recommendations: newRecs };
+    });
+  } catch (e) {
+    console.error("대체 추천 요청 실패", e);
+    setError("비슷한 영화 다시 추천 중 오류가 발생했습니다.");
+  }
+};
+
+
+
   // 찜 토글 함수
 const toggleFavorite = async (movieId: string) => {
   console.log('favorite click', movieId); // 디버깅용, 나중에 지워도 됨
@@ -280,30 +314,85 @@ const toggleFavorite = async (movieId: string) => {
               boxShadow: "0 18px 40px rgba(0,0,0,0.45)",
             }}
           >
-            <div style={{ marginBottom: 8, fontSize: 14, opacity: 0.85 }}>
+            <div
+              style={{
+                marginBottom: 8,
+                fontSize: 14,
+                opacity: 0.85,
+              }}
+            >
               오늘의 취향 스냅샷
             </div>
+
             <div
               style={{
                 fontSize: 18,
                 fontWeight: 600,
+                color: "#e5e7eb",
                 marginBottom: 4,
               }}
             >
-              {prefSentence}
+              오늘의 취향 타입: {summary.tasteTypeName}
             </div>
+
             <div
               style={{
                 fontSize: 13,
                 color: "#9ca3af",
-                marginBottom: 12,
+                marginBottom: 8,
               }}
             >
-              {likedText}
+              좋아요 {summary.likedCount}편 · 별로에요 {summary.dislikedCount}편
             </div>
 
-            {summary.topGenres && summary.topGenres.length > 0 && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {summary.avgLikedRating !== null && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#9ca3af",
+                  marginBottom: 12,
+                }}
+              >
+                이번 세션에서 좋아요한 영화 평균 평점:{" "}
+                <strong>{summary.avgLikedRating.toFixed(1)}점</strong>
+              </div>
+            )}
+
+            {summary.mainKeywords.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginBottom: 12,
+                }}
+              >
+                {summary.mainKeywords.map((k) => (
+                  <span
+                    key={k}
+                    style={{
+                      fontSize: 12,
+                      borderRadius: 999,
+                      padding: "4px 10px",
+                      backgroundColor: "rgba(15, 23, 42, 0.9)",
+                      border: "1px solid #334155",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    #{k}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {summary.topGenres.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
                 {summary.topGenres.slice(0, 3).map((g) => (
                   <span
                     key={g.name}
@@ -360,16 +449,16 @@ const toggleFavorite = async (movieId: string) => {
               </span>
             </div>
 
-            <div
+                        <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
                 gap: 18,
               }}
             >
-              {recommendations.map((r) => (
+              {recommendations.map((r, idx) => (
                 <div
-                  key={r.movieId}
+                  key={`${r.movieId}-${idx}`}
                   style={{
                     border: "1px solid #1f2937",
                     borderRadius: 14,
@@ -378,27 +467,30 @@ const toggleFavorite = async (movieId: string) => {
                     display: "flex",
                     flexDirection: "column",
                     boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-                    position: "relative"
+                    position: "relative",
                   }}
                 >
-
                   {/* 찜하기 하트 버튼 */}
-              <button
-                onClick={() => toggleFavorite(r.movieId)}
-                style={{
-                  position: "absolute",
-                  top: 8,
-                  right: 8,
-                  fontSize: 22,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: favoriteMovieIds.has(r.movieId) ? "#f87171" : "#ffffff90",
-                  zIndex: 2,  
-                }}
-                >
-                  {favoriteMovieIds.has(r.movieId) ? "❤️" : "🤍"}
-              </button>
+                  <button
+                    onClick={(e) => {e.stopPropagation();toggleFavorite(r.movieId);}}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: 22,
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: favoriteMovieIds.has(r.movieId)
+                        ? "#f87171"
+                        : "#ffffff90",
+                      zIndex: 2,
+                    }}
+                  >
+                    {favoriteMovieIds.has(r.movieId) ? "❤️" : "🤍"}
+                  </button>
+
+                  {/* 포스터 */}
                   {r.posterUrl && (
                     <div style={{ position: "relative" }}>
                       <img
@@ -413,6 +505,8 @@ const toggleFavorite = async (movieId: string) => {
                       />
                     </div>
                   )}
+
+                  {/* 제목 + 추천 문구 + 한 장 더 뽑기 버튼 */}
                   <div
                     style={{
                       padding: "10px 12px 12px",
@@ -442,6 +536,31 @@ const toggleFavorite = async (movieId: string) => {
                     >
                       {r.reason}
                     </p>
+
+                    <div
+                      style={{
+                        marginTop: 8,
+                        display: "flex",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        onClick={() =>
+                          handleReplaceRecommendation(idx, r.movieId)
+                        }
+                        style={{
+                          fontSize: 11,
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          border: "none",
+                          cursor: "pointer",
+                          backgroundColor: "rgba(31,41,55,0.95)",
+                          color: "#e5e7eb",
+                        }}
+                      >
+                        한 장 더 뽑기
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

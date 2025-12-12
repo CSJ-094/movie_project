@@ -37,9 +37,7 @@ import com.boot.dto.MovieSearchResponse;
 @RequiredArgsConstructor
 public class MovieSearchService {
     private static final Logger logger = LoggerFactory.getLogger(MovieSearchService.class); // Logger 인스턴스 생성
-
     private final ElasticsearchClient elasticsearchClient;
-
     private static final List<GenreOption> GENRE_OPTIONS = List.of(
             new GenreOption(28, "액션"),
             new GenreOption(12, "모험"),
@@ -66,18 +64,18 @@ public class MovieSearchService {
             // 퀵매치 후보: 유명하고, 어느 정도 인기 있고, 성인 영화는 제외
             SearchResponse<Movie> response = elasticsearchClient.search(s -> s
                             .index("movies")
-                            .size(3000) // 넉넉하게 3000개 정도까지
+                            .size(8000) // 넉넉하게 3000개 정도까지
                             .query(q -> q
                                     .bool(b -> b
-                                            // 1) 최소 평가 수: 듣보잡 컷
+                                            // 1) 최소 평가 수: 듣보잡 X
                                             .filter(f -> f.range(r -> r
                                                     .field("vote_count")
-                                                    .gte(JsonData.of(500)) // 필요하면 300, 800 이런 식으로 조절 가능
+                                                    .gte(JsonData.of(300)) // 필요하면 300, 800 이런 식으로 조절 가능
                                             ))
-                                            // 2) 최소 인기도: 너무 묻힌 영화 컷
+                                            // 2) 최소 인기도: 너무 묻힌 영화 X
                                             .filter(f -> f.range(r -> r
                                                     .field("popularity")
-                                                    .gte(JsonData.of(20))
+                                                    .gte(JsonData.of(5))
                                             ))
                                             // 3) 성인 영화 제외
                                             .filter(f -> f.term(t -> t
@@ -195,8 +193,7 @@ public class MovieSearchService {
                             .terms(v -> v.value(List.of(
                                     FieldValue.of("18"),
                                     FieldValue.of("19+"),
-                                    FieldValue.of("19"),
-                                    FieldValue.of("청소년관람불가")
+                                    FieldValue.of("19")
                             )))
                     )
             );
@@ -409,101 +406,112 @@ public class MovieSearchService {
 
     // MovieDetailPage 추천영화 섹션
     public List<MovieDoc> recommend(String movieId) {
-        List<Movie> finalResults = new ArrayList<>();
-        List<FieldValue> adultCerts = List.of(FieldValue.of("19"), FieldValue.of("18"), FieldValue.of("R"), FieldValue.of("Restricted"));
-        int targetSize = 10; // 갯수
 
-        // MLT(More Like This) 쿼리 사용 (유사도 기반)
-        // 대표 키워드set을 가지고 리턴
+        Movie currentMovie = getMovieById(movieId);
+        List<Movie> finalResults = new ArrayList<>();
+        List<FieldValue> adultCerts = List.of(FieldValue.of("19"));
+        int targetSize = 10;
+        boolean isAni = false;
+        if (currentMovie.getGenreIds() != null) {
+            isAni = currentMovie.getGenreIds().contains(16) || //애니장르 16번
+                    currentMovie.getGenreIds().contains("16");
+        }
+
+        String title = currentMovie.getTitle().replaceAll("[0-9]", "").trim();
+        if (title.length() < 2) {
+            title = currentMovie.getTitle();
+        }
+
+        String fixedTitle = title;
         try {
+            boolean checkIsAni = isAni;
+
+            //MLT 유사도
             SearchResponse<Movie> mltResponse = elasticsearchClient.search(s -> s
-                            .index("movies") //movies 인덱스에서 검색하여 targetSize만큼 가져오겠다.
+                            .index("movies")
                             .size(targetSize)
                             .query(q -> q
-                                    .bool(b -> b
-                                            .must(m -> m
-                                                    .moreLikeThis(mlt -> mlt //MLT 필드 시작
-                                                            .fields("overview", "title", "actors", "director", "companies") //유사도 분석 필드
-                                                            .like(l -> l.document(d -> d.index("movies").id(movieId))) // 기준이 되는 항목 -> 현재 영화 id
-                                                            .minTermFreq(1) // 기준 항목에서 [최소 1번] 이상 등장한 단어 사용
-                                                            .minDocFreq(1) // DB에서 최소 1번 이상 등장해야 사용
-                                                    )
-                                            )
-                                            .filter(f ->f.exists(e -> e.field("poster_path")))
-                                            .mustNot(mn ->mn.terms(t -> t.field("certification").terms(v -> v.value(adultCerts))))
-                                    )
+                                    .bool(b -> {
+                                        b.should(sh -> sh.moreLikeThis(mlt -> mlt
+                                                .fields("genre_ids^3.5", "director^2.0", "actors^1.5", "overview^1.0")
+                                                .like(l -> l.document(d -> d.index("movies").id(movieId)))
+                                                .minTermFreq(1).minDocFreq(1).maxQueryTerms(12)
+                                        ));
+
+                                        b.should(sh -> sh.match(m -> m
+                                                .field("title")
+                                                .query(fixedTitle)
+                                                .boost(5.0f)
+                                        ));
+
+                                        b.minimumShouldMatch("1");
+
+                                        b.filter(f -> f.exists(e -> e.field("poster_path")));
+                                        b.mustNot(mn -> mn.terms(t -> t.field("certification").terms(v -> v.value(adultCerts))));
+                                        b.mustNot(mn -> mn.ids(i -> i.values(movieId)));
+
+                                        if (checkIsAni) {
+                                            b.filter(f -> f.term(t -> t.field("genre_ids").value("16")));
+                                        }
+                                        return b;
+                                    })
                             ),
                     Movie.class
             );
 
             finalResults.addAll(mltResponse.hits().hits().stream()
-                    .map(Hit::source)
-                    .filter(Objects::nonNull)
-                    .toList()); //추천 정보 저장
+                    .map(Hit::source).filter(Objects::nonNull).toList());
 
         } catch (Exception e) {
-            logger.warn("MLT기반 추천중 오류 (ID: {}): {}", movieId, e.getMessage());
+            logger.warn("MLT 추천 오류 (ID: {}): {}", movieId, e.getMessage());
         }
 
-        if (finalResults.size() < targetSize) { //추천 정보 갯수가 너무 적으면 ->
+        if (finalResults.size() < targetSize) {
             try {
-                // 현재 영화의 장르를 조회
-                Movie currentMovie = getMovieById(movieId);
 
-                if (currentMovie != null && currentMovie.getGenreIds() != null && !currentMovie.getGenreIds().isEmpty()) {
-                    List<String> excludeIds = new ArrayList<>(); //리스트 생성
-                    excludeIds.add(movieId); //현재 보고있는 영화와
-                    finalResults.forEach(m -> excludeIds.add(m.getId())); //위에서 저장한 추천 정보들 excludeIds에 저장
+                List<String> excludeIds = new ArrayList<>();
+                excludeIds.add(movieId);
+                finalResults.forEach(m -> excludeIds.add(m.getId()));
+                //이미 찾은 영화 삭제
 
-                    int more = targetSize - finalResults.size(); //추가해야할 size 계산
+                int more = targetSize - finalResults.size();
+                boolean checkIsAni = isAni;
 
-                    SearchResponse<Movie> genreResponse = elasticsearchClient.search(s -> s
-                                    .index("movies")
-                                    .size(more)
-                                    .query(q -> q
-                                            .bool(b -> b
-                                                    //같은 장르 기반 추천
-                                                    .filter(f -> f
-                                                            .terms(t -> t
-                                                                    .field("genre_ids")
-                                                                    .terms(v -> v.value(currentMovie.getGenreIds().stream()
-                                                                            .map(FieldValue::of)
-                                                                            .toList()))
-                                                            )
-                                                    )
-                                                    .filter(f -> f
-                                                            .exists(e -> e
-                                                                    .field("poster_path"))
-                                                    )
+                SearchResponse<Movie> genreResponse = elasticsearchClient.search(s -> s
+                                .index("movies")
+                                .size(more)
+                                .query(q -> q
+                                        .bool(b -> {
+                                            //장르 체크
+                                            if (currentMovie.getGenreIds() != null) {
+                                                b.filter(f -> f.terms(t -> t.field("genre_ids")
+                                                        .terms(v -> v.value(currentMovie.getGenreIds().stream().map(FieldValue::of).toList()))));
+                                            }
 
-                                                    .mustNot(mn -> mn
-                                                            .ids(i -> i.values(excludeIds)) //excludeIds에 있는 값은 추가 x
-                                                    )
-                                                    .mustNot(mn -> mn
-                                                            .terms(t -> t
-                                                                    .field("certification")
-                                                                    .terms(v -> v.value(adultCerts))
-                                                            )
-                                                    )
-                                            )
-                                    )
-                                    // 평점 높은 순으로 채우기
-                                    .sort(sort -> sort.field(f -> f.field("vote_average").order(SortOrder.Desc)))
-                            , Movie.class);
+                                            b.filter(f -> f.exists(e -> e.field("poster_path")));
+                                            b.mustNot(mn -> mn.ids(i -> i.values(excludeIds)));
+                                            b.mustNot(mn -> mn.terms(t -> t.field("certification").terms(v -> v.value(adultCerts))));
 
-                    finalResults.addAll(genreResponse.hits().hits().stream()
-                            .map(Hit::source)
-                            .filter(Objects::nonNull)
-                            .toList()); //추천 항목 리스트 추가
-                }
+                                            if (checkIsAni) {
+                                                b.filter(f -> f.term(t -> t.field("genre_ids").value("16")));
+                                            }
+                                            return b;
+                                        })
+                                )
+
+                                .sort(sort -> sort.field(f -> f.field("popularity").order(SortOrder.Desc)))
+                                .sort(sort -> sort.field(f -> f.field("vote_average").order(SortOrder.Desc)))
+                        , Movie.class);
+
+                finalResults.addAll(genreResponse.hits().hits().stream()
+                        .map(Hit::source).filter(Objects::nonNull).toList());
+
             } catch (Exception e) {
-                logger.error("장르기반 추천 중 오류: {}", e.getMessage());
+                logger.error("장르 추천 중 오류: {}", e.getMessage());
             }
         }
 
-        return finalResults.stream()
-                .map(this::toMovieDoc)
-                .toList();
+        return finalResults.stream().map(this::toMovieDoc).toList();
     }
 
     // 4. 오타 교정 제안 (Suggester)

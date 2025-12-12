@@ -242,6 +242,24 @@ public class QuickMatchService {
         // 3) 취향 요약 계산 (장르 / 연도대 / 평균 평점)
         PreferenceSummary pref = summarizePreferences(likedMovies);
 
+        // AI가 쓸 수 있도록 MovieDoc 리스트로 변환
+        List<MovieDoc> likedDocs = likedMovies.stream()
+                .map(this::toMovieDocSafe)
+                .toList();
+
+        // 취향 타입명 생성
+        String tasteTypeName = aiRecommendationService.generateTasteType(
+                pref.topGenres,
+                pref.preferredYearRange,
+                pref.avgRating
+        );
+
+        // 핵심 키워드 5개까지 추출
+        List<String> mainKeywords = aiRecommendationService.extractMainKeywords(
+                likedDocs,
+                5
+        );
+
         QuickMatchResultSummaryDto summaryDto = QuickMatchResultSummaryDto.builder()
                 .likedCount((int) likedCount)
                 .dislikedCount((int) dislikedCount)
@@ -249,7 +267,11 @@ public class QuickMatchService {
                 .preferredYearRange(pref.preferredYearRange != null ? pref.preferredYearRange : "알 수 없음")
                 .preferredCountry(List.of("알 수 없음"))
                 .preferredMood(List.of("알 수 없음"))
+                .tasteTypeName(tasteTypeName)
+                .avgLikedRating(pref.avgRating)
+                .mainKeywords(mainKeywords)
                 .build();
+
 
         // 4) 추천 영화 뽑기
         List<String> seenMovieIds = feedbacks.stream()
@@ -597,25 +619,29 @@ public class QuickMatchService {
         }
         req.setMinRating(minRating);
 
-        // 장르 필터: 대표 장르 1개만 사용
+        // 장르 필터: 상위 장르 중 1~2개 랜덤 선택
         if (pref.topGenreIds != null && !pref.topGenreIds.isEmpty()) {
-            req.setGenres(pref.topGenreIds.stream()
-                    .limit(1)
-                    .toList());
+            List<Integer> shuffled = new ArrayList<>(pref.topGenreIds);
+            Collections.shuffle(shuffled);
+
+            int limit = Math.min(2, shuffled.size()); // 최대 2개까지만
+            req.setGenres(shuffled.subList(0, limit));
         }
 
         MovieSearchResponse resp = movieSearchService.search(req);
 
-        // 🔹 1차로 후보 MovieDoc만 모아 둔다
+        // 1차로 후보 MovieDoc만 모아 둔다 (순서 랜덤 섞기)
         List<MovieDoc> selected = new ArrayList<>();
+        List<MovieDoc> candidates = new ArrayList<>(resp.getMovies());
+        Collections.shuffle(candidates);
 
-        for (MovieDoc doc : resp.getMovies()) {
+        for (MovieDoc doc : candidates) {
             if (seenMovieIds.contains(doc.getMovieId())) continue;
             selected.add(doc);
             if (selected.size() >= 10) break;
         }
 
-        // 🔹 추천이 너무 적으면(예: 5개 미만) 장르 필터 풀고 다시 채우기
+        // 추천이 너무 적으면(예: 5개 미만) 장르 필터 풀고 다시 채우기
         if (selected.size() < 5) {
             MovieSearchRequest fallbackReq = new MovieSearchRequest();
             fallbackReq.setPage(0);
@@ -623,6 +649,8 @@ public class QuickMatchService {
             fallbackReq.setMinRating(minRating);
 
             MovieSearchResponse fallbackResp = movieSearchService.search(fallbackReq);
+            List<MovieDoc> fallbackCandidates = new ArrayList<>(fallbackResp.getMovies());
+            Collections.shuffle(fallbackCandidates);
 
             for (MovieDoc doc : fallbackResp.getMovies()) {
 
@@ -641,10 +669,10 @@ public class QuickMatchService {
             return List.of();
         }
 
-        // 🔹 여기서 한 번만 AI 호출해서 reason 리스트 받아오기
+        // 여기서 한 번만 AI 호출해서 reason 리스트 받아오기
         List<String> reasons = aiRecommendationService.generateReasons(summaryDto, selected);
 
-        // 🔹 영화 + reason 매핑해서 DTO로 변환
+        // 영화 + reason 매핑해서 DTO로 변환
         List<QuickMatchRecommendationDto> result = new ArrayList<>();
 
         for (int i = 0; i < selected.size(); i++) {
@@ -706,5 +734,146 @@ public class QuickMatchService {
 
         // 3차: 그래도 없으면 그냥 랜덤
         return pool.get(RANDOM.nextInt(pool.size()));
+    }
+
+    // QuickMatchService 안에 추가
+
+    /**
+     * 추천 카드 한 장 갈아끼우기
+     * - 현재 세션의 피드백(좋아요/싫어요) 기반으로 취향 요약 다시 계산
+     * - buildRecommendations()로 새 추천 리스트를 만든 뒤
+     *   지금 카드에 떠 있는 currentMovieId 를 제외한 것 중 하나 반환
+     */
+    // QuickMatchService.java 내부
+
+    @Transactional(readOnly = true)
+    public QuickMatchRecommendationDto getAlternativeRecommendation(
+            String sessionId,
+            String currentMovieId
+    ) {
+        // 1) 세션 확인
+        QuickMatchSession session = getSession(sessionId);
+
+        // 2) 이 세션의 전체 피드백
+        List<QuickMatchFeedback> feedbacks =
+                feedbackRepository.findBySessionId(sessionId);
+
+        if (feedbacks.isEmpty()) {
+            throw new IllegalStateException("해당 세션에 저장된 피드백이 없습니다.");
+        }
+
+        // 3) 이미 본 영화 ID 목록 (중복 제거)
+        List<String> seenMovieIds = feedbacks.stream()
+                .map(QuickMatchFeedback::getMovieId)
+                .distinct()
+                .toList();
+
+        // 4) LIKE 된 영화들만 모아서 취향 다시 요약
+        List<Movie> likedMovies = new ArrayList<>();
+        feedbacks.stream()
+                .filter(f -> f.getAction() == QuickMatchFeedback.Action.LIKE)
+                .forEach(f -> {
+                    Movie m = movieSearchService.getMovieById(f.getMovieId());
+                    if (m != null) likedMovies.add(m);
+                });
+
+        PreferenceSummary pref = summarizePreferences(likedMovies);
+
+        // 5) 추천용 검색 요청 구성 (buildRecommendations와 비슷하지만 1장만 뽑는용)
+        MovieSearchRequest req = new MovieSearchRequest();
+        req.setPage(0);
+        req.setSize(120);
+
+        // 평점 최소값 (취향 평균 기반)
+        float minRating = 6.5f;
+        if (pref.avgRating != null) {
+            float candidate = pref.avgRating.floatValue() - 0.7f;
+            minRating = Math.max(5.5f, candidate);
+            minRating = Math.min(7.8f, minRating);
+        }
+        req.setMinRating(minRating);
+
+        // 상위 장르 중 1~2개 랜덤 선택
+        if (pref.topGenreIds != null && !pref.topGenreIds.isEmpty()) {
+            List<Integer> shuffled = new ArrayList<>(pref.topGenreIds);
+            Collections.shuffle(shuffled);
+            int limit = Math.min(2, shuffled.size());
+            req.setGenres(shuffled.subList(0, limit));
+        }
+
+        MovieSearchResponse resp = movieSearchService.search(req);
+
+        // 6) 후보 셔플 후, 이미 본 영화 + 지금 카드 제외
+        List<MovieDoc> candidates = new ArrayList<>(resp.getMovies());
+        Collections.shuffle(candidates);
+
+        Set<String> excludeIds = new HashSet<>(seenMovieIds);
+        excludeIds.add(currentMovieId);
+
+        List<MovieDoc> filtered = candidates.stream()
+                .filter(m -> m.getMovieId() != null)
+                .filter(m -> !excludeIds.contains(m.getMovieId()))
+                .collect(Collectors.toList());
+
+        // 7) 후보가 너무 적으면 장르 필터 풀고 한 번 더
+        if (filtered.isEmpty()) {
+            MovieSearchRequest fallbackReq = new MovieSearchRequest();
+            fallbackReq.setPage(0);
+            fallbackReq.setSize(200);
+            fallbackReq.setMinRating(minRating);
+
+            MovieSearchResponse fallbackResp = movieSearchService.search(fallbackReq);
+            List<MovieDoc> fallbackCandidates = new ArrayList<>(fallbackResp.getMovies());
+            Collections.shuffle(fallbackCandidates);
+
+            filtered = fallbackCandidates.stream()
+                    .filter(m -> m.getMovieId() != null)
+                    .filter(m -> !excludeIds.contains(m.getMovieId()))
+                    .collect(Collectors.toList());
+
+            if (filtered.isEmpty()) {
+                // 그래도 없으면 마지막으로 wide pool에서 뽑기
+                List<MovieDoc> pool = movieSearchService.getWideCandidatePool().stream()
+                        .filter(m -> m.getMovieId() != null && !excludeIds.contains(m.getMovieId()))
+                        .toList();
+
+                if (pool.isEmpty()) {
+                    throw new RuntimeException("대체 추천 후보가 없습니다.");
+                }
+
+                MovieDoc pickedFromPool = pool.get(RANDOM.nextInt(pool.size()));
+
+                String reason = aiRecommendationService.generateAlternativeReason(
+                        pref.topGenres,
+                        pref.preferredYearRange,
+                        pref.avgRating,
+                        pickedFromPool
+                );
+
+                return QuickMatchRecommendationDto.builder()
+                        .movieId(pickedFromPool.getMovieId())
+                        .title(pickedFromPool.getTitle())
+                        .posterUrl(pickedFromPool.getPosterUrl())
+                        .reason(reason)
+                        .build();
+            }
+        }
+
+        // 8) 최종 후보 중 하나 랜덤 선택
+        MovieDoc picked = filtered.get(RANDOM.nextInt(filtered.size()));
+
+        String reason = aiRecommendationService.generateAlternativeReason(
+                pref.topGenres,
+                pref.preferredYearRange,
+                pref.avgRating,
+                picked
+        );
+
+        return QuickMatchRecommendationDto.builder()
+                .movieId(picked.getMovieId())
+                .title(picked.getTitle())
+                .posterUrl(picked.getPosterUrl())
+                .reason(reason)
+                .build();
     }
 }

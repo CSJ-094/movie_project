@@ -34,7 +34,12 @@ public class QrAuthController {
     @PostMapping("/authenticate")
     public ResponseEntity<QrAuthResponse> authenticateQrSession(@RequestBody QrAuthRequest request) {
         // QrAuthService의 authenticateSession 메서드 시그니처 변경에 맞춰 호출
-        boolean authenticated = qrAuthService.authenticateSession(request.getSessionId(), request.getMobileAuthToken());
+        boolean authenticated = qrAuthService.authenticateSession(
+                request.getSessionId(),
+                request.getMobileAuthToken(),
+                request.getUsername(),
+                request.getPassword()
+        );
         if (authenticated) {
             return ResponseEntity.ok(new QrAuthResponse(request.getSessionId(), "Authentication successful.", null));
         } else {
