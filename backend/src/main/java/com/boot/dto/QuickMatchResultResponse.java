@@ -13,4 +13,7 @@ public class QuickMatchResultResponse {
 
     private QuickMatchResultSummaryDto summary;
     private List<QuickMatchRecommendationDto> recommendations;
+    private String tasteTypeName;
+    private Double avgLikedRating;
+    private List<String> mainKeywords;
 }
