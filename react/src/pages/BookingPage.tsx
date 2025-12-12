@@ -41,6 +41,7 @@ interface Showtime {
   endTime: string;
   price: number;
   availableSeats: number;
+  totalSeats: number;
   movieTitle: string;
   posterPath: string;
   runtime: number;
@@ -51,6 +52,8 @@ interface Showtime {
 }
 
 export default function BookingPage() {
+      // 고정적으로 보여줄 영화 id (최신 목록)
+      const fixedOtherMovieIds = [1379266, 1084242, 1228246, 1242898, 1555417, 701387];
     // 영화사별 드롭다운 상태 관리
     const [openChains, setOpenChains] = useState<{[chain: string]: boolean}>({});
     const toggleChain = (chain: string) => {
@@ -102,6 +105,14 @@ export default function BookingPage() {
     if (date.toDateString() === today.toDateString()) return '오늘';
     if (date.toDateString() === tomorrow.toDateString()) return '내일';
     return getDayOfWeek(date);
+  };
+
+  // 시간대 타입 계산
+  const getTimeType = (date: Date) => {
+    const hour = date.getHours();
+    if (hour < 10) return '조조';
+    if (hour >= 23) return '심야';
+    return '일반';
   };
 
   // 날짜 이동 핸들러
@@ -244,7 +255,12 @@ export default function BookingPage() {
 
       setLoadingShowtimes(true);
       try {
-        const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        // 로컬 시간대 기준으로 날짜 포맷팅 (YYYY-MM-DD)
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+
         const response = await axios.get('http://localhost:8484/api/showtimes', {
           params: {
             movieId: selectedMovie.movieId, // tmdb_ 접두사 제거
@@ -275,14 +291,14 @@ export default function BookingPage() {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* 헤더 */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-        <div className="max-w-[1400px] mx-auto px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">빠른예매</h1>
         </div>
       </div>
 
       {/* 날짜 선택 */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-        <div className="max-w-[1400px] mx-auto px-6">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex items-center justify-between py-2">
             <button 
               onClick={handlePrevDates}
@@ -358,10 +374,9 @@ export default function BookingPage() {
       </div>
 
       {/* 메인 컨텐츠 - 4단 레이아웃 */}
-      <div className="max-w-[1400px] mx-auto">
-        <div className="grid grid-cols-12 border-t dark:border-gray-700">
-          {/* 선택한 영화 포스터 영역 */}
-          <div className="col-span-2 border-r dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="max-w-[1600px] mx-auto flex border-t dark:border-gray-700">
+        {/* 왼쪽: 영화 포스터 + 영화 리스트 */}
+        <div className="w-[280px] min-w-[200px] flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
               <div className="py-3 px-4 text-center font-bold text-lg text-gray-900 dark:text-white">
                 선택하신 영화
@@ -373,11 +388,11 @@ export default function BookingPage() {
                   <img 
                     src={selectedMovie.posterUrl} 
                     alt={selectedMovie.title}
-                    className="w-full rounded-lg shadow-lg"
+                    className="w-48 h-72 object-cover rounded-lg shadow-lg mx-auto"
                   />
-                  <h3 className="mt-4 font-bold text-gray-900 dark:text-white text-sm text-center">{selectedMovie.title}</h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">⭐ {selectedMovie.voteAverage}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 text-center">{selectedMovie.releaseDate}</p>
+                  <h3 className="mt-4 font-bold text-gray-900 dark:text-white text-lg text-center">{selectedMovie.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center">⭐ {selectedMovie.voteAverage}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500 mt-1 text-center">{selectedMovie.releaseDate}</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 mt-20">
@@ -391,52 +406,58 @@ export default function BookingPage() {
           </div>
 
           {/* 영화 선택 */}
-          <div className="col-span-3 border-r dark:border-gray-700 min-h-[600px] bg-white dark:bg-gray-800">
+          <div className="flex-1 overflow-y-auto" style={{ maxWidth: '320px' }}>
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
               <div className="py-3 px-4 text-center font-bold text-lg text-gray-900 dark:text-white">
                 그 외 상영중인 영화들
               </div>
             </div>
             <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 250px)' }}>
-              {movies.map((movie) => (
-                <button
-                  key={movie.movieId}
-                  onClick={() => setSelectedMovie(selectedMovie?.movieId === movie.movieId ? null : movie)}
-                  className={`w-full px-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b dark:border-gray-700 ${
-                    selectedMovie?.movieId === movie.movieId ? 'bg-red-50 dark:bg-red-900/20' : ''
-                  }`}
-                >
-                  {/* 포스터 이미지 */}
-                  <img 
-                    src={movie.posterUrl} 
-                    alt={movie.title}
-                    className="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0"
-                  />
-                  {/* 영화 정보 */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 dark:text-gray-200 font-medium truncate">{movie.title}</p>
-                    {movie.isNowPlaying && movie.firstShowDate && movie.lastShowDate && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {new Date(movie.firstShowDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ {new Date(movie.lastShowDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                      </p>
-                    )}
-                    {!movie.isNowPlaying && (
-                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">상영 종료</p>
-                    )}
-                  </div>
-                  {/* 좋아요 아이콘 */}
-                  <div className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 cursor-pointer flex-shrink-0">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                  </div>
-                </button>
-              ))}
+              {[selectedMovie, ...movies.filter(movie => fixedOtherMovieIds.includes(movie.movieId) && movie.movieId !== selectedMovie?.movieId)]
+                .filter((movie, idx, arr) => movie && arr.findIndex(m => m?.movieId === movie?.movieId) === idx)
+                .map((movie) => (
+                  movie && (
+                    <button
+                      key={movie.movieId}
+                      onClick={() => setSelectedMovie(selectedMovie?.movieId === movie.movieId ? null : movie)}
+                      className={`w-full px-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b dark:border-gray-700 ${
+                        selectedMovie?.movieId === movie.movieId ? 'bg-red-50 dark:bg-red-900/20' : ''
+                      }`}
+                    >
+                      {/* 포스터 이미지 */}
+                      <img 
+                        src={movie.posterUrl} 
+                        alt={movie.title}
+                        className="w-16 h-24 object-cover rounded shadow-sm flex-shrink-0"
+                      />
+                      {/* 영화 정보 */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base text-gray-900 dark:text-gray-200 font-medium truncate">{movie.title}</p>
+                        {movie.isNowPlaying && movie.firstShowDate && movie.lastShowDate && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {new Date(movie.firstShowDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} ~ {new Date(movie.lastShowDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                          </p>
+                        )}
+                        {!movie.isNowPlaying && (
+                          <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">상영 종료</p>
+                        )}
+                      </div>
+                      {/* 좋아요 아이콘 */}
+                      <div className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 cursor-pointer flex-shrink-0">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </div>
+                    </button>
+                  )
+                ))}
             </div>
           </div>
 
-          {/* 극장 선택 (첨부 이미지 스타일) */}
-          <div className="col-span-3 border-r dark:border-gray-700 min-h-[600px] bg-white dark:bg-gray-800">
+        {/* 오른쪽: 극장 선택 + 상영시간표 */}
+        <div className="flex-1 flex min-h-[600px] bg-white dark:bg-gray-800">
+          {/* 극장 선택 */}
+          <div className="w-[40%] border-r dark:border-gray-700 flex flex-col">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
               <div className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">극장</div>
               {/* 탭 */}
@@ -444,47 +465,56 @@ export default function BookingPage() {
             </div>
             <div className="flex h-full" style={{minHeight:'500px'}}>
               {/* 좌측: 지역 리스트 */}
-              <div className="w-[45%] border-r dark:border-gray-700 overflow-y-auto bg-[#1a2233]" style={{maxHeight:'calc(100vh - 250px)'}}>
+              <div className="w-[45%] border-r dark:border-gray-700 overflow-y-auto bg-gray-50 dark:bg-gray-900" style={{maxHeight:'calc(100vh - 250px)'}}>
                 {regionGroups.map((region, idx) => (
                   <button
                     key={region.name}
                     onClick={()=>setSelectedRegionIdx(idx)}
-                    className={`w-full px-4 py-2 text-left text-sm border-b dark:border-gray-700 transition-all
-                      ${selectedRegionIdx===idx?'bg-[#232b3e] text-white font-bold':'bg-transparent text-gray-300'}
-                      hover:bg-[#232b3e] hover:text-white`}
+                    className={`w-full px-4 py-3 text-left text-sm border-b border-gray-200 dark:border-gray-700 transition-all
+                      ${selectedRegionIdx===idx
+                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-bold border-r-2 border-r-gray-900 dark:border-r-white'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}
+                      `}
                   >
                     {region.name} <span className="text-xs text-gray-400">({region.theaters.length})</span>
                   </button>
                 ))}
               </div>
               {/* 우측: 해당 지역의 극장 리스트 (영화사별 그룹핑) */}
-              <div className="w-[55%] overflow-y-auto bg-[#232b3e]" style={{maxHeight:'calc(100vh - 250px)'}}>
+              <div className="w-[55%] overflow-y-auto bg-white dark:bg-gray-800" style={{maxHeight:'calc(100vh - 250px)'}}>
                 {(() => {
                   // 특별관 필터 완전 제거: 항상 전체 극장만 노출
                   const theaters = (regionGroups[selectedRegionIdx]?.theaters||[]);
                   // 영화사별 그룹핑
                   const chains = Array.from(new Set(theaters.map(t=>t.chain)));
                   return chains.map(chain => (
-                    <div key={chain} className="mb-4">
+                    <div key={chain} className="border-b border-gray-100 dark:border-gray-700 last:border-0">
                       <button
-                        className="flex items-center px-4 py-2 bg-gradient-to-r from-[#2c3e70] to-[#1a2233] rounded-t-lg border-b-2 border-[#7fa2ff] w-full font-bold text-[#7fa2ff] justify-between"
+                        className="relative flex items-center w-full px-4 py-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all justify-between group overflow-hidden"
                         onClick={() => toggleChain(chain)}
                       >
-                        <span>{chain}</span>
-                        <span>{openChains[chain] ? '▲' : '▼'}</span>
+                        <div className="relative z-10 flex items-center gap-2">
+                           <span className="font-bold text-sm text-gray-900 dark:text-white">{chain}</span>
+                        </div>
+                        <span className={`relative z-10 text-gray-400 transition-transform duration-200 ${openChains[chain] ? 'rotate-180' : ''}`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </span>
                       </button>
                       {openChains[chain] && (
-                        <div className="border-l-4 border-[#7fa2ff] bg-[#232b3e]">
+                        <div className="bg-gray-50 dark:bg-gray-900/50 py-1">
                           {theaters.filter(t=>t.chain===chain).map(theater=>(
                             <button
                               key={theater.id}
                               onClick={()=>setSelectedTheater(theater)}
-                              className={`w-full px-4 py-2 text-left text-sm border-b border-gray-700 transition-all
+                              className={`w-full px-8 py-2 text-left text-sm transition-all flex items-center gap-2
                                 ${selectedTheater?.id===theater.id
-                                  ? 'bg-[#232b3e] text-white font-bold'
-                                  : 'bg-transparent text-gray-300 font-bold'}
-                                hover:bg-[#232b3e] hover:text-white`}
+                                  ? 'text-gray-900 dark:text-white font-bold bg-gray-200 dark:bg-gray-700'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}
+                              `}
                             >
+                              <span className={`w-1.5 h-1.5 rounded-full ${selectedTheater?.id===theater.id ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'}`}></span>
                               {theater.name}
                             </button>
                           ))}
@@ -497,8 +527,8 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* 시간 선택 */}
-          <div className="col-span-5 min-h-[600px] bg-gray-50 dark:bg-gray-900">
+          {/* 시간 선택 (상영시간표) */}
+          <div className="w-[60%] bg-gray-50 dark:bg-gray-900 flex flex-col">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
               <div className="py-3 px-4">
                 <div className="flex items-center justify-between">
@@ -510,7 +540,7 @@ export default function BookingPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="inline-block w-3 h-3 bg-purple-400 rounded-sm"></span>
-                      <span className="text-gray-600 dark:text-gray-400">본관심</span>
+                      <span className="text-gray-600 dark:text-gray-400">일반</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="inline-block w-3 h-3 bg-blue-400 rounded-sm"></span>
@@ -546,6 +576,7 @@ export default function BookingPage() {
                     {showtimes.map((showtime, index) => {
                       const startTime = new Date(showtime.startTime);
                       const isSelected = selectedShowtime?.id === showtime.id;
+                      const timeType = getTimeType(startTime);
                       
                       return (
                         <button
@@ -553,17 +584,24 @@ export default function BookingPage() {
                           onClick={() => setSelectedShowtime(showtime)}
                           className={`w-full p-4 rounded-lg text-left transition-all duration-300 ${
                             isSelected 
-                              ? 'border-[3px] border-red-600 bg-white dark:bg-gray-800 shadow-2xl' 
+                              ? 'border-[3px] border-red-600 bg-white dark:bg-gray-700 shadow-2xl dark:shadow-[0_0_15px_rgba(220,38,38,0.5)]' 
                               : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <div>
+                            <div className="flex items-center gap-2">
                               <span className="font-bold text-lg text-gray-900 dark:text-white">
                                 {startTime.getHours().toString().padStart(2, '0')}:{startTime.getMinutes().toString().padStart(2, '0')}
                               </span>
-                              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
                                 ~ {new Date(showtime.endTime).getHours().toString().padStart(2, '0')}:{new Date(showtime.endTime).getMinutes().toString().padStart(2, '0')}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                timeType === '조조' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+                                timeType === '심야' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' :
+                                'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400'
+                              }`}>
+                                {timeType}
                               </span>
                             </div>
                           </div>
@@ -575,7 +613,7 @@ export default function BookingPage() {
                             </div>
                             <div className="text-right">
                               <div className="text-gray-600 dark:text-gray-400">
-                                잔여 {showtime.availableSeats}/{showtime.availableSeats}석
+                                잔여 {showtime.availableSeats}/{showtime.totalSeats}석
                               </div>
                               <div className="text-red-600 dark:text-red-400 font-bold">
                                 {showtime.price.toLocaleString()}원
@@ -604,7 +642,7 @@ export default function BookingPage() {
       {/* 하단 고정 예매 버튼 */}
       {selectedShowtime && (
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-lg z-50">
-          <div className="max-w-[1400px] mx-auto px-6 py-4">
+          <div className="max-w-[1600px] mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div>

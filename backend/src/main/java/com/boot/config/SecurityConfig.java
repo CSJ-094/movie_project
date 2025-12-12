@@ -77,6 +77,7 @@ public class SecurityConfig {
                                 "/api/reviews/**",
                                 "/api/theaters/**",
                                 "/api/showtimes/**",
+                                "/api/bookings/showtime/**",
                                 "/api/favorites/**",
                                 "/api/watchlist/**")
                         .permitAll()

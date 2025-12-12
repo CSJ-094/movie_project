@@ -1098,3 +1098,56 @@
 2025-12-11 09:23:50,294 - INFO - Successfully indexed 13248 movies.
 2025-12-11 09:23:50,325 - INFO - 
 --- ETL Process Finished in 638.79 seconds ---
+2025-12-11 15:50:11,873 - INFO - GET http://localhost:9200/ [status:200 duration:0.007s]
+2025-12-11 15:50:11,873 - INFO - Elasticsearch 연결 성공. 버전: 8.11.1
+2025-12-11 15:50:11,873 - INFO - --- Starting ETL Process ---
+2025-12-11 15:50:11,875 - INFO - HEAD http://localhost:9200/movies [status:200 duration:0.002s]
+2025-12-11 15:50:11,876 - INFO - GET http://localhost:9200/ [status:200 duration:0.001s]
+2025-12-11 15:50:11,876 - INFO - HEAD http://localhost:9200/movies [status:200 duration:8.11.1]
+2025-12-11 15:50:11,877 - INFO - Deleting existing index 'movies'...
+2025-12-11 15:50:11,996 - INFO - DELETE http://localhost:9200/movies [status:200 duration:0.119s]
+2025-12-11 15:50:11,997 - INFO - Existing index 'movies' deleted.
+2025-12-11 15:50:11,997 - INFO - Creating new index 'movies' with mappings...
+2025-12-11 15:50:12,337 - INFO - PUT http://localhost:9200/movies [status:200 duration:0.340s]
+2025-12-11 15:50:12,337 - INFO - Index 'movies' created with mappings.
+2025-12-11 15:50:12,337 - INFO - 
+--- Extracting Movie Data (Basic Info from various endpoints) ---
+2025-12-11 15:50:50,406 - INFO - Found 106 now playing movies.
+2025-12-11 15:51:23,429 - INFO - Found 9814 popular movies.
+2025-12-11 15:51:56,266 - INFO - Found 9999 top rated movies.
+2025-12-11 15:52:29,235 - INFO - Found 37 upcoming movies.
+2025-12-11 15:52:29,236 - INFO - Total unique movies to process: 17873
+2025-12-11 15:52:29,236 - INFO - 
+--- Extracting Movie Data (Details like OTT, Runtime, Certification, Companies) ---
+2025-12-11 15:54:58,698 - INFO - 
+--- Loading Data to Elasticsearch ---
+2025-12-11 15:54:59,335 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.555s]
+2025-12-11 15:54:59,599 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.246s]
+2025-12-11 15:54:59,816 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.205s]
+2025-12-11 15:55:00,006 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.174s]
+2025-12-11 15:55:00,199 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.182s]
+2025-12-11 15:55:00,328 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.119s]
+2025-12-11 15:55:00,500 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.161s]
+2025-12-11 15:55:00,636 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.125s]
+2025-12-11 15:55:00,767 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.121s]
+2025-12-11 15:55:00,898 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.122s]
+2025-12-11 15:55:01,037 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.129s]
+2025-12-11 15:55:01,209 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.162s]
+2025-12-11 15:55:01,426 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.206s]
+2025-12-11 15:55:01,617 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.181s]
+2025-12-11 15:55:01,805 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.177s]
+2025-12-11 15:55:02,054 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.240s]
+2025-12-11 15:55:02,245 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.180s]
+2025-12-11 15:55:02,441 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.186s]
+2025-12-11 15:55:02,617 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.166s]
+2025-12-11 15:55:02,818 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.192s]
+2025-12-11 15:55:03,025 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.196s]
+2025-12-11 15:55:03,223 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.188s]
+2025-12-11 15:55:03,420 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.187s]
+2025-12-11 15:55:03,628 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.198s]
+2025-12-11 15:55:03,852 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.213s]
+2025-12-11 15:55:04,039 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.176s]
+2025-12-11 15:55:04,113 - INFO - PUT http://localhost:9200/_bulk [status:200 duration:0.068s]
+2025-12-11 15:55:04,114 - INFO - Successfully indexed 13185 movies.
+2025-12-11 15:55:04,144 - INFO - 
+--- ETL Process Finished in 291.81 seconds ---
