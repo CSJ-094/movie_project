@@ -107,6 +107,8 @@ public class MovieController {
         request.setSortOrder("desc");
         return ResponseEntity.ok(movieSearchService.search(request));
     }
+
+    @Operation(summary = "추천 영화 목록 조회", description = "영화 상세보기 페이지 추천 영화 리스트 요청용")
     @GetMapping("/{movieId}/recommendations")
     public ResponseEntity<List<MovieDoc>> getRecommendations(@PathVariable("movieId") String movieId) {
         return ResponseEntity.ok(movieSearchService.recommend(movieId));
