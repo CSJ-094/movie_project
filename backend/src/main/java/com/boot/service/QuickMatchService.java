@@ -242,6 +242,24 @@ public class QuickMatchService {
         // 3) 취향 요약 계산 (장르 / 연도대 / 평균 평점)
         PreferenceSummary pref = summarizePreferences(likedMovies);
 
+        // AI가 쓸 수 있도록 MovieDoc 리스트로 변환
+        List<MovieDoc> likedDocs = likedMovies.stream()
+                .map(this::toMovieDocSafe)
+                .toList();
+
+        // 취향 타입명 생성
+        String tasteTypeName = aiRecommendationService.generateTasteType(
+                pref.topGenres,
+                pref.preferredYearRange,
+                pref.avgRating
+        );
+
+        // 핵심 키워드 5개까지 추출
+        List<String> mainKeywords = aiRecommendationService.extractMainKeywords(
+                likedDocs,
+                5
+        );
+
         QuickMatchResultSummaryDto summaryDto = QuickMatchResultSummaryDto.builder()
                 .likedCount((int) likedCount)
                 .dislikedCount((int) dislikedCount)
@@ -249,7 +267,11 @@ public class QuickMatchService {
                 .preferredYearRange(pref.preferredYearRange != null ? pref.preferredYearRange : "알 수 없음")
                 .preferredCountry(List.of("알 수 없음"))
                 .preferredMood(List.of("알 수 없음"))
+                .tasteTypeName(tasteTypeName)
+                .avgLikedRating(pref.avgRating)
+                .mainKeywords(mainKeywords)
                 .build();
+
 
         // 4) 추천 영화 뽑기
         List<String> seenMovieIds = feedbacks.stream()
@@ -820,13 +842,19 @@ public class QuickMatchService {
                 }
 
                 MovieDoc pickedFromPool = pool.get(RANDOM.nextInt(pool.size()));
-                String reasonFallback = "여태까지의 취향과 겹치지 않으면서도 분위기가 어울리는 작품으로 골라봤어요.";
+
+                String reason = aiRecommendationService.generateAlternativeReason(
+                        pref.topGenres,
+                        pref.preferredYearRange,
+                        pref.avgRating,
+                        pickedFromPool
+                );
 
                 return QuickMatchRecommendationDto.builder()
                         .movieId(pickedFromPool.getMovieId())
                         .title(pickedFromPool.getTitle())
                         .posterUrl(pickedFromPool.getPosterUrl())
-                        .reason(reasonFallback)
+                        .reason(reason)
                         .build();
             }
         }
@@ -834,7 +862,12 @@ public class QuickMatchService {
         // 8) 최종 후보 중 하나 랜덤 선택
         MovieDoc picked = filtered.get(RANDOM.nextInt(filtered.size()));
 
-        String reason = "이번 세션에서 좋아요한 영화들의 장르·평점 취향을 반영해, 너무 겹치지 않는 선에서 비슷한 분위기 작품을 추천했어요.";
+        String reason = aiRecommendationService.generateAlternativeReason(
+                pref.topGenres,
+                pref.preferredYearRange,
+                pref.avgRating,
+                picked
+        );
 
         return QuickMatchRecommendationDto.builder()
                 .movieId(picked.getMovieId())
