@@ -1,6 +1,7 @@
 package com.boot.controller;
 
 import com.boot.dto.*;
+import com.boot.dto.QuickMatchAlternativeRequest;
 import com.boot.entity.QuickMatchFeedback;
 import com.boot.entity.QuickMatchSession;
 import com.boot.service.QuickMatchService;
