@@ -122,8 +122,8 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* 로고 */}
-          <Link to="/" className="flex-shrink-0 text-2xl font-bold text-red-600 dark:text-red-500">
-            MovieApp
+          <Link to="/" className="flex-shrink-0">
+            <img className="h-10 w-auto" src="/assets/logo.png" alt="NextFlick" />
           </Link>
 
           {/* 데스크톱 내비게이션 및 검색 */}
@@ -181,8 +181,8 @@ const Header: React.FC = () => {
               </button>
             ) : (
               <>
-                <Link to="/login" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-semibold">로그인</Link>
-                <Link to="/register" className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-semibold">회원가입</Link>
+                <Link to="/login" className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-semibold">로그인</Link>
+                <Link to="/register" className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors font-semibold">회원가입</Link>
               </>
             )}
 
@@ -264,8 +264,8 @@ const Header: React.FC = () => {
             </button>
           ) : (
             <div className="flex flex-col space-y-2">
-              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className={`${authButtonClass} bg-blue-600 hover:bg-blue-700 text-white`}>로그인</Link>
-              <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className={`${authButtonClass} bg-green-600 hover:bg-green-700 text-white`}>회원가입</Link>
+              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className={`${authButtonClass} bg-red-600 hover:bg-red-700 text-white`}>로그인</Link>
+              <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className={`${authButtonClass} bg-gray-700 hover:bg-gray-800 text-white`}>회원가입</Link>
             </div>
           )}
           <button onClick={toggleDarkMode} className={`${authButtonClass} bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600`}>
