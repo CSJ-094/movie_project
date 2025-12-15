@@ -405,7 +405,7 @@ public class MovieSearchService {
         return resp.getMovies();
     }
 
-    // MovieDetailPage 추천영화 섹션
+
     public List<MovieDoc> recommend(String movieId) {
 
         Movie currentMovie = getMovieById(movieId);
@@ -439,7 +439,7 @@ public class MovieSearchService {
                                     .bool(b -> {
                                         // MLT 유사도 분석 ^=가중치설정
                                         b.should(sh -> sh.moreLikeThis(mlt -> mlt
-                                                .fields("genre_ids^3.5", "director^2.0", "actors^1.5", "overview^1.0") // title은 여기서 뺍니다 (어차피 아래에서 함)
+                                                .fields("genre_ids^3.5", "director^2.0", "actors^1.5", "overview^1.0")
                                                 .like(l -> l.document(d -> d.index("movies").id(movieId)))
                                                 .minTermFreq(1).minDocFreq(1).maxQueryTerms(12)
                                         ));
