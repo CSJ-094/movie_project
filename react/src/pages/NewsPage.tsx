@@ -13,17 +13,16 @@ interface NewsItem {
 const NewsPage: React.FC = () => {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(false);
-    const [keyword, setKeyword] = useState('영화');
     const [sort, setSort] = useState('date'); // default: latest
     const [page, setPage] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const itemsPerPage = 12;
 
-    const fetchNews = async () => {
+    const fetchNews = async (currentPage: number) => {
         setLoading(true);
         try {
             const response = await axiosInstance.get('/news', {
-                params: { query: keyword, sort, page, size: itemsPerPage }
+                params: { query: '영화', sort, page: currentPage, size: itemsPerPage }
             });
             setNews(response.data.items || []);
             setTotalItems(response.data.total || 0);
@@ -33,16 +32,9 @@ const NewsPage: React.FC = () => {
             setLoading(false);
         }
     };
-
     useEffect(() => {
-        fetchNews();
+        fetchNews(page);
     }, [sort, page]);
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        setPage(1); // Reset to page 1 on new search
-        fetchNews();
-    };
 
     // HTML 태그 제거 및 디코딩 함수
     const cleanHtml = (html: string) => {
@@ -85,34 +77,13 @@ const NewsPage: React.FC = () => {
                     </p>
 
                     {/* Search Bar (Floating) */}
-                    <div className="max-w-3xl mx-auto">
-                        <form onSubmit={handleSearch} className="relative flex items-center w-full p-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-2xl transition-all hover:bg-white/20 focus-within:bg-white/95 focus-within:text-gray-900 group">
-                            <div className="pl-4 text-white/70 group-focus-within:text-red-500 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                value={keyword}
-                                onChange={(e) => setKeyword(e.target.value)}
-                                className="w-full bg-transparent border-none text-white placeholder-red-200 group-focus-within:text-gray-900 group-focus-within:placeholder-gray-400 focus:ring-0 text-lg px-4 py-2"
-                                placeholder="관심 있는 영화나 배우를 검색해보세요..."
-                            />
-                            <button type="submit" className="bg-white text-red-600 px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition-colors shadow-md transform hover:scale-105 active:scale-95 group-focus-within:bg-red-600 group-focus-within:text-white">
-                                검색
-                            </button>
-                        </form>
-                    </div>
+                    <div className="max-w-3xl mx-auto hidden"></div>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 {/* Sort Buttons */}
-                <div className="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
-                        <span className="mr-2">📰</span> 검색 결과 <span className="text-red-500 ml-2 text-xl">{totalItems.toLocaleString()}</span>건
-                    </h2>
+                <div className="flex justify-end items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
                     <div className="flex space-x-1 bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
                         {['sim', 'date'].map((option) => (
                             <button
