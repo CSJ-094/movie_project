@@ -1,4 +1,4 @@
-import React from 'react';
+  import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 // --- 상단 카테고리 헤더 컴포넌트 ---

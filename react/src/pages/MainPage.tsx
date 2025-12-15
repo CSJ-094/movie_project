@@ -5,6 +5,7 @@ import MovieSectionCarousel from '../components/MovieSectionCarousel';
 import { useAuth } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import axios from 'axios';
+import AppHeader from '../components/AppHeader';
 
 const TMDB_API_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -93,9 +94,11 @@ const MainPage: React.FC = () => {
     };
 
     return (
+
         <div className="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white overflow-x-hidden">
+
             <MovieCarousel />
-            
+            <AppHeader />
             {/* 퀵매칭 버튼 추가 */}
             <div className="py-12 text-center">
                 <button

@@ -193,7 +193,8 @@ public class MovieSearchService {
                             .terms(v -> v.value(List.of(
                                     FieldValue.of("18"),
                                     FieldValue.of("19+"),
-                                    FieldValue.of("19")
+                                    FieldValue.of("19"),
+                                    FieldValue.of("청소년관람불가")
                             )))
                     )
             );
@@ -408,35 +409,41 @@ public class MovieSearchService {
     public List<MovieDoc> recommend(String movieId) {
 
         Movie currentMovie = getMovieById(movieId);
-        List<Movie> finalResults = new ArrayList<>();
-        List<FieldValue> adultCerts = List.of(FieldValue.of("19"));
-        int targetSize = 10;
-        boolean isAni = false;
-        if (currentMovie.getGenreIds() != null) {
-            isAni = currentMovie.getGenreIds().contains(16) || //애니장르 16번
-                    currentMovie.getGenreIds().contains("16");
+        if (currentMovie == null) {
+            return new ArrayList<>(); // 영화 정보가 없으면 빈 리스트 반환
         }
 
+        List<Movie> finalResults = new ArrayList<>();
+        List<FieldValue> adultCerts = List.of(FieldValue.of("19"), FieldValue.of("18"), FieldValue.of("R"), FieldValue.of("Restricted"));
+        int targetSize = 10;
+
+        boolean isAnimation = false;
+        if (currentMovie.getGenreIds() != null) {
+
+            isAnimation = currentMovie.getGenreIds().contains(16) || //애니장르 16번
+                    currentMovie.getGenreIds().contains("16");
+        }
         String title = currentMovie.getTitle().replaceAll("[0-9]", "").trim();
         if (title.length() < 2) {
             title = currentMovie.getTitle();
         }
-
         String fixedTitle = title;
         try {
-            boolean checkIsAni = isAni;
+            boolean checkIsAnimation = isAnimation;
+            String currentTitle = currentMovie.getTitle();
 
-            //MLT 유사도
             SearchResponse<Movie> mltResponse = elasticsearchClient.search(s -> s
                             .index("movies")
                             .size(targetSize)
                             .query(q -> q
                                     .bool(b -> {
+                                        // MLT 유사도 분석 ^=가중치설정
                                         b.should(sh -> sh.moreLikeThis(mlt -> mlt
-                                                .fields("genre_ids^3.5", "director^2.0", "actors^1.5", "overview^1.0")
+                                                .fields("genre_ids^3.5", "director^2.0", "actors^1.5", "overview^1.0") // title은 여기서 뺍니다 (어차피 아래에서 함)
                                                 .like(l -> l.document(d -> d.index("movies").id(movieId)))
                                                 .minTermFreq(1).minDocFreq(1).maxQueryTerms(12)
                                         ));
+
 
                                         b.should(sh -> sh.match(m -> m
                                                 .field("title")
@@ -444,13 +451,16 @@ public class MovieSearchService {
                                                 .boost(5.0f)
                                         ));
 
+
                                         b.minimumShouldMatch("1");
+
 
                                         b.filter(f -> f.exists(e -> e.field("poster_path")));
                                         b.mustNot(mn -> mn.terms(t -> t.field("certification").terms(v -> v.value(adultCerts))));
                                         b.mustNot(mn -> mn.ids(i -> i.values(movieId)));
 
-                                        if (checkIsAni) {
+
+                                        if (checkIsAnimation) {
                                             b.filter(f -> f.term(t -> t.field("genre_ids").value("16")));
                                         }
                                         return b;
@@ -475,7 +485,7 @@ public class MovieSearchService {
                 //이미 찾은 영화 삭제
 
                 int more = targetSize - finalResults.size();
-                boolean checkIsAni = isAni;
+                boolean finalIsAnimation = isAnimation;
 
                 SearchResponse<Movie> genreResponse = elasticsearchClient.search(s -> s
                                 .index("movies")
@@ -492,7 +502,7 @@ public class MovieSearchService {
                                             b.mustNot(mn -> mn.ids(i -> i.values(excludeIds)));
                                             b.mustNot(mn -> mn.terms(t -> t.field("certification").terms(v -> v.value(adultCerts))));
 
-                                            if (checkIsAni) {
+                                            if (finalIsAnimation) {
                                                 b.filter(f -> f.term(t -> t.field("genre_ids").value("16")));
                                             }
                                             return b;

@@ -93,6 +93,7 @@ const MovieListPage: React.FC<MovieListPageProps> = ({ pageTitle, fetchUrl }) =>
   return (
     <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
       <AppHeader />
+
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold mb-8 text-gray-800 dark:text-white">{pageTitle}</h1>
 

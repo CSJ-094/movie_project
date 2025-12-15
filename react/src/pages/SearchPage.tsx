@@ -4,6 +4,7 @@ import MovieCard from '../components/MovieCard';
 import MovieCardSkeleton from '../components/MovieCardSkeleton';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../contexts/AuthContext';
+import AppHeader from "../components/AppHeader.tsx";
 
 // 백엔드 API 응답에 맞춘 Movie 인터페이스
 interface Movie {
@@ -174,6 +175,7 @@ const SearchPage: React.FC = () => {
 
   return (
     <div className="p-5 text-center">
+      <AppHeader />
       <h1 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">'{query}'에 대한 검색 결과</h1>
 
       {isLoggedIn && searchHistory.length > 0 && (
