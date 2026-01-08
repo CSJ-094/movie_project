@@ -29,7 +29,7 @@
 * **요약 기능 부재:** 긴 줄글 형태의 리뷰를 한눈에 파악할 수 있는 요약 기능이 없음
 * **낮은 활용성:** 외부 사이트의 양질의 리뷰 데이터를 제대로 활용하지 못함
 <br/>
----
+
 
 ## 🛠 Tech Stack (기술 스택)
 
@@ -42,15 +42,46 @@
 | **Infra & Tools** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Git](https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white) |
 | **Collaboration** | ![Jira](https://img.shields.io/badge/Jira-0052CC?style=flat&logo=jira&logoColor=white) ![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat&logo=slack&logoColor=white) ![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white) |
 
+<br/>
 
+## 📂 Project Structure (폴더 구조)
 
+이 프로젝트는 **Frontend(React)**와 **Backend(Spring Boot)**가 분리된 모노레포(Monorepo) 형태의 구조를 따르고 있으며, Python을 이용한 별도의 데이터 파이프라인(ETL)을 포함하고 있습니다.
+
+```bash
+movie_project/
+├── 📂 backend/              # Spring Boot API Server
+│   ├── src/main/java       # Java Source Code 
+│   ├── src/main/resources  # Config (application.yml) & Mapper
+│   └── build.gradle        # Gradle Build Settings
+│
+├── 📂 frontend/             # React Client Application
+│   ├── src/                # React Source Code 
+│   ├── public/             # Static Assets 
+│   └── package.json        # NPM Dependencies
+│
+├── 📂 etl/                  # Python Data Pipeline (ETL)
+│   ├── collector.py        # TMDB API Data Collection Script
+│   └── loader.py           # Elasticsearch Data Insert Script
+│
+├── 📂 images/               # README & Documentation Assets
+│   └── ...                 # Architecture, ERD, Flowcharts
+│
+└── 📄 README.md             # Project Documentation
+```
+
+<br/>
+
+---
 
 ### 🏗 System Architecture
 
 **[ERD]**
 ![구조도](./images/ERD.png)
 
-<br/>
+<br/> 
+
+
 
 **[서비스 구조도]**
 ![구조도](./images/구조도.png)
