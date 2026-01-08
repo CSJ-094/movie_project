@@ -42,69 +42,24 @@
 | **Infra & Tools** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Git](https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white) |
 | **Collaboration** | ![Jira](https://img.shields.io/badge/Jira-0052CC?style=flat&logo=jira&logoColor=white) ![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat&logo=slack&logoColor=white) ![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white) |
 
-## 설계
 
-**ERD 테이블 설계**
-![image](https://github.com/user-attachments/assets/4d5a879f-b70b-4317-8ba5-3fe3a85a231c)
 
-```mermaid
-graph TD
-    %% 스타일 정의 (색상 등)
-    classDef main fill:#ff9,stroke:#333,stroke-width:2px;
-    classDef sub fill:#e1f5fe,stroke:#333,stroke-width:1px;
-    classDef ext fill:#f5f5f5,stroke:#999,stroke-width:1px,stroke-dasharray: 5 5;
 
-    %% 사용자 및 진입점
-    User((User)) --> Client[Frontend]
-    Admin((Admin)) --> Client
-    Client --> API_Gateway[API Controller Layer]
+### 🏗 System Architecture
 
-    %% 1. 회원 및 인증 관리 (왼쪽 영역)
-    subgraph "👤 Member & Auth Service"
-        API_Gateway --> LoginCtrl[Login Controller]
-        LoginCtrl --> SocialAuth["Social Login (Kakao/Naver)"]
-        LoginCtrl --> MemberCtrl[Member Controller]
-        MemberCtrl --> MyPage["My Page / Info"]
-        MemberCtrl --> ScrapCtrl[Scrap Controller]
-    end
+**[ERD]**
+![구조도](./images/ERD.png)
 
-    %% 2. 검색 서비스 (중간 상단)
-    subgraph "🔍 Search Service"
-        API_Gateway --> SearchCtrl[Search Controller]
-        SearchCtrl --> HistoryCtrl[Search History Controller]
-        SearchCtrl --> ES[(Elasticsearch)]
-    end
+<br/>
 
-    %% 3. 영화 및 리뷰 서비스 (중앙 핵심)
-    subgraph "🎬 Movie & Content Service"
-        API_Gateway --> MovieCtrl[Movie Info Controller]
-        
-        MovieCtrl --> ReviewCtrl[Review Controller]
-        ReviewCtrl --> SummaryCtrl[AI Review Summary]
-        SummaryCtrl -.-> OpenAI[OpenAI API]
-        
-        MovieCtrl --> RatingCtrl[Star Rating Controller]
-        MovieCtrl --> LikeCtrl["Favorite/Like Controller"]
-        MovieCtrl -.-> VisionAPI["Google Vision API (Rec)"]
-    end
+**[서비스 구조도]**
+![구조도](./images/구조도.png)
 
-    %% 4. 예약 및 결제 서비스 (왼쪽 하단)
-    subgraph "🎫 Booking & Payment Service"
-        API_Gateway --> BookCtrl[Booking Controller]
-        BookCtrl --> SeatCtrl[Seat Selection Controller]
-        BookCtrl --> PayCtrl[Payment Controller]
-        PayCtrl -.-> Toss[Toss Payments API]
-    end
+<br/>
 
-    %% 5. 관리자 및 고객지원 (오른쪽 영역)
-    subgraph "🛠 Admin & Support Service"
-        API_Gateway --> AdminCtrl[Admin Controller]
-        AdminCtrl --> NoticeCtrl[Notice Controller]
-        AdminCtrl --> QnACtrl["Q&A / Inquiry Controller"]
-        AdminCtrl --> ReportCtrl["Report/Ban Controller"]
-        AdminCtrl --> MovieManage[Movie Management]
-    end
+**[업무 흐름도]**
+![업무 흐름도](./images/업무흐름도.png)
 
-    %% 주요 데이터 흐름 연결
-    MainPage[Main Page] --> MovieCtrl
-    PayCtrl --Success--> User
+<br/>
+
+**[기타 문서]**
