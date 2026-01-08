@@ -226,9 +226,9 @@ npm run dev
 
 | 이름 | 포지션 | 담당 역할 |
 | :--- | :--- | :--- |
-| **조상진** (팀장) | FullStack | • Spring Security & JWT<br>• 소셜 로그인(Kakao, Naver) 구현<br>• 서버 배포<br>• 리캡 기능<br>• React 기반 전반적인 UI/UX 설계 및 구현|
+| **조상진** (팀장) | FullStack | • Spring Security & JWT<br>• 소셜 로그인(Kakao, Naver) 구현<br>• 서버 배포<br>• 리캡 기능<br>• React 기반 전반적인 UI/UX 설계 및 구현<br>• 에러 페이지 구현|
 | **주석우** | FullStack | • 예매 시스템<br>• 결제 시스템 <br>• 티켓 출력 |
 | **김가영** | FullStack | • 검색 및 필터옵션 API<br>• 리뷰API<br>• 자동완성API <br>• 영화 퀵매치 기능<br>• AI 리뷰 요약 |
 | **최예성** | FullStack | • UI 개선<br>• 필터<br>• 영화 기사 크롤링 및 구현 |
 | **한경훈** | FullStack | • 찜목록, 워치리스트 구현<br>• 별점, 리뷰 구현<br>• 표정 분석기반 영화추천<br>• 인덱스, 매핑 설계<br>• 서버 배포<br>• QR 로그인 구현|
-| **최민규** | FullStack | • TMDB 데이터 검색, ElasticSearch 적재 파이프라인 구축<br>• 인덱스, 매핑 설계<br>• 영화 상세조회 API<br>• 성인 필터링<br>• 추천목록 API<br>• OTT 매칭
+| **최민규** | FullStack | • TMDB 데이터 검색 및 처리 파이프라인 구축<br>• 인덱스, 매핑 설계 및 ElasticSearch 적재<br>• 영화 상세조회 API<br>• 성인 필터링<br>• 추천목록 API<br>• OTT 매칭
