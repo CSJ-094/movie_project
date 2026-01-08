@@ -72,9 +72,86 @@ movie_project/
 
 <br/>
 
+## 🚀 Getting Started (프로젝트 실행 가이드)
+
+로컬 환경에서 프로젝트를 실행하기 위한 단계별 가이드입니다. 
+
+### 1. 💡 Database (Elasticsearch) 실행
+프로젝트 최상위 폴더에서 Docker를 통해 검색 엔진을 실행합니다.
+
+```bash
+# 1. 터미널 열기 (프로젝트 최상위 위치)
+# 2. 컨테이너 실행
+docker-compose up -d
+```
+브라우저에서 http://localhost:9200 접속 시 JSON 응답이 보이면 성공
+
+<br/>
+
+### 2. 💡 Plugin Installation (한글 형태소 분석기)
+DB가 켜진 상태에서, 한글 검색 최적화를 위해 'nori' 분석기를 설치합니다.
+
+```bash
+# 1. 플러그인 설치 명령어 입력
+docker exec -it elasticsearch bin/elasticsearch-plugin install analysis-nori
+
+# 2. Elasticsearch 재시작 (설치 적용)
+docker restart elasticsearch
+```
+
+<br/>
+
+### 3. 💡 Data ETL (데이터 적재)
+TMDB에서 영화 데이터를 수집하여 DB에 채워 넣습니다.
+
+```Bash
+
+cd etl
+
+# 1. 필수 라이브러리 설치
+pip install -r requirements.txt
+
+# 2. 데이터 수집 및 적재 실행
+python Movie_El.py
+```
+
+http://localhost:5601 (Kibana) 접속 -> 좌측 햄버거 메뉴 -> Dev Tools -> GET movies/_search 입력 후 실행 (데이터 확인)
+
+<br/>
+
+### 4. 💡 Backend (Spring Boot) 실행
+IntelliJ 등 IDE에서 backend 폴더를 엽니다.
+
+src/main/resources/application.yml 설정을 확인합니다. (포트 8484)
+
+BootMovieProjectApplication 파일을 실행합니다.
+
+콘솔에 "Started..." 메시지 확인 후 http://localhost:8484/api/search?q=사랑 접속 시 데이터가 뜨면 성공
+
+<br/>
+
+### 5. 💡 Frontend (React) 실행 [프론트]
+사용자 인터페이스 화면을 켭니다.
+
+```Bash
+
+cd react  # (중요!) frontend 폴더가 아닌 react 폴더로 이동
+
+# 1. 라이브러리 설치 (최초 1회)
+npm install
+
+# 2. 개발 서버 실행
+npm run dev
+
+```
+
+접속: http://localhost:5173 (Chrome 브라우저 권장)
+
+<br/>
+
 ---
 
-### 🏗 System Architecture
+## 🚀 System Architecture
 
 **[ERD]**
 ![구조도](./images/ERD.png)
